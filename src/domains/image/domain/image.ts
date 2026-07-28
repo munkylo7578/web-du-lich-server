@@ -3,7 +3,7 @@ import { ImageId } from "./image-id";
 export type ImageSnapshot = {
   id: string;
   url: string;
-  altText: string;
+  altText?: string;
   fileName?: string;
   mimeType?: string;
   sizeInBytes?: number;
@@ -13,7 +13,7 @@ export type ImageSnapshot = {
 
 export type CreateImageProps = {
   url: string;
-  altText: string;
+  altText?: string;
   fileName?: string;
   mimeType?: string;
   sizeInBytes?: number;
@@ -23,7 +23,7 @@ export class Image {
   private constructor(
     private readonly id: ImageId,
     private url: string,
-    private altText: string,
+    private altText: string | undefined,
     private readonly fileName: string | undefined,
     private readonly mimeType: string | undefined,
     private readonly sizeInBytes: number | undefined,
@@ -63,7 +63,7 @@ export class Image {
     return this.id;
   }
 
-  changeAltText(altText: string): void {
+  changeAltText(altText?: string): void {
     this.altText = Image.validateAltText(altText);
     this.touch();
   }
@@ -104,8 +104,12 @@ export class Image {
     return value;
   }
 
-  private static validateAltText(altText: string): string {
-    const value = altText.trim();
+  private static validateAltText(altText?: string): string | undefined {
+    const value = altText?.trim();
+
+    if (!value) {
+      return undefined;
+    }
 
     if (value.length < 2) {
       throw new Error("Image alt text must have at least 2 characters.");
