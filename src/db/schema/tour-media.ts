@@ -24,8 +24,6 @@ export const tours = pgTable(
   "tours",
   {
     id: uuid("id").primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    description: text("description"),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     plans: jsonb("plans").$type<TourPlanSnapshot[]>().default(sql`'[]'::jsonb`).notNull(),
@@ -37,11 +35,6 @@ export const tours = pgTable(
       .notNull(),
   },
   (table) => [
-    check("tours_name_length_check", sql`char_length(trim(${table.name})) >= 2`),
-    check(
-      "tours_description_length_check",
-      sql`${table.description} is null or char_length(trim(${table.description})) >= 10`,
-    ),
     check(
       "tours_location_pair_check",
       sql`(${table.latitude} is null and ${table.longitude} is null) or (${table.latitude} is not null and ${table.longitude} is not null)`,
@@ -55,6 +48,34 @@ export const tours = pgTable(
       sql`${table.longitude} is null or ${table.longitude} between -180 and 180`,
     ),
     check("tours_plans_array_check", sql`jsonb_typeof(${table.plans}) = 'array'`),
+  ],
+);
+
+export const tourLocale = pgEnum("tour_locale", ["vi", "en"]);
+
+export const tourTranslations = pgTable(
+  "tour_translations",
+  {
+    tourId: uuid("tour_id")
+      .notNull()
+      .references(() => tours.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    locale: tourLocale("locale").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tourId, table.locale] }),
+    check(
+      "tour_translations_name_length_check",
+      sql`char_length(trim(${table.name})) >= 2`,
+    ),
+    check(
+      "tour_translations_description_length_check",
+      sql`${table.description} is null or char_length(trim(${table.description})) >= 10`,
+    ),
+    index("tour_translations_locale_name_idx").on(table.locale, table.name),
   ],
 );
 
@@ -112,6 +133,14 @@ export const tourImages = pgTable(
 
 export const toursRelations = relations(tours, ({ many }) => ({
   imageLinks: many(tourImages),
+  translations: many(tourTranslations),
+}));
+
+export const tourTranslationsRelations = relations(tourTranslations, ({ one }) => ({
+  tour: one(tours, {
+    fields: [tourTranslations.tourId],
+    references: [tours.id],
+  }),
 }));
 
 export const imagesRelations = relations(images, ({ many }) => ({

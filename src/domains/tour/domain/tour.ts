@@ -1,12 +1,22 @@
 import { TourId } from "./tour-id";
 import { TourImageRef, type TourImageRefSnapshot } from "./tour-image-ref";
+import {
+  DEFAULT_TOUR_LOCALE,
+  isTourLocale,
+  type TourLocale,
+} from "./tour-locale";
 import { TourLocation, type TourLocationProps } from "./tour-location";
 import { TourPlan, type TourPlanSnapshot } from "./tour-plan";
 
-export type TourSnapshot = {
-  id: string;
+export type TourTranslationSnapshot = {
+  locale: TourLocale;
   name: string;
   description?: string;
+};
+
+export type TourSnapshot = {
+  id: string;
+  translations: TourTranslationSnapshot[];
   location?: TourLocationProps;
   plans: TourPlanSnapshot[];
   images: TourImageRefSnapshot[];
@@ -15,8 +25,7 @@ export type TourSnapshot = {
 };
 
 export type CreateTourProps = {
-  name: string;
-  description?: string;
+  translations: TourTranslationSnapshot[];
   location?: TourLocation;
   plans?: TourPlan[];
   images?: TourImageRef[];
@@ -25,8 +34,7 @@ export type CreateTourProps = {
 export class Tour {
   private constructor(
     private readonly id: TourId,
-    private name: string,
-    private description: string | undefined,
+    private translations: TourTranslationSnapshot[],
     private location: TourLocation | undefined,
     private plans: TourPlan[],
     private images: TourImageRef[],
@@ -39,8 +47,7 @@ export class Tour {
 
     return new Tour(
       TourId.create(),
-      Tour.validateName(props.name),
-      Tour.validateDescription(props.description),
+      Tour.validateTranslations(props.translations),
       props.location,
       Tour.validatePlans(props.plans ?? []),
       Tour.validateImages(props.images ?? []),
@@ -52,8 +59,7 @@ export class Tour {
   static rehydrate(snapshot: TourSnapshot): Tour {
     return new Tour(
       TourId.create(snapshot.id),
-      Tour.validateName(snapshot.name),
-      Tour.validateDescription(snapshot.description),
+      Tour.validateTranslations(snapshot.translations),
       snapshot.location ? TourLocation.create(snapshot.location) : undefined,
       Tour.validatePlans(snapshot.plans.map(TourPlan.fromSnapshot)),
       Tour.validateImages(snapshot.images.map(TourImageRef.fromSnapshot)),
@@ -66,13 +72,14 @@ export class Tour {
     return this.id;
   }
 
-  rename(name: string): void {
-    this.name = Tour.validateName(name);
+  upsertTranslation(translation: TourTranslationSnapshot): void {
+    const next = this.translations.filter((item) => item.locale !== translation.locale);
+    this.translations = Tour.validateTranslations([...next, translation]);
     this.touch();
   }
 
-  updateDescription(description?: string): void {
-    this.description = Tour.validateDescription(description);
+  replaceTranslations(translations: TourTranslationSnapshot[]): void {
+    this.translations = Tour.validateTranslations(translations);
     this.touch();
   }
 
@@ -97,6 +104,11 @@ export class Tour {
     this.touch();
   }
 
+  replaceImages(images: TourImageRef[]): void {
+    this.images = Tour.validateImages(images);
+    this.touch();
+  }
+
   removeImage(imageId: string): void {
     this.images = this.images.filter((item) => item.imageId.value !== imageId);
     this.touch();
@@ -105,8 +117,7 @@ export class Tour {
   toSnapshot(): TourSnapshot {
     return {
       id: this.id.value,
-      name: this.name,
-      description: this.description,
+      translations: this.translations.map((translation) => ({ ...translation })),
       location: this.location
         ? {
             lat: this.location.lat,
@@ -146,6 +157,34 @@ export class Tour {
     }
 
     return value;
+  }
+
+  private static validateTranslations(
+    translations: TourTranslationSnapshot[],
+  ): TourTranslationSnapshot[] {
+    const locales = new Set<TourLocale>();
+    const normalized = translations.map((translation) => {
+      if (!isTourLocale(translation.locale)) {
+        throw new Error(`Unsupported tour locale: ${translation.locale}.`);
+      }
+
+      if (locales.has(translation.locale)) {
+        throw new Error(`Tour translation locale ${translation.locale} must be unique.`);
+      }
+
+      locales.add(translation.locale);
+      return {
+        locale: translation.locale,
+        name: Tour.validateName(translation.name),
+        description: Tour.validateDescription(translation.description),
+      };
+    });
+
+    if (!locales.has(DEFAULT_TOUR_LOCALE)) {
+      throw new Error("Tour translation is required in the default locale.");
+    }
+
+    return normalized;
   }
 
   private static validatePlans(plans: TourPlan[]): TourPlan[] {
