@@ -53,8 +53,8 @@ export function RichTextEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-background focus-within:ring-3 focus-within:ring-ring/20">
-      <div className="flex flex-wrap gap-1 border-b bg-muted/40 p-2">
+    <div className="overflow-hidden rounded-2xl border border-white/65 bg-white/58 shadow-sm backdrop-blur focus-within:ring-3 focus-within:ring-cyan-400/20">
+      <div className="flex flex-wrap gap-1 border-b border-white/55 bg-white/45 p-2 backdrop-blur">
         {[
           { label: "In đậm", icon: Bold, active: editor.isActive("bold"), action: () => editor.chain().focus().toggleBold().run() },
           { label: "In nghiêng", icon: Italic, active: editor.isActive("italic"), action: () => editor.chain().focus().toggleItalic().run() },

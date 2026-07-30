@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { requireSession } from "@/lib/auth/session";
 import { listAdminTours } from "@/features/admin-tours/repository";
 import { TourManagement } from "@/components/admin/tours/tour-management";
 
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminToursPage() {
-  const [session, tours] = await Promise.all([requireSession(), listAdminTours()]);
+  const tours = await listAdminTours();
 
-  return <TourManagement tours={tours} username={session.username} />;
+  return <TourManagement tours={tours} />;
 }

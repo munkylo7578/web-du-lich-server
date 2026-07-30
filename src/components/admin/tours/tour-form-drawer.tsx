@@ -80,8 +80,9 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent fullscreen className="gap-0" showCloseButton={!isPending}>
-        <SheetHeader className="border-b px-5 py-4 sm:px-8">
+      <SheetContent fullscreen className="admin-aurora gap-0 text-slate-950" showCloseButton={!isPending}>
+        <div className="admin-grid-overlay pointer-events-none absolute inset-0 opacity-50" />
+        <SheetHeader className="glass-panel sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
           <div className="mx-auto w-full max-w-[1480px] pr-12">
             <SheetTitle className="text-xl sm:text-2xl">{tour ? "Chỉnh sửa tour" : "Tạo tour mới"}</SheetTitle>
             <SheetDescription className="mt-1">Nội dung tiếng Việt là bắt buộc. Ảnh mới chỉ được upload sau khi lưu.</SheetDescription>
@@ -89,11 +90,11 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
         </SheetHeader>
 
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8">
+          <div className="relative flex-1 overflow-y-auto px-5 py-6 sm:px-8">
             <div className="mx-auto w-full max-w-[1480px] space-y-7">
             {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
 
-            <section className="space-y-4">
+            <section className="glass-panel-strong space-y-4 rounded-[28px] p-5 sm:p-7">
               <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên và mô tả hiển thị trên website client." />
               <Tabs defaultValue="vi">
                 <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
@@ -111,7 +112,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
             </section>
 
             <Separator />
-            <section className="space-y-4">
+            <section className="glass-panel-strong space-y-4 rounded-[28px] p-5 sm:p-7">
               <SectionHeading title="Vị trí" description="Tọa độ là dữ liệu dùng chung cho mọi ngôn ngữ." />
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField label="Vĩ độ"><Controller control={form.control} name="latitude" render={({ field }) => <Input type="number" step="any" value={field.value ?? ""} onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))} placeholder="16.0544" />} /></FormField>
@@ -120,14 +121,14 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
             </section>
 
             <Separator />
-            <section className="space-y-4">
+            <section className="glass-panel-strong space-y-4 rounded-[28px] p-5 sm:p-7">
               <div className="flex items-center justify-between gap-4">
                 <SectionHeading title="Lịch trình" description="Tên và mô tả từng ngày theo ngôn ngữ." />
                 <Button type="button" variant="outline" onClick={() => plans.append({ sortOrder: plans.fields.length, name: { vi: "", en: "" }, description: { vi: "", en: "" } })}><Plus data-icon="inline-start" />Thêm chặng</Button>
               </div>
               {!plans.fields.length && <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">Chưa có lịch trình. Bấm “Thêm chặng” để bắt đầu.</div>}
               {plans.fields.map((plan, index) => (
-                <div key={plan.id} className="rounded-2xl border bg-muted/15 p-4 sm:p-5">
+                <div key={plan.id} className="rounded-2xl border border-white/60 bg-white/46 p-4 shadow-sm backdrop-blur sm:p-5">
                   <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium"><GripVertical className="size-4 text-muted-foreground" />Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => plans.remove(index)}><Trash2 /></Button></div>
                   <Tabs defaultValue="vi">
                     <TabsList><TabsTrigger value="vi">VI *</TabsTrigger><TabsTrigger value="en">EN</TabsTrigger></TabsList>
@@ -138,14 +139,14 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
             </section>
 
             <Separator />
-            <section className="space-y-4">
+            <section className="glass-panel-strong space-y-4 rounded-[28px] p-5 sm:p-7">
               <SectionHeading title="Hình ảnh" description="Chọn, kéo thả hoặc paste ảnh. Chỉ một ảnh được đặt làm ảnh bìa." />
               <Controller control={form.control} name="existingImages" render={({ field }) => <ImageUploadField existing={field.value as AdminTour["images"]} pending={pendingImages} onExistingChange={field.onChange} onPendingChange={setPendingImages} />} />
             </section>
             </div>
           </div>
 
-          <SheetFooter className="border-t bg-background px-5 py-4 sm:px-8">
+          <SheetFooter className="glass-panel sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
             <div className="mx-auto flex w-full max-w-[1480px] flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>Hủy</Button>
               <Button type="submit" disabled={isPending}>{isPending ? "Đang lưu..." : tour ? "Lưu thay đổi" : "Tạo tour"}</Button>

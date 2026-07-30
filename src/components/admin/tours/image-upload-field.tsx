@@ -64,12 +64,12 @@ export function ImageUploadField({
       <div
         {...getRootProps()}
         className={cn(
-          "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/30 px-6 py-7 text-center transition-colors hover:bg-muted/60",
-          isDragActive && "border-primary bg-primary/5",
+          "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-white/70 bg-white/44 px-6 py-7 text-center shadow-sm backdrop-blur transition-colors hover:bg-white/62",
+          isDragActive && "border-cyan-400 bg-cyan-100/45",
         )}
       >
         <input {...getInputProps()} />
-        <div className="mb-3 rounded-xl border bg-background p-2.5 shadow-sm"><Upload className="size-5" /></div>
+        <div className="mb-3 rounded-xl border border-white/70 bg-white/70 p-2.5 text-cyan-700 shadow-sm"><Upload className="size-5" /></div>
         <p className="font-medium">Kéo thả, chọn hoặc paste ảnh</p>
         <p className="mt-1 text-xs text-muted-foreground">JPEG, PNG, WebP, AVIF · tối đa 8MB · chỉ upload khi lưu tour</p>
       </div>
@@ -77,7 +77,7 @@ export function ImageUploadField({
       {!existing.length && !pending.length ? (
         <div className="flex items-center gap-2 rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground"><ImagePlus className="size-4" /> Chưa có ảnh nào.</div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {existing.map((image) => (
             <ImageCard
               key={image.imageId}
@@ -113,7 +113,7 @@ function ImageCard({ src, altText, isCover, onCover, onAlt, onRemove }: {
   src: string; altText: string; isCover: boolean; onCover: () => void; onAlt: (value: string) => void; onRemove: () => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card">
+    <div className="overflow-hidden rounded-2xl border border-white/65 bg-white/55 shadow-sm backdrop-blur">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={altText || "Ảnh xem trước"} className="aspect-[16/10] w-full object-cover" />
       <div className="space-y-2 p-3">

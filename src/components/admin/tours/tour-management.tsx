@@ -23,7 +23,7 @@ import type { AdminTour } from "@/features/admin-tours/tour-types";
 
 const helper = createColumnHelper<AdminTour>();
 
-export function TourManagement({ tours, username }: { tours: AdminTour[]; username: string }) {
+export function TourManagement({ tours }: { tours: AdminTour[] }) {
   const [query, setQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<AdminTour | null>(null);
@@ -57,41 +57,34 @@ export function TourManagement({ tours, username }: { tours: AdminTour[]; userna
   });
 
   return (
-    <main className="min-h-screen bg-muted/35">
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm"><MapPin className="size-5" /></div><div><p className="font-heading font-semibold">Travel Admin</p><p className="text-xs text-muted-foreground">Quản lý nội dung tour</p></div></div>
-          <div className="flex items-center gap-3 text-sm"><div className="hidden text-right sm:block"><p className="font-medium">{username}</p><p className="text-xs text-muted-foreground">Quản trị viên</p></div><div className="grid size-9 place-items-center rounded-full bg-secondary font-semibold uppercase">{username.slice(0, 1)}</div></div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8">
+    <>
+      <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">Nội dung</p><h1 className="font-heading text-3xl font-semibold tracking-tight">Danh sách tour</h1><p className="mt-2 max-w-2xl text-muted-foreground">Quản lý nội dung đa ngôn ngữ, lịch trình và hình ảnh tour ở một nơi.</p></div>
-          <Button size="lg" onClick={() => { setEditingTour(null); setDrawerOpen(true); }}><Plus data-icon="inline-start" />Tạo tour mới</Button>
+          <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Nội dung</p><h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách tour</h1><p className="mt-2 max-w-2xl text-slate-650 text-slate-600">Quản lý nội dung đa ngôn ngữ, lịch trình và hình ảnh tour ở một nơi.</p></div>
+          <Button size="lg" className="glass-gradient-button h-11 rounded-2xl px-5" onClick={() => { setEditingTour(null); setDrawerOpen(true); }}><Plus data-icon="inline-start" />Tạo tour mới</Button>
         </div>
 
-        <Card className="gap-0 py-0 shadow-sm">
-          <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-sm"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9" placeholder="Tìm theo tên tour..." /></div>
-            <p className="text-sm text-muted-foreground">{table.getFilteredRowModel().rows.length} tour</p>
+        <Card className="glass-panel-strong gap-0 overflow-hidden rounded-[28px] py-0">
+          <div className="flex flex-col gap-3 border-b border-white/55 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-sm"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-cyan-700" /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên tour..." /></div>
+            <p className="rounded-full border border-white/60 bg-white/50 px-3 py-1 text-sm text-slate-600 backdrop-blur">{table.getFilteredRowModel().rows.length} tour</p>
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-white/45 hover:bg-transparent">{group.headers.map((header) => <TableHead key={header.id} className="text-slate-600">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
                 <TableBody>{table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => <TableRow key={row.id}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={columns.length} className="h-52 text-center"><div className="mx-auto flex max-w-sm flex-col items-center"><div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div><p className="font-medium">Chưa tìm thấy tour</p><p className="mt-1 text-sm text-muted-foreground">Tạo tour mới hoặc thử từ khóa khác.</p></div></TableCell></TableRow>}</TableBody>
               </Table>
             </div>
             {table.getPageCount() > 1 && <div className="flex items-center justify-end gap-2 border-t p-4"><Button variant="outline" disabled={!table.getCanPreviousPage()} onClick={() => table.previousPage()}>Trước</Button><span className="px-2 text-sm text-muted-foreground">{table.getState().pagination.pageIndex + 1} / {table.getPageCount()}</span><Button variant="outline" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>Sau</Button></div>}
           </CardContent>
         </Card>
-      </div>
+      </section>
 
       <TourFormDrawer key={editingTour?.id || "new"} open={drawerOpen} tour={editingTour} onOpenChange={setDrawerOpen} />
       <AlertDialog open={Boolean(deletingTour)} onOpenChange={(open) => !open && setDeletingTour(null)}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xóa tour này?</AlertDialogTitle><AlertDialogDescription>Tour và liên kết hình ảnh sẽ bị xóa khỏi cơ sở dữ liệu. Thao tác này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel><AlertDialogAction disabled={isDeleting} onClick={(event) => { event.preventDefault(); if (!deletingTour) return; startDelete(async () => { const result = await deleteTourAction(deletingTour.id); if (result.success) setDeletingTour(null); }); }}>{isDeleting ? "Đang xóa..." : "Xóa tour"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
-    </main>
+    </>
   );
 }
