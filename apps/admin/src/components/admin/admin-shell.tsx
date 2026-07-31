@@ -1,0 +1,283 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  ImageIcon,
+  MapPin,
+  Menu,
+  PlaneTakeoff,
+  Settings,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+
+type AdminNavItem = {
+  title: string;
+  href: string;
+  icon: typeof BarChart3;
+  disabled?: boolean;
+};
+
+const adminNavItems: AdminNavItem[] = [
+  {
+    title: "Dashboard",
+    href: "/admin",
+    icon: BarChart3,
+    disabled: true,
+  },
+  {
+    title: "Tours",
+    href: "/admin/tours",
+    icon: PlaneTakeoff,
+  },
+  {
+    title: "Bookings",
+    href: "/admin/bookings",
+    icon: ShoppingBag,
+    disabled: true,
+  },
+  {
+    title: "Customers",
+    href: "/admin/customers",
+    icon: Users,
+    disabled: true,
+  },
+  {
+    title: "Media",
+    href: "/admin/media",
+    icon: ImageIcon,
+    disabled: true,
+  },
+  {
+    title: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+    disabled: true,
+  },
+] as const;
+
+function isNavItemActive(pathname: string, href: string) {
+  if (href === "/admin") {
+    return pathname === href;
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function BrandMark({ collapsed = false }: { collapsed?: boolean }) {
+  return (
+    <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
+      <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-400 text-white shadow-[0_18px_44px_-26px_rgba(6,182,212,0.85)]">
+        <MapPin className="size-5" />
+      </div>
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="font-heading font-semibold leading-tight">Travel Admin</p>
+          <p className="truncate text-xs text-slate-600">Điều hành nội dung</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminNavigation({
+  collapsed = false,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <nav className="space-y-1.5" aria-label="Admin navigation">
+      {adminNavItems.map((item) => {
+        const active = isNavItemActive(pathname, item.href);
+        const Icon = item.icon;
+        const content = (
+          <>
+            <Icon className="size-4 shrink-0" />
+            {!collapsed && <span className="truncate">{item.title}</span>}
+            {!collapsed && item.disabled && (
+              <span className="ml-auto rounded-full border border-white/55 bg-white/50 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                Sắp có
+              </span>
+            )}
+          </>
+        );
+
+        const className = cn(
+          "group flex h-11 items-center gap-3 rounded-2xl px-3 text-sm font-medium transition-all",
+          collapsed && "justify-center px-0",
+          active
+            ? "bg-slate-950 text-white shadow-[0_18px_42px_-28px_rgba(15,23,42,0.75)]"
+            : "text-slate-600 hover:bg-white/52 hover:text-slate-950",
+          item.disabled && "cursor-not-allowed opacity-55 hover:bg-transparent hover:text-slate-600",
+        );
+
+        if (item.disabled) {
+          return (
+            <span key={item.href} className={className} title={collapsed ? item.title : undefined}>
+              {content}
+            </span>
+          );
+        }
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={className}
+            title={collapsed ? item.title : undefined}
+            onClick={onNavigate}
+          >
+            {content}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function UserBadge({ username, compact = false }: { username: string; compact?: boolean }) {
+  return (
+    <div className={cn("flex items-center gap-3", compact && "justify-center")}>
+      {!compact && (
+        <div className="hidden text-right sm:block">
+          <p className="font-medium">{username}</p>
+          <p className="text-xs text-slate-600">Quản trị viên</p>
+        </div>
+      )}
+      <div className="grid size-10 place-items-center rounded-full border border-white/70 bg-white/55 font-semibold uppercase shadow-sm backdrop-blur">
+        {username.slice(0, 1)}
+      </div>
+    </div>
+  );
+}
+
+export function AdminShell({ children, username }: { children: ReactNode; username: string }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <div className="admin-aurora relative min-h-screen overflow-hidden text-slate-950">
+      <div className="admin-grid-overlay pointer-events-none absolute inset-0 opacity-70" />
+      <div className="pointer-events-none absolute -left-24 top-24 size-72 rounded-full bg-cyan-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 top-10 size-80 rounded-full bg-violet-300/20 blur-3xl" />
+
+      <aside
+        className={cn(
+          "glass-panel fixed inset-y-4 left-4 z-40 hidden flex-col rounded-[28px] p-3 transition-all duration-300 md:flex",
+          collapsed ? "w-20" : "w-68",
+        )}
+      >
+        <div className="flex items-center justify-between gap-2 px-1 pb-5 pt-1">
+          <BrandMark collapsed={collapsed} />
+          {!collapsed && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full bg-white/45"
+              aria-label="Thu gọn sidebar"
+              onClick={() => setCollapsed(true)}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+          )}
+        </div>
+
+        {collapsed && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="mx-auto mb-4 rounded-full bg-white/45"
+            aria-label="Mở rộng sidebar"
+            onClick={() => setCollapsed(false)}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        )}
+
+        <AdminNavigation collapsed={collapsed} />
+
+        <div className="mt-auto rounded-3xl border border-white/55 bg-white/42 p-3 backdrop-blur">
+          {/* <UserBadge username={username} compact={collapsed} />
+          {!collapsed && (
+            <p className="mt-3 text-xs leading-relaxed text-slate-600">
+              Sidebar đã sẵn cấu trúc để thêm các module CRUD mới.
+            </p>
+          )} */}
+        </div>
+      </aside>
+
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="admin-aurora w-[21rem] max-w-[86vw] gap-0 border-white/55 p-0 text-slate-950">
+          <SheetHeader className="glass-panel rounded-none border-x-0 border-t-0 p-4 pr-12 text-left">
+            <BrandMark />
+            <SheetTitle className="sr-only">Admin menu</SheetTitle>
+            <SheetDescription className="sr-only">Điều hướng các khu vực quản trị</SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col p-4">
+            <AdminNavigation onNavigate={() => setMobileOpen(false)} />
+            {/* <div className="mt-auto rounded-3xl border border-white/55 bg-white/42 p-3 backdrop-blur">
+              <UserBadge username={username} />
+            </div> */}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <div
+        className={cn(
+          "relative flex min-h-screen flex-col transition-[padding] duration-300",
+          collapsed ? "md:pl-[6.5rem]" : "md:pl-[19rem]",
+        )}
+      >
+        <header className="glass-panel sticky top-0 z-30 rounded-none border-x-0 border-t-0 bg-white/62">
+          <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                className="rounded-2xl bg-white/50 md:hidden"
+                aria-label="Mở sidebar quản trị"
+                onClick={() => setMobileOpen(true)}
+              >
+                <Menu className="size-5" />
+              </Button>
+              <div className="md:hidden">
+                <BrandMark />
+              </div>
+              <div className="hidden md:block">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Admin workspace</p>
+                <p className="mt-1 text-sm text-slate-600">Quản lý nội dung, dữ liệu và cấu hình website</p>
+              </div>
+            </div>
+            {/* <UserBadge username={username} /> */}
+          </div>
+        </header>
+
+        <main className="relative flex-1 px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1500px]">{children}</div>
+        </main>
+      </div>
+    </div>
+  );
+}

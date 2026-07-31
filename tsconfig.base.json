@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./apps/admin/src/*"],
+      "@database": ["./libs/database/src/index.ts"]
+    }
+  }
+}
