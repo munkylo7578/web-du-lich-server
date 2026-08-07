@@ -34,41 +34,41 @@ type AdminNavItem = {
 };
 
 const adminNavItems: AdminNavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/admin",
-    icon: BarChart3,
-    disabled: true,
-  },
+  // {
+  //   title: "Dashboard",
+  //   href: "/admin",
+  //   icon: BarChart3,
+  //   disabled: true,
+  // },
   {
     title: "Tours",
     href: "/admin/tours",
     icon: PlaneTakeoff,
   },
-  {
-    title: "Bookings",
-    href: "/admin/bookings",
-    icon: ShoppingBag,
-    disabled: true,
-  },
-  {
-    title: "Customers",
-    href: "/admin/customers",
-    icon: Users,
-    disabled: true,
-  },
-  {
-    title: "Media",
-    href: "/admin/media",
-    icon: ImageIcon,
-    disabled: true,
-  },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
-    disabled: true,
-  },
+  // {
+  //   title: "Bookings",
+  //   href: "/admin/bookings",
+  //   icon: ShoppingBag,
+  //   disabled: true,
+  // },
+  // {
+  //   title: "Customers",
+  //   href: "/admin/customers",
+  //   icon: Users,
+  //   disabled: true,
+  // },
+  // {
+  //   title: "Media",
+  //   href: "/admin/media",
+  //   icon: ImageIcon,
+  //   disabled: true,
+  // },
+  // {
+  //   title: "Settings",
+  //   href: "/admin/settings",
+  //   icon: Settings,
+  //   disabled: true,
+  // },
 ] as const;
 
 function isNavItemActive(pathname: string, href: string) {
