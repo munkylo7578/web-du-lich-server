@@ -30,17 +30,34 @@ export async function searchLocationsAction(query: string): Promise<AdminLocatio
 export async function saveTourAction(formData: FormData): Promise<TourActionState> {
   await requireSession();
 
+  const requestId = crypto.randomUUID();
+  console.info("[TourUpload] saveTourAction:start", {
+    requestId,
+    formDataKeys: Array.from(formData.keys()),
+  });
+
   let payload: unknown;
   let pendingMeta: PendingImageMeta[];
   try {
     payload = JSON.parse(String(formData.get("payload") || "{}"));
     pendingMeta = JSON.parse(String(formData.get("pendingImages") || "[]"));
   } catch {
+    console.error("[TourUpload] saveTourAction:parse_failed", { requestId });
     return { success: false, message: "Dữ liệu biểu mẫu không hợp lệ." };
   }
 
+  console.info("[TourUpload] saveTourAction:parsed", {
+    requestId,
+    pendingMetaCount: pendingMeta.length,
+    pendingClientIds: pendingMeta.map((meta) => meta.clientId),
+  });
+
   const parsed = tourFormSchema.safeParse(payload);
   if (!parsed.success) {
+    console.error("[TourUpload] saveTourAction:validation_failed", {
+      requestId,
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    });
     return {
       success: false,
       message: "Vui lòng kiểm tra lại các trường thông tin.",
@@ -93,7 +110,26 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     for (let index = 0; index < pendingMeta.length; index += 1) {
       const meta = pendingMeta[index];
       const file = formData.get(`file:${meta.clientId}`);
-      if (!(file instanceof File)) continue;
+
+      console.info("[TourUpload] saveTourAction:pending_file", {
+        requestId,
+        index,
+        clientId: meta.clientId,
+        hasFile: file instanceof File,
+        fileName: file instanceof File ? file.name : undefined,
+        fileType: file instanceof File ? file.type : undefined,
+        fileSize: file instanceof File ? file.size : undefined,
+      });
+
+      if (!(file instanceof File)) {
+        console.error("[TourUpload] saveTourAction:missing_file", {
+          requestId,
+          index,
+          clientId: meta.clientId,
+          availableFormDataKeys: Array.from(formData.keys()),
+        });
+        continue;
+      }
 
       const stored = await saveTourImage(file);
       uploadedPaths.push(stored.physicalPath);
@@ -115,9 +151,23 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
 
     aggregate.replaceImages([...existingRefs, ...newRefs]);
     await tourRepository.save(aggregate, newImages);
+    console.info("[TourUpload] saveTourAction:success", {
+      requestId,
+      tourId: aggregate.getId().toString(),
+      pendingMetaCount: pendingMeta.length,
+      savedNewImages: newImages.length,
+      uploadedPaths,
+    });
     revalidatePath("/admin/tours");
     return { success: true, message: data.id ? "Đã cập nhật tour." : "Đã tạo tour." };
   } catch (error) {
+    console.error("[TourUpload] saveTourAction:failed", {
+      requestId,
+      uploadedPaths,
+      errorName: error instanceof Error ? error.name : undefined,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     await removeUploadedFiles(uploadedPaths);
     return {
       success: false,

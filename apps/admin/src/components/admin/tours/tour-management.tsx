@@ -64,10 +64,10 @@ export function TourManagement({ tours }: { tours: AdminTour[] }) {
           <Button size="lg" className="glass-gradient-button h-11 rounded-2xl px-5" onClick={() => { setEditingTour(null); setDrawerOpen(true); }}><Plus data-icon="inline-start" />Tạo tour mới</Button>
         </div>
 
-        <Card className="glass-panel-strong gap-0 overflow-hidden rounded-[28px] py-0">
+        <Card className="gap-0 overflow-hidden rounded-[28px] border bg-white py-0 shadow-sm">
           <div className="flex flex-col gap-3 border-b border-white/55 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950 drop-shadow-sm" strokeWidth={2.75} /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên tour..." /></div>
-            <p className="rounded-full border border-white/60 bg-white/50 px-3 py-1 text-sm text-slate-600 backdrop-blur">{table.getFilteredRowModel().rows.length} tour</p>
+            <div className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên tour..." /></div>
+            <p className="rounded-full border bg-white px-3 py-1 text-sm text-slate-600">{table.getFilteredRowModel().rows.length} tour</p>
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">

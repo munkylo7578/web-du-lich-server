@@ -64,7 +64,7 @@ export function ImageUploadField({
       <div
         {...getRootProps()}
         className={cn(
-          "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-white/70 bg-white/44 px-6 py-7 text-center shadow-sm backdrop-blur transition-colors hover:bg-white/62",
+          "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-white/70 bg-white/72 px-6 py-7 text-center shadow-sm transition-colors hover:bg-white/86",
           isDragActive && "border-cyan-400 bg-cyan-100/45",
         )}
       >
@@ -113,7 +113,7 @@ function ImageCard({ src, altText, isCover, onCover, onAlt, onRemove }: {
   src: string; altText: string; isCover: boolean; onCover: () => void; onAlt: (value: string) => void; onRemove: () => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/65 bg-white/55 shadow-sm backdrop-blur">
+    <div className="overflow-hidden rounded-2xl border border-white/65 bg-white/80 shadow-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={altText || "Ảnh xem trước"} className="aspect-[16/10] w-full object-cover" />
       <div className="space-y-2 p-3">

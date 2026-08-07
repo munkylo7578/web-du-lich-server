@@ -1,6 +1,6 @@
 import "server-only";
 
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -19,15 +19,43 @@ function getUploadConfig() {
   return { uploadDir, publicBaseUrl, maxBytes: maxMb * 1024 * 1024 };
 }
 
+function logUploadInfo(message: string, context?: Record<string, unknown>) {
+  console.info(`[TourUpload] ${message}`, context ?? {});
+}
+
+function logUploadError(message: string, context?: Record<string, unknown>) {
+  console.error(`[TourUpload] ${message}`, context ?? {});
+}
+
 export async function saveTourImage(file: File) {
   const config = getUploadConfig();
   const extension = MIME_EXTENSIONS[file.type];
 
+  logUploadInfo("saveTourImage:start", {
+    cwd: process.cwd(),
+    uploadDir: config.uploadDir,
+    publicBaseUrl: config.publicBaseUrl,
+    maxBytes: config.maxBytes,
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+  });
+
   if (!extension) {
+    logUploadError("saveTourImage:unsupported_mime", {
+      fileName: file.name,
+      fileType: file.type,
+      supportedTypes: Object.keys(MIME_EXTENSIONS),
+    });
     throw new Error("Chỉ hỗ trợ ảnh JPEG, PNG, WebP hoặc AVIF.");
   }
 
   if (file.size <= 0 || file.size > config.maxBytes) {
+    logUploadError("saveTourImage:invalid_size", {
+      fileName: file.name,
+      fileSize: file.size,
+      maxBytes: config.maxBytes,
+    });
     throw new Error("Dung lượng ảnh không hợp lệ hoặc vượt quá giới hạn.");
   }
 
@@ -36,8 +64,34 @@ export async function saveTourImage(file: File) {
   const directory = path.join(config.uploadDir, subdirectory);
   const physicalPath = path.join(directory, fileName);
 
-  await mkdir(directory, { recursive: true });
-  await writeFile(physicalPath, Buffer.from(await file.arrayBuffer()));
+  try {
+    logUploadInfo("saveTourImage:mkdir", { directory });
+    await mkdir(directory, { recursive: true });
+    await access(directory);
+
+    logUploadInfo("saveTourImage:write:start", { physicalPath });
+    await writeFile(physicalPath, Buffer.from(await file.arrayBuffer()));
+    await access(physicalPath);
+
+    logUploadInfo("saveTourImage:write:success", {
+      physicalPath,
+      url: `${config.publicBaseUrl}/${subdirectory}/${fileName}`,
+      fileName,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+    });
+  } catch (error) {
+    logUploadError("saveTourImage:write:failed", {
+      cwd: process.cwd(),
+      uploadDir: config.uploadDir,
+      directory,
+      physicalPath,
+      errorName: error instanceof Error ? error.name : undefined,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 
   return {
     physicalPath,
@@ -49,5 +103,13 @@ export async function saveTourImage(file: File) {
 }
 
 export async function removeUploadedFiles(paths: string[]) {
-  await Promise.all(paths.map((filePath) => unlink(filePath).catch(() => undefined)));
+  if (paths.length) logUploadInfo("removeUploadedFiles:start", { paths });
+
+  await Promise.all(paths.map((filePath) => unlink(filePath).catch((error) => {
+    logUploadError("removeUploadedFiles:failed", {
+      filePath,
+      errorName: error instanceof Error ? error.name : undefined,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+  })));
 }

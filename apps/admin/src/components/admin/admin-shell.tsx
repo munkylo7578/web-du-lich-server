@@ -82,7 +82,7 @@ function isNavItemActive(pathname: string, href: string) {
 function BrandMark({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-      <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-400 text-white shadow-[0_18px_44px_-26px_rgba(6,182,212,0.85)]">
+      <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-cyan-600 text-white shadow-sm">
         <MapPin className="size-5" />
       </div>
       {!collapsed && (
@@ -125,7 +125,7 @@ function AdminNavigation({
           "group flex h-11 items-center gap-3 rounded-2xl px-3 text-sm font-medium transition-all",
           collapsed && "justify-center px-0",
           active
-            ? "bg-slate-950 text-white shadow-[0_18px_42px_-28px_rgba(15,23,42,0.75)]"
+            ? "bg-slate-950 text-white shadow-sm"
             : "text-slate-600 hover:bg-white/52 hover:text-slate-950",
           item.disabled && "cursor-not-allowed opacity-55 hover:bg-transparent hover:text-slate-600",
         );
@@ -163,7 +163,7 @@ function UserBadge({ username, compact = false }: { username: string; compact?: 
           <p className="text-xs text-slate-600">Quản trị viên</p>
         </div>
       )}
-      <div className="grid size-10 place-items-center rounded-full border border-white/70 bg-white/55 font-semibold uppercase shadow-sm backdrop-blur">
+      <div className="grid size-10 place-items-center rounded-full border bg-white font-semibold uppercase shadow-sm">
         {username.slice(0, 1)}
       </div>
     </div>
@@ -176,10 +176,6 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
 
   return (
     <div className="admin-aurora relative min-h-screen overflow-hidden text-slate-950">
-      <div className="admin-grid-overlay pointer-events-none absolute inset-0 opacity-70" />
-      <div className="pointer-events-none absolute -left-24 top-24 size-72 rounded-full bg-cyan-300/20 blur-3xl" />
-      <div className="pointer-events-none absolute -right-20 top-10 size-80 rounded-full bg-violet-300/20 blur-3xl" />
-
       <aside
         className={cn(
           "glass-panel fixed inset-y-4 left-4 z-40 hidden flex-col rounded-[28px] p-3 transition-all duration-300 md:flex",
@@ -217,7 +213,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
 
         <AdminNavigation collapsed={collapsed} />
 
-        <div className="mt-auto rounded-3xl border border-white/55 bg-white/42 p-3 backdrop-blur">
+        <div className="mt-auto rounded-3xl border bg-white p-3">
           {/* <UserBadge username={username} compact={collapsed} />
           {!collapsed && (
             <p className="mt-3 text-xs leading-relaxed text-slate-600">
@@ -228,7 +224,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="admin-aurora w-[21rem] max-w-[86vw] gap-0 border-white/55 p-0 text-slate-950">
+        <SheetContent side="left" className="admin-aurora w-[21rem] max-w-[86vw] gap-0 border p-0 text-slate-950">
           <SheetHeader className="glass-panel rounded-none border-x-0 border-t-0 p-4 pr-12 text-left">
             <BrandMark />
             <SheetTitle className="sr-only">Admin menu</SheetTitle>
@@ -236,7 +232,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
           </SheetHeader>
           <div className="flex min-h-0 flex-1 flex-col p-4">
             <AdminNavigation onNavigate={() => setMobileOpen(false)} />
-            {/* <div className="mt-auto rounded-3xl border border-white/55 bg-white/42 p-3 backdrop-blur">
+            {/* <div className="mt-auto rounded-3xl border bg-white p-3">
               <UserBadge username={username} />
             </div> */}
           </div>
@@ -249,7 +245,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
           collapsed ? "md:pl-[6.5rem]" : "md:pl-[19rem]",
         )}
       >
-        <header className="glass-panel sticky top-0 z-30 rounded-none border-x-0 border-t-0 bg-white/62">
+        <header className="glass-panel sticky top-0 z-30 rounded-none border-x-0 border-t-0 bg-white">
           <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
               <Button

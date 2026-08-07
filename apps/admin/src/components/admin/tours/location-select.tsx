@@ -134,7 +134,7 @@ export function LocationSelect({ value, selectedLocation, onChange }: LocationSe
       id="tour-location-results"
       role="listbox"
       style={dropdownStyle}
-      className="fixed z-[100] max-h-72 overflow-y-auto rounded-2xl border border-white/80 bg-white/98 p-2 shadow-2xl shadow-slate-950/15 backdrop-blur"
+      className="fixed z-[100] max-h-72 overflow-y-auto rounded-2xl border bg-white p-2 shadow-md"
     >
       {query.trim().length < 2 ? (
         <p className="px-3 py-6 text-center text-sm text-muted-foreground">
@@ -187,7 +187,7 @@ export function LocationSelect({ value, selectedLocation, onChange }: LocationSe
       <div ref={controlRef} className="flex gap-2">
         <div className="relative flex-1">
           <MapPin
-            className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950 drop-shadow-sm"
+            className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950"
             strokeWidth={2.75}
           />
           <Input

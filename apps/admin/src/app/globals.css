@@ -140,39 +140,46 @@
 
 @layer components {
   .admin-aurora {
-    background:
-      radial-gradient(circle at 8% 10%, oklch(0.75 0.16 205 / 28%), transparent 30rem),
-      radial-gradient(circle at 82% 8%, oklch(0.74 0.2 305 / 18%), transparent 32rem),
-      radial-gradient(circle at 58% 72%, oklch(0.76 0.17 160 / 22%), transparent 34rem),
-      linear-gradient(135deg, oklch(0.98 0.02 230), oklch(0.97 0.025 180) 44%, oklch(0.985 0.018 300));
+    background: oklch(0.985 0.01 230);
   }
 
   .admin-grid-overlay {
-    background-image:
-      linear-gradient(to right, oklch(0.55 0.08 245 / 8%) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(0.55 0.08 245 / 8%) 1px, transparent 1px);
-    background-size: 34px 34px;
+    display: none;
   }
 
   .glass-panel {
-    border: 1px solid var(--admin-glass-border);
-    background: var(--admin-glass-surface);
-    box-shadow: var(--admin-glass-shadow);
-    backdrop-filter: blur(22px) saturate(1.3);
+    border: 1px solid oklch(0.9 0.025 240);
+    background: oklch(1 0 0);
+    box-shadow: 0 1px 2px oklch(0.2 0.04 240 / 8%);
   }
 
   .glass-panel-strong {
-    border: 1px solid var(--admin-glass-border);
-    background: var(--admin-glass-surface-strong);
-    box-shadow: var(--admin-glass-shadow);
-    backdrop-filter: blur(24px) saturate(1.35);
+    border: 1px solid oklch(0.9 0.025 240);
+    background: oklch(1 0 0);
+    box-shadow: 0 1px 2px oklch(0.2 0.04 240 / 8%);
+  }
+
+  .tour-drawer-surface {
+    background: oklch(0.985 0.01 230);
+  }
+
+  .tour-drawer-chrome {
+    border: 1px solid oklch(0.9 0.025 240);
+    background: oklch(1 0 0);
+    box-shadow: 0 1px 2px oklch(0.2 0.04 240 / 8%);
+  }
+
+  .tour-drawer-panel {
+    border: 1px solid oklch(0.9 0.025 240);
+    background: oklch(1 0 0);
+    box-shadow: 0 1px 2px oklch(0.2 0.04 240 / 8%);
+    contain: paint;
   }
 
   .glass-input {
-    border-color: oklch(1 0 0 / 72%);
-    background: oklch(1 0 0 / 68%);
-    box-shadow: inset 0 1px 0 oklch(1 0 0 / 65%);
-    backdrop-filter: blur(12px);
+    border-color: oklch(0.88 0.025 240);
+    background: oklch(1 0 0);
+    box-shadow: none;
   }
 
   .glass-input:focus-visible {
