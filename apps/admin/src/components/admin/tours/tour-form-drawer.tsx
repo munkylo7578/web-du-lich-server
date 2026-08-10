@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Controller, type FieldError, type FieldErrors, useFieldArray, useForm } from "react-hook-form";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 
 import { saveTourAction } from "@/app/admin/tours/actions";
@@ -19,15 +19,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { tourFormSchema, type TourFormValues } from "@/features/admin-tours/tour-form-schema";
 import type { AdminTour } from "@/features/admin-tours/tour-types";
 
-const emptyValues: TourFormValues = {
-  translations: { vi: { name: "", description: "" }, en: { name: "", description: "" } },
-  locationId: null,
-  plans: [],
-  existingImages: [],
-};
+type Locale = "vi" | "en";
+
+function createEmptyValues(): TourFormValues {
+  return {
+    translations: { vi: { name: "", description: "" }, en: { name: "", description: "" } },
+    locationId: null,
+    plans: [],
+    existingImages: [],
+  };
+}
 
 function toFormValues(tour: AdminTour | null): TourFormValues {
-  if (!tour) return emptyValues;
+  if (!tour) return createEmptyValues();
   const vi = tour.translations.find((item) => item.locale === "vi");
   const en = tour.translations.find((item) => item.locale === "en");
   return {
@@ -48,11 +52,56 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
 
 export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; tour: AdminTour | null; onOpenChange: (open: boolean) => void }) {
   const values = useMemo(() => toFormValues(tour), [tour]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [message, setMessage] = useState<string>();
+  const [translationLocale, setTranslationLocale] = useState<Locale>("vi");
+  const [planLocales, setPlanLocales] = useState<Record<string, Locale>>({});
   const [isPending, startTransition] = useTransition();
   const form = useForm<TourFormValues>({ resolver: zodResolver(tourFormSchema), values });
   const plans = useFieldArray({ control: form.control, name: "plans" });
+
+  const resetDraft = () => {
+    pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    setPendingImages([]);
+    setMessage(undefined);
+    setTranslationLocale("vi");
+    setPlanLocales({});
+    form.reset(values);
+  };
+
+  const closeAndReset = () => {
+    resetDraft();
+    onOpenChange(false);
+  };
+
+  const activateTabForError = (path: string) => {
+    const parts = path.split(".");
+    if (parts[0] === "translations" && isLocale(parts[1])) {
+      setTranslationLocale(parts[1]);
+    }
+
+    if (parts[0] === "plans" && parts[1] && isLocale(parts[3])) {
+      setPlanLocales((current) => ({ ...current, [parts[1]]: parts[3] }));
+    }
+  };
+
+  const scrollToError = (path: string) => {
+    activateTabForError(path);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const root = scrollAreaRef.current ?? document;
+        const target = root.querySelector<HTMLElement>(`[data-field-path="${escapeAttributeSelectorValue(path)}"]`);
+        if (!target) return;
+
+        target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        const focusTarget = target.matches("input, textarea, select, button, [contenteditable='true']")
+          ? target
+          : target.querySelector<HTMLElement>("input, textarea, select, button:not([disabled]), [contenteditable='true']");
+        focusTarget?.focus({ preventScroll: true });
+      });
+    });
+  };
 
   const submit = form.handleSubmit((data) => {
     setMessage(undefined);
@@ -75,10 +124,13 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
         onOpenChange(false);
       }
     });
+  }, (errors) => {
+    const firstErrorPath = getFirstErrorPath(errors);
+    if (firstErrorPath) scrollToError(firstErrorPath);
   });
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) resetDraft(); onOpenChange(nextOpen); }}>
       <SheetContent fullscreen className="tour-drawer-surface gap-0 text-slate-950" showCloseButton={!isPending}>
         <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
           <div className="mx-auto w-full max-w-[1480px] pr-12">
@@ -88,21 +140,21 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
         </SheetHeader>
 
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-          <div className="relative flex-1 overflow-y-auto px-5 py-6 sm:px-8">
+          <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto px-5 py-6 sm:px-8">
             <div className="mx-auto w-full max-w-[1480px] space-y-7">
             {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
 
             <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
               <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên và mô tả hiển thị trên website client." />
-              <Tabs defaultValue="vi">
+              <Tabs value={translationLocale} onValueChange={(value) => isLocale(value) && setTranslationLocale(value)}>
                 <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
                 {(["vi", "en"] as const).map((locale) => (
                   <TabsContent key={locale} value={locale} className="space-y-4 pt-3">
-                    <FormField label={`Tên tour (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.name?.message}>
-                      <Input {...form.register(`translations.${locale}.name`)} placeholder={locale === "vi" ? "Ví dụ: Khám phá Đà Nẵng 3N2Đ" : "Example: Discover Da Nang 3D2N"} />
+                    <FormField fieldPath={`translations.${locale}.name`} label={`Tên tour (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.name?.message}>
+                      <Input aria-invalid={Boolean(form.formState.errors.translations?.[locale]?.name)} {...form.register(`translations.${locale}.name`)} placeholder={locale === "vi" ? "Ví dụ: Khám phá Đà Nẵng 3N2Đ" : "Example: Discover Da Nang 3D2N"} />
                     </FormField>
-                    <FormField label={`Mô tả (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.description?.message}>
-                      <Controller control={form.control} name={`translations.${locale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của tour..." />} />
+                    <FormField fieldPath={`translations.${locale}.description`} label={`Mô tả (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.description?.message}>
+                      <Controller control={form.control} name={`translations.${locale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của tour..." invalid={Boolean(form.formState.errors.translations?.[locale]?.description)} />} />
                     </FormField>
                   </TabsContent>
                 ))}
@@ -135,9 +187,18 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
               {plans.fields.map((plan, index) => (
                 <div key={plan.id} className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
                   <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium"><GripVertical className="size-4 text-muted-foreground" />Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => plans.remove(index)}><Trash2 /></Button></div>
-                  <Tabs defaultValue="vi">
+                  <Tabs value={planLocales[index] ?? "vi"} onValueChange={(value) => isLocale(value) && setPlanLocales((current) => ({ ...current, [index]: value }))}>
                     <TabsList><TabsTrigger value="vi">VI *</TabsTrigger><TabsTrigger value="en">EN</TabsTrigger></TabsList>
-                    {(["vi", "en"] as const).map((locale) => <TabsContent key={locale} value={locale} className="space-y-3 pt-3"><Input {...form.register(`plans.${index}.name.${locale}`)} placeholder={locale === "vi" ? "Tên chặng" : "Plan name"} /><Controller control={form.control} name={`plans.${index}.description.${locale}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nội dung lịch trình..." />} /></TabsContent>)}
+                    {(["vi", "en"] as const).map((locale) => (
+                      <TabsContent key={locale} value={locale} className="space-y-3 pt-3">
+                        <FormField fieldPath={`plans.${index}.name.${locale}`} label={`Tên chặng (${locale.toUpperCase()})`} error={form.formState.errors.plans?.[index]?.name?.[locale]?.message}>
+                          <Input aria-invalid={Boolean(form.formState.errors.plans?.[index]?.name?.[locale])} {...form.register(`plans.${index}.name.${locale}`)} placeholder={locale === "vi" ? "Tên chặng" : "Plan name"} />
+                        </FormField>
+                        <FormField fieldPath={`plans.${index}.description.${locale}`} label={`Mô tả chặng (${locale.toUpperCase()})`} error={form.formState.errors.plans?.[index]?.description?.[locale]?.message}>
+                          <Controller control={form.control} name={`plans.${index}.description.${locale}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nội dung lịch trình..." invalid={Boolean(form.formState.errors.plans?.[index]?.description?.[locale])} />} />
+                        </FormField>
+                      </TabsContent>
+                    ))}
                   </Tabs>
                 </div>
               ))}
@@ -153,7 +214,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
 
           <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
             <div className="mx-auto flex w-full max-w-[1480px] flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>Hủy</Button>
+              <Button type="button" variant="outline" disabled={isPending} onClick={closeAndReset}>Hủy</Button>
               <Button type="submit" disabled={isPending}>{isPending ? "Đang lưu..." : tour ? "Lưu thay đổi" : "Tạo tour"}</Button>
             </div>
           </SheetFooter>
@@ -167,6 +228,46 @@ function SectionHeading({ title, description }: { title: string; description: st
   return <div><h3 className="font-heading text-base font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{description}</p></div>;
 }
 
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <div className="space-y-2"><Label>{label}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
+function FormField({ fieldPath, label, error, children }: { fieldPath: string; label: string; error?: string; children: React.ReactNode }) {
+  return <div data-field-path={fieldPath} className="space-y-2"><Label>{label}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
+}
+
+function isLocale(value: unknown): value is Locale {
+  return value === "vi" || value === "en";
+}
+
+function getFirstErrorPath(errors: FieldErrors<TourFormValues>): string | undefined {
+  return findErrorPath(errors);
+}
+
+function findErrorPath(errors: unknown, parentPath = ""): string | undefined {
+  if (!errors || typeof errors !== "object") return undefined;
+
+  if ("message" in errors && typeof (errors as FieldError).message === "string") {
+    return parentPath;
+  }
+
+  if (Array.isArray(errors)) {
+    for (const [index, item] of errors.entries()) {
+      const path = findErrorPath(item, joinPath(parentPath, String(index)));
+      if (path) return path;
+    }
+    return undefined;
+  }
+
+  for (const [key, value] of Object.entries(errors)) {
+    if (["ref", "type", "types", "message"].includes(key)) continue;
+    const path = findErrorPath(value, joinPath(parentPath, key));
+    if (path) return path;
+  }
+
+  return undefined;
+}
+
+function joinPath(parentPath: string, key: string) {
+  return parentPath ? `${parentPath}.${key}` : key;
+}
+
+function escapeAttributeSelectorValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }

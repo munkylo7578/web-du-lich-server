@@ -48,7 +48,15 @@ export function ImageUploadField({
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
       const files = Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith("image/"));
-      if (files.length) addFiles(files);
+      if (files.length) {
+        const target = event.target as Element | null;
+        console.info("[ImageUploadField] global paste image diagnostics", {
+          fileTypes: files.map((file) => file.type),
+          targetTag: target?.tagName,
+          insideRichTextEditor: Boolean(target?.closest(".ProseMirror")),
+        });
+        addFiles(files);
+      }
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
