@@ -82,7 +82,9 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
     }
 
     if (parts[0] === "plans" && parts[1] && isLocale(parts[3])) {
-      setPlanLocales((current) => ({ ...current, [parts[1]]: parts[3] }));
+      const planIndex = parts[1];
+      const planLocale: Locale = parts[3];
+      setPlanLocales((current) => ({ ...current, [planIndex]: planLocale }));
     }
   };
 
@@ -187,7 +189,13 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
               {plans.fields.map((plan, index) => (
                 <div key={plan.id} className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
                   <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium"><GripVertical className="size-4 text-muted-foreground" />Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => plans.remove(index)}><Trash2 /></Button></div>
-                  <Tabs value={planLocales[index] ?? "vi"} onValueChange={(value) => isLocale(value) && setPlanLocales((current) => ({ ...current, [index]: value }))}>
+                  <Tabs
+                    value={planLocales[index] ?? "vi"}
+                    onValueChange={(value) => {
+                      if (!isLocale(value)) return;
+                      setPlanLocales((current) => ({ ...current, [index]: value }));
+                    }}
+                  >
                     <TabsList><TabsTrigger value="vi">VI *</TabsTrigger><TabsTrigger value="en">EN</TabsTrigger></TabsList>
                     {(["vi", "en"] as const).map((locale) => (
                       <TabsContent key={locale} value={locale} className="space-y-3 pt-3">
