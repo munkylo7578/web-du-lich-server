@@ -5,15 +5,15 @@ import { revalidatePath } from "next/cache";
 import { Image } from "@/domains/image/domain";
 import {
   Tour,
+  TourDestination,
   TourImageRef,
-  TourLocation,
   TourPlan,
   type TourTranslationSnapshot,
 } from "@/domains/tour/domain";
 import { requireSession } from "@/lib/auth/session";
-import { searchLocations, tourRepository } from "@/features/admin-tours/repository";
-import { type PendingImageMeta, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
-import type { AdminLocation } from "@/features/admin-tours/tour-types";
+import { saveDestinationRecord, searchDestinations, searchWards, tourRepository } from "@/features/admin-tours/repository";
+import { destinationEditorSchema, type PendingImageMeta, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
+import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
 import { removeUploadedFiles, saveTourImage } from "@/features/admin-tours/upload";
 
 export type TourActionState = {
@@ -22,9 +22,50 @@ export type TourActionState = {
   fieldErrors?: Record<string, string[]>;
 };
 
-export async function searchLocationsAction(query: string): Promise<AdminLocation[]> {
+export async function searchWardsAction(query: string): Promise<AdminWard[]> {
   await requireSession();
-  return searchLocations(query);
+  return searchWards(query);
+}
+
+export async function searchDestinationsAction(query: string): Promise<AdminDestination[]> {
+  await requireSession();
+  return searchDestinations(query);
+}
+
+export async function saveDestinationAction(payload: unknown): Promise<TourActionState & { destination?: AdminDestination }> {
+  await requireSession();
+
+  const parsed = destinationEditorSchema.safeParse(payload);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Vui lòng kiểm tra lại thông tin điểm đến.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  const data = parsed.data;
+  const destinationId = data.destinationId ?? crypto.randomUUID();
+  const destination = await saveDestinationRecord({
+    destinationId,
+    wardCodes: [...new Set(data.wardCodes)],
+    translations: [
+      {
+        locale: "vi",
+        name: data.translations.vi.name,
+        description: data.translations.vi.description,
+      },
+      ...(data.translations.en.name
+        ? [{
+            locale: "en" as const,
+            name: data.translations.en.name,
+            description: data.translations.en.description || undefined,
+          }]
+        : []),
+    ],
+  });
+
+  return { success: true, message: "Đã lưu điểm đến.", destination };
 }
 
 export async function saveTourAction(formData: FormData): Promise<TourActionState> {
@@ -82,7 +123,9 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
           }]
         : []),
     ];
-    const location = data.locationId ? TourLocation.create({ id: data.locationId }) : undefined;
+    const destinations = data.destinations.map((destination, index) =>
+      TourDestination.create({ destinationId: destination.destinationId, sortOrder: index }),
+    );
     const plans = data.plans.map((plan, index) =>
       TourPlan.create({ ...plan, sortOrder: index }),
     );
@@ -90,10 +133,10 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     const tour = data.id ? await tourRepository.findById(data.id) : null;
     if (data.id && !tour) return { success: false, message: "Không tìm thấy tour." };
 
-    const aggregate = tour || Tour.create({ translations, location, plans });
+    const aggregate = tour || Tour.create({ translations, destinations, plans });
     if (tour) {
       aggregate.replaceTranslations(translations);
-      aggregate.updateLocation(location);
+      aggregate.replaceDestinations(destinations);
       aggregate.replacePlans(plans);
     }
 

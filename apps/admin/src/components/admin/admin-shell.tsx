@@ -7,13 +7,9 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  ImageIcon,
   MapPin,
   Menu,
   PlaneTakeoff,
-  Settings,
-  ShoppingBag,
-  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,6 +40,11 @@ const adminNavItems: AdminNavItem[] = [
     title: "Tours",
     href: "/admin/tours",
     icon: PlaneTakeoff,
+  },
+  {
+    title: "Điểm đến",
+    href: "/admin/destinations",
+    icon: MapPin,
   },
   // {
   //   title: "Bookings",
@@ -151,22 +152,6 @@ function AdminNavigation({
         );
       })}
     </nav>
-  );
-}
-
-function UserBadge({ username, compact = false }: { username: string; compact?: boolean }) {
-  return (
-    <div className={cn("flex items-center gap-3", compact && "justify-center")}>
-      {!compact && (
-        <div className="hidden text-right sm:block">
-          <p className="font-medium">{username}</p>
-          <p className="text-xs text-slate-600">Quản trị viên</p>
-        </div>
-      )}
-      <div className="grid size-10 place-items-center rounded-full border bg-white font-semibold uppercase shadow-sm">
-        {username.slice(0, 1)}
-      </div>
-    </div>
   );
 }
 

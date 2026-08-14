@@ -2,7 +2,6 @@ import { relations, sql } from "drizzle-orm";
 import {
   bigint,
   check,
-  doublePrecision,
   index,
   integer,
   jsonb,
@@ -16,6 +15,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { wards } from "./geo-location";
+
 export const TOUR_LOCALES = ["vi", "en"] as const;
 
 export type TourLocale = (typeof TOUR_LOCALES)[number];
@@ -28,58 +29,12 @@ export type TourPlanSnapshot = {
   sortOrder: number;
 };
 
-export type LocationSnapshot = {
-  id: string;
-  name: string;
-  searchName: string;
-  latitude: number;
-  longitude: number;
-  country: string;
-};
-
-export const locations = pgTable(
-  "locations",
-  {
-    id: uuid("id").primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    searchName: text("search_name").notNull(),
-    latitude: doublePrecision("latitude").notNull(),
-    longitude: doublePrecision("longitude").notNull(),
-    country: varchar("country", { length: 128 }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    check("locations_name_not_blank_check", sql`char_length(trim(${table.name})) > 0`),
-    check(
-      "locations_search_name_not_blank_check",
-      sql`char_length(trim(${table.searchName})) > 0`,
-    ),
-    check("locations_country_not_blank_check", sql`char_length(trim(${table.country})) > 0`),
-    check("locations_latitude_check", sql`${table.latitude} between -90 and 90`),
-    check("locations_longitude_check", sql`${table.longitude} between -180 and 180`),
-    index("locations_name_country_idx").on(table.name, table.country),
-    index("locations_search_name_trgm_idx").using(
-      "gin",
-      sql`${table.searchName} gin_trgm_ops`,
-    ),
-  ],
-);
-
 export const tourImageRole = pgEnum("tour_image_role", ["cover", "gallery"]);
 
 export const tours = pgTable(
   "tours",
   {
     id: uuid("id").primaryKey(),
-    locationId: uuid("location_id").references(() => locations.id, {
-      onDelete: "set null",
-      onUpdate: "cascade",
-    }),
     plans: jsonb("plans").$type<TourPlanSnapshot[]>().default(sql`'[]'::jsonb`).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -89,7 +44,6 @@ export const tours = pgTable(
       .notNull(),
   },
   (table) => [
-    index("tours_location_id_idx").on(table.locationId),
     check("tours_plans_array_check", sql`jsonb_typeof(${table.plans}) = 'array'`),
   ],
 );
@@ -119,6 +73,69 @@ export const tourTranslations = pgTable(
       sql`${table.description} is null or char_length(trim(${table.description})) >= 10`,
     ),
     index("tour_translations_locale_name_idx").on(table.locale, table.name),
+  ],
+);
+
+export const destinations = pgTable("destinations", {
+  id: uuid("id").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const destinationTranslations = pgTable(
+  "destination_translations",
+  {
+    destinationId: uuid("destination_id")
+      .notNull()
+      .references(() => destinations.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    locale: tourLocale("locale").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.destinationId, table.locale] }),
+    check(
+      "destination_translations_name_length_check",
+      sql`char_length(trim(${table.name})) >= 2`,
+    ),
+    index("destination_translations_locale_name_idx").on(table.locale, table.name),
+  ],
+);
+
+export const destinationWards = pgTable(
+  "destination_wards",
+  {
+    destinationId: uuid("destination_id")
+      .notNull()
+      .references(() => destinations.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    wardCode: varchar("ward_code", { length: 20 })
+      .notNull()
+      .references(() => wards.code, { onDelete: "restrict", onUpdate: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.destinationId, table.wardCode] }),
+    index("destination_wards_ward_code_idx").on(table.wardCode),
+  ],
+);
+
+export const tourDestinations = pgTable(
+  "tour_destinations",
+  {
+    tourId: uuid("tour_id")
+      .notNull()
+      .references(() => tours.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    destinationId: uuid("destination_id")
+      .notNull()
+      .references(() => destinations.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tourId, table.destinationId] }),
+    check("tour_destinations_sort_order_check", sql`${table.sortOrder} >= 0`),
+    uniqueIndex("tour_destinations_tour_sort_order_idx").on(table.tourId, table.sortOrder),
+    index("tour_destinations_destination_id_idx").on(table.destinationId),
   ],
 );
 
@@ -174,23 +191,51 @@ export const tourImages = pgTable(
   ],
 );
 
-export const locationsRelations = relations(locations, ({ many }) => ({
-  tours: many(tours),
-}));
-
-export const toursRelations = relations(tours, ({ many, one }) => ({
+export const toursRelations = relations(tours, ({ many }) => ({
   imageLinks: many(tourImages),
   translations: many(tourTranslations),
-  location: one(locations, {
-    fields: [tours.locationId],
-    references: [locations.id],
-  }),
+  destinationLinks: many(tourDestinations),
 }));
 
 export const tourTranslationsRelations = relations(tourTranslations, ({ one }) => ({
   tour: one(tours, {
     fields: [tourTranslations.tourId],
     references: [tours.id],
+  }),
+}));
+
+export const destinationsRelations = relations(destinations, ({ many }) => ({
+  translations: many(destinationTranslations),
+  wardLinks: many(destinationWards),
+  tourLinks: many(tourDestinations),
+}));
+
+export const destinationTranslationsRelations = relations(destinationTranslations, ({ one }) => ({
+  destination: one(destinations, {
+    fields: [destinationTranslations.destinationId],
+    references: [destinations.id],
+  }),
+}));
+
+export const destinationWardsRelations = relations(destinationWards, ({ one }) => ({
+  destination: one(destinations, {
+    fields: [destinationWards.destinationId],
+    references: [destinations.id],
+  }),
+  ward: one(wards, {
+    fields: [destinationWards.wardCode],
+    references: [wards.code],
+  }),
+}));
+
+export const tourDestinationsRelations = relations(tourDestinations, ({ one }) => ({
+  tour: one(tours, {
+    fields: [tourDestinations.tourId],
+    references: [tours.id],
+  }),
+  destination: one(destinations, {
+    fields: [tourDestinations.destinationId],
+    references: [destinations.id],
   }),
 }));
 

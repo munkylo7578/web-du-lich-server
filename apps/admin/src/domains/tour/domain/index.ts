@@ -5,7 +5,12 @@ export {
   type TourTranslationSnapshot,
 } from "./tour";
 export { TourId } from "./tour-id";
-export type { TourRepository, TourSaveImage } from "./tour-repository";
+export type { TourRepository, TourSaveDestination, TourSaveImage } from "./tour-repository";
+export {
+  TourDestination,
+  type TourDestinationProps,
+  type TourDestinationSnapshot,
+} from "./tour-destination";
 export { TourImageRef, type TourImageRefProps, type TourImageRefSnapshot, type TourImageRole } from "./tour-image-ref";
 export {
   DEFAULT_TOUR_LOCALE,
@@ -14,5 +19,4 @@ export {
   type LocalizedText,
   type TourLocale,
 } from "./tour-locale";
-export { TourLocation, type TourLocationProps } from "./tour-location";
 export { TourPlan, type TourPlanProps, type TourPlanSnapshot } from "./tour-plan";

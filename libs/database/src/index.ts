@@ -3,7 +3,7 @@ import postgres from "postgres";
 
 import * as schema from "./schema";
 
-if (!process.env.DATABASE_URL) {
+if (!process.env["DATABASE_URL"]) {
   throw new Error("DATABASE_URL is missing. Add it to .env before using the database client.");
 }
 
@@ -13,11 +13,11 @@ const globalForDatabase = globalThis as typeof globalThis & {
 
 const client =
   globalForDatabase.postgresClient ??
-  postgres(process.env.DATABASE_URL, {
+  postgres(process.env["DATABASE_URL"], {
     prepare: false,
   });
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env["NODE_ENV"] !== "production") {
   globalForDatabase.postgresClient = client;
 }
 

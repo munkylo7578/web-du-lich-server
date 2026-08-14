@@ -1,11 +1,11 @@
 import { TourId } from "./tour-id";
+import { TourDestination, type TourDestinationSnapshot } from "./tour-destination";
 import { TourImageRef, type TourImageRefSnapshot } from "./tour-image-ref";
 import {
   DEFAULT_TOUR_LOCALE,
   isTourLocale,
   type TourLocale,
 } from "./tour-locale";
-import { TourLocation, type TourLocationProps } from "./tour-location";
 import { TourPlan, type TourPlanSnapshot } from "./tour-plan";
 
 export type TourTranslationSnapshot = {
@@ -17,7 +17,7 @@ export type TourTranslationSnapshot = {
 export type TourSnapshot = {
   id: string;
   translations: TourTranslationSnapshot[];
-  location?: TourLocationProps;
+  destinations: TourDestinationSnapshot[];
   plans: TourPlanSnapshot[];
   images: TourImageRefSnapshot[];
   createdAt: Date;
@@ -26,7 +26,7 @@ export type TourSnapshot = {
 
 export type CreateTourProps = {
   translations: TourTranslationSnapshot[];
-  location?: TourLocation;
+  destinations?: TourDestination[];
   plans?: TourPlan[];
   images?: TourImageRef[];
 };
@@ -35,7 +35,7 @@ export class Tour {
   private constructor(
     private readonly id: TourId,
     private translations: TourTranslationSnapshot[],
-    private location: TourLocation | undefined,
+    private destinations: TourDestination[],
     private plans: TourPlan[],
     private images: TourImageRef[],
     private readonly createdAt: Date,
@@ -48,7 +48,7 @@ export class Tour {
     return new Tour(
       TourId.create(),
       Tour.validateTranslations(props.translations),
-      props.location,
+      Tour.validateDestinations(props.destinations ?? []),
       Tour.validatePlans(props.plans ?? []),
       Tour.validateImages(props.images ?? []),
       now,
@@ -60,7 +60,7 @@ export class Tour {
     return new Tour(
       TourId.create(snapshot.id),
       Tour.validateTranslations(snapshot.translations),
-      snapshot.location ? TourLocation.create(snapshot.location) : undefined,
+      Tour.validateDestinations(snapshot.destinations.map(TourDestination.fromSnapshot)),
       Tour.validatePlans(snapshot.plans.map(TourPlan.fromSnapshot)),
       Tour.validateImages(snapshot.images.map(TourImageRef.fromSnapshot)),
       snapshot.createdAt,
@@ -83,8 +83,8 @@ export class Tour {
     this.touch();
   }
 
-  updateLocation(location?: TourLocation): void {
-    this.location = location;
+  replaceDestinations(destinations: TourDestination[]): void {
+    this.destinations = Tour.validateDestinations(destinations);
     this.touch();
   }
 
@@ -118,11 +118,7 @@ export class Tour {
     return {
       id: this.id.value,
       translations: this.translations.map((translation) => ({ ...translation })),
-      location: this.location
-        ? {
-            id: this.location.id,
-          }
-        : undefined,
+      destinations: this.destinations.map((destination) => destination.toSnapshot()),
       plans: this.plans.map((plan) => plan.toSnapshot()),
       images: this.images.map((image) => image.toSnapshot()),
       createdAt: new Date(this.createdAt),
@@ -198,6 +194,26 @@ export class Tour {
     }
 
     return [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  private static validateDestinations(destinations: TourDestination[]): TourDestination[] {
+    const destinationIds = new Set<string>();
+    const sortOrders = new Set<number>();
+
+    for (const destination of destinations) {
+      if (destinationIds.has(destination.destinationId)) {
+        throw new Error("Tour destination ids must be unique.");
+      }
+
+      if (sortOrders.has(destination.sortOrder)) {
+        throw new Error("Tour destination sort orders must be unique.");
+      }
+
+      destinationIds.add(destination.destinationId);
+      sortOrders.add(destination.sortOrder);
+    }
+
+    return [...destinations].sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
   private static validateImages(images: TourImageRef[]): TourImageRef[] {

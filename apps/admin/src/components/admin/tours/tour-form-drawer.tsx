@@ -6,8 +6,8 @@ import { Controller, type FieldError, type FieldErrors, useFieldArray, useForm }
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 
 import { saveTourAction } from "@/app/admin/tours/actions";
+import { DestinationManager } from "./destination-manager";
 import { ImageUploadField, type PendingImage } from "./image-upload-field";
-import { LocationSelect } from "./location-select";
 import { RichTextEditor } from "./rich-text-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ type Locale = "vi" | "en";
 function createEmptyValues(): TourFormValues {
   return {
     translations: { vi: { name: "", description: "" }, en: { name: "", description: "" } },
-    locationId: null,
+    destinations: [],
     plans: [],
     existingImages: [],
   };
@@ -40,7 +40,10 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
       vi: { name: vi?.name || "", description: vi?.description || "" },
       en: { name: en?.name || "", description: en?.description || "" },
     },
-    locationId: tour.locationId,
+    destinations: tour.destinations.map((destination) => ({
+      destinationId: destination.destinationId,
+      sortOrder: destination.sortOrder,
+    })),
     plans: tour.plans.map((plan) => ({
       sortOrder: plan.sortOrder,
       name: { vi: plan.name.vi || "", en: plan.name.en || "" },
@@ -165,14 +168,15 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
 
             <Separator />
             <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
-              <SectionHeading title="Vị trí" description="Chọn địa chỉ hiển thị cho tour. Có thể để trống và bổ sung sau." />
+              <SectionHeading title="Điểm đến" description="Chọn hoặc tạo nhiều điểm đến. Mỗi điểm đến có thể liên kết nhiều phường/xã." />
               <Controller
                 control={form.control}
-                name="locationId"
+                name="destinations"
                 render={({ field }) => (
-                  <LocationSelect
+                  <DestinationManager
                     value={field.value}
-                    selectedLocation={tour?.location ?? null}
+                    existingDestinations={tour?.destinations ?? []}
+                    error={form.formState.errors.destinations?.message}
                     onChange={field.onChange}
                   />
                 )}

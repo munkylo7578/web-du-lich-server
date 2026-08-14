@@ -2,6 +2,21 @@ import { z } from "zod";
 
 const optionalHtml = z.string().trim().optional().default("");
 
+export const destinationEditorSchema = z.object({
+  destinationId: z.string().uuid().optional(),
+  wardCodes: z.array(z.string().trim().min(1)).default([]),
+  translations: z.object({
+    vi: z.object({
+      name: z.string().trim().min(2, "Tên điểm đến cần ít nhất 2 ký tự."),
+      description: optionalHtml,
+    }),
+    en: z.object({
+      name: z.string().trim().optional().default(""),
+      description: optionalHtml,
+    }),
+  }),
+});
+
 export const localizedTextSchema = z.object({
   vi: z.string().trim().min(1, "Nội dung tiếng Việt là bắt buộc."),
   en: z.string().trim().optional().default(""),
@@ -22,7 +37,12 @@ export const tourFormSchema = z.object({
       description: optionalHtml,
     }),
   }),
-  locationId: z.string().uuid().nullable(),
+  destinations: z.array(
+    z.object({
+      destinationId: z.string().uuid(),
+      sortOrder: z.number().int().min(0),
+    }),
+  ),
   plans: z.array(
     z.object({
       sortOrder: z.number().int().min(0),
@@ -42,6 +62,12 @@ export const tourFormSchema = z.object({
 });
 
 export type TourFormValues = z.input<typeof tourFormSchema>;
+
+export type DestinationFormValue = TourFormValues["destinations"][number];
+
+export type DestinationEditorFormValues = z.input<typeof destinationEditorSchema>;
+
+export type DestinationEditorValues = z.output<typeof destinationEditorSchema>;
 
 export type PendingImageMeta = {
   clientId: string;
