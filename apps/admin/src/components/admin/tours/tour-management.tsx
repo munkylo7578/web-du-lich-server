@@ -60,19 +60,19 @@ export function TourManagement({ tours }: { tours: AdminTour[] }) {
     <>
       <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Nội dung</p><h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách tour</h1><p className="mt-2 max-w-2xl text-slate-650 text-slate-600">Quản lý nội dung đa ngôn ngữ, lịch trình và hình ảnh tour ở một nơi.</p></div>
-          <Button size="lg" className="glass-gradient-button h-11 rounded-2xl px-5" onClick={() => { setEditingTour(null); setDrawerOpen(true); }}><Plus data-icon="inline-start" />Tạo tour mới</Button>
+          <div><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-800">Nội dung</p><h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách tour</h1><p className="mt-2 max-w-2xl font-medium text-slate-700">Quản lý nội dung đa ngôn ngữ, lịch trình và hình ảnh tour ở một nơi.</p></div>
+          <Button size="lg" className="solid-accent-button h-11 rounded-2xl px-5" onClick={() => { setEditingTour(null); setDrawerOpen(true); }}><Plus data-icon="inline-start" />Tạo tour mới</Button>
         </div>
 
-        <Card className="gap-0 overflow-hidden rounded-[28px] border bg-white py-0 shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-white/55 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="gap-0 overflow-hidden rounded-[28px] border border-cyan-900/15 bg-white/95 py-0 shadow-[0_18px_55px_-42px_rgba(8,47,73,0.55)]">
+          <div className="flex flex-col gap-3 border-b border-cyan-900/15 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên tour..." /></div>
-            <p className="rounded-full border bg-white px-3 py-1 text-sm text-slate-600">{table.getFilteredRowModel().rows.length} tour</p>
+            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{table.getFilteredRowModel().rows.length} tour</p>
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-white/45 hover:bg-transparent">{group.headers.map((header) => <TableHead key={header.id} className="text-slate-600">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-cyan-900/15 hover:bg-transparent">{group.headers.map((header) => <TableHead key={header.id} className="font-semibold text-slate-700">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
                 <TableBody>{table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => <TableRow key={row.id}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={columns.length} className="h-52 text-center"><div className="mx-auto flex max-w-sm flex-col items-center"><div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div><p className="font-medium">Chưa tìm thấy tour</p><p className="mt-1 text-sm text-muted-foreground">Tạo tour mới hoặc thử từ khóa khác.</p></div></TableCell></TableRow>}</TableBody>
               </Table>
             </div>

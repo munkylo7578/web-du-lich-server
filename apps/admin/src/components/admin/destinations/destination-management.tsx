@@ -55,7 +55,7 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
       header: "Điểm đến",
       cell: ({ row, getValue }) => (
         <div className="flex min-w-72 items-start gap-3">
-          <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-cyan-50 text-cyan-700">
+          <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-800">
             <MapPin className="size-5" />
           </div>
           <div>
@@ -158,13 +158,13 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
       <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Dữ liệu dùng chung</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-800">Dữ liệu dùng chung</p>
             <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách điểm đến</h1>
-            <p className="mt-2 max-w-2xl text-slate-600">Quản lý điểm đến một lần, sau đó tìm và gắn vào nhiều tour khác nhau.</p>
+            <p className="mt-2 max-w-2xl font-medium text-slate-700">Quản lý điểm đến một lần, sau đó tìm và gắn vào nhiều tour khác nhau.</p>
           </div>
           <Button
             size="lg"
-            className="glass-gradient-button h-11 rounded-2xl px-5"
+            className="solid-accent-button h-11 rounded-2xl px-5"
             onClick={() => {
               setEditingDestination(null);
               setDrawerOpen(true);
@@ -174,18 +174,18 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
           </Button>
         </div>
 
-        <Card className="gap-0 overflow-hidden rounded-[28px] border bg-white py-0 shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-white/55 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="gap-0 overflow-hidden rounded-[28px] border border-cyan-900/15 bg-white/95 py-0 shadow-[0_18px_55px_-42px_rgba(8,47,73,0.55)]">
+          <div className="flex flex-col gap-3 border-b border-cyan-900/15 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} />
               <Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên, mô tả điểm đến..." />
             </div>
-            <p className="rounded-full border bg-white px-3 py-1 text-sm text-slate-600">{table.getFilteredRowModel().rows.length} điểm đến</p>
+            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{table.getFilteredRowModel().rows.length} điểm đến</p>
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-white/45 hover:bg-transparent">{group.headers.map((header) => <TableHead key={header.id} className="text-slate-600">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-cyan-900/15 hover:bg-transparent">{group.headers.map((header) => <TableHead key={header.id} className="font-semibold text-slate-700">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
                 <TableBody>{table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => <TableRow key={row.id}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={columns.length} className="h-52 text-center"><div className="mx-auto flex max-w-sm flex-col items-center"><div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div><p className="font-medium">Chưa tìm thấy điểm đến</p><p className="mt-1 text-sm text-muted-foreground">Tạo điểm đến mới hoặc thử từ khóa khác.</p></div></TableCell></TableRow>}</TableBody>
               </Table>
             </div>
@@ -345,7 +345,7 @@ function DestinationFormDrawer({
                   <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
                   {(["vi", "en"] as const).map((currentLocale) => (
                     <TabsContent key={currentLocale} value={currentLocale} className="space-y-4 pt-3">
-                      <FormField label={`Tên điểm đến (${currentLocale.toUpperCase()})`} error={form.formState.errors.translations?.[currentLocale]?.name?.message}>
+                      <FormField label={`Tên điểm đến (${currentLocale.toUpperCase()})`} required={currentLocale === "vi"} error={form.formState.errors.translations?.[currentLocale]?.name?.message}>
                         <Input aria-invalid={Boolean(form.formState.errors.translations?.[currentLocale]?.name)} {...form.register(`translations.${currentLocale}.name`)} placeholder={currentLocale === "vi" ? "Ví dụ: Hà Giang" : "Example: Ha Giang"} />
                       </FormField>
                       <FormField label={`Mô tả (${currentLocale.toUpperCase()})`} error={form.formState.errors.translations?.[currentLocale]?.description?.message}>
@@ -365,9 +365,9 @@ function DestinationFormDrawer({
                     <Input value={wardQuery} onChange={(event) => searchWards(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm phường/xã, tỉnh/thành" />
                   </div>
                   {wardQuery.trim().length >= 2 && (
-                    <div className="max-h-56 overflow-y-auto rounded-2xl border bg-white p-2 shadow-sm">
+                    <div className="max-h-56 overflow-y-auto rounded-2xl border border-cyan-900/15 bg-white p-2 shadow-[0_18px_45px_-35px_rgba(8,47,73,0.65)]">
                       {isPending ? <p className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Đang tìm phường/xã...</p> : wardResults.length ? wardResults.map((ward) => (
-                        <button key={ward.code} type="button" className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-cyan-50" onClick={() => addWard(ward)}>
+                        <button key={ward.code} type="button" className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-cyan-100" onClick={() => addWard(ward)}>
                           <span className="font-medium">{ward.fullName || ward.name}</span>
                           <span className="ml-2 text-xs text-muted-foreground">{ward.provinceName}</span>
                         </button>
@@ -395,8 +395,8 @@ function DestinationFormDrawer({
 
           <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
             <div className="mx-auto flex w-full max-w-[1180px] flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>Hủy</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? "Đang lưu..." : destination ? "Lưu thay đổi" : "Tạo điểm đến"}</Button>
+              <Button type="button" variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending} onClick={() => onOpenChange(false)}>Hủy</Button>
+              <Button type="submit" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending}>{isPending ? "Đang lưu..." : destination ? "Lưu thay đổi" : "Tạo điểm đến"}</Button>
             </div>
           </SheetFooter>
         </form>
@@ -434,8 +434,12 @@ function SectionHeading({ title, description }: { title: string; description: st
   return <div><h3 className="font-heading text-base font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{description}</p></div>;
 }
 
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <div className="space-y-2"><Label>{label}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
+function FormField({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  return <div className="space-y-2"><Label className="gap-0">{label}{required && <RequiredMark />}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
+}
+
+function RequiredMark() {
+  return <span className="ml-0.5 text-destructive" aria-label="required">*</span>;
 }
 
 function getDestinationName(destination: AdminDestination): string {

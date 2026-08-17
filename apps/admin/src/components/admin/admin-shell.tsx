@@ -8,8 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
-  Menu,
   PlaneTakeoff,
+  Settings,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -64,12 +64,11 @@ const adminNavItems: AdminNavItem[] = [
   //   icon: ImageIcon,
   //   disabled: true,
   // },
-  // {
-  //   title: "Settings",
-  //   href: "/admin/settings",
-  //   icon: Settings,
-  //   disabled: true,
-  // },
+  {
+    title: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+  },
 ] as const;
 
 function isNavItemActive(pathname: string, href: string) {
@@ -83,13 +82,13 @@ function isNavItemActive(pathname: string, href: string) {
 function BrandMark({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-      <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-cyan-600 text-white shadow-sm">
+      <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-cyan-700 text-white shadow-[0_14px_28px_-18px_rgba(14,116,144,0.95)]">
         <MapPin className="size-5" />
       </div>
       {!collapsed && (
         <div className="min-w-0">
-          <p className="font-heading font-semibold leading-tight">Travel Admin</p>
-          <p className="truncate text-xs text-slate-600">Điều hành nội dung</p>
+          <p className="font-heading font-semibold leading-tight text-slate-950">Travel Admin</p>
+          <p className="truncate text-xs font-medium text-slate-700">Điều hành nội dung</p>
         </div>
       )}
     </div>
@@ -126,8 +125,8 @@ function AdminNavigation({
           "group flex h-11 items-center gap-3 rounded-2xl px-3 text-sm font-medium transition-all",
           collapsed && "justify-center px-0",
           active
-            ? "bg-slate-950 text-white shadow-sm"
-            : "text-slate-600 hover:bg-white/52 hover:text-slate-950",
+            ? "bg-cyan-950 text-white shadow-[0_14px_34px_-22px_rgba(8,47,73,0.9)]"
+            : "text-slate-700 hover:bg-cyan-50/90 hover:text-cyan-950",
           item.disabled && "cursor-not-allowed opacity-55 hover:bg-transparent hover:text-slate-600",
         );
 
@@ -174,7 +173,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="rounded-full bg-white/45"
+              className="rounded-full bg-cyan-50/90 text-cyan-950 hover:bg-cyan-100"
               aria-label="Thu gọn sidebar"
               onClick={() => setCollapsed(true)}
             >
@@ -188,7 +187,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="mx-auto mb-4 rounded-full bg-white/45"
+            className="mx-auto mb-4 rounded-full bg-cyan-50/90 text-cyan-950 hover:bg-cyan-100"
             aria-label="Mở rộng sidebar"
             onClick={() => setCollapsed(false)}
           >
@@ -198,14 +197,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
 
         <AdminNavigation collapsed={collapsed} />
 
-        <div className="mt-auto rounded-3xl border bg-white p-3">
-          {/* <UserBadge username={username} compact={collapsed} />
-          {!collapsed && (
-            <p className="mt-3 text-xs leading-relaxed text-slate-600">
-              Sidebar đã sẵn cấu trúc để thêm các module CRUD mới.
-            </p>
-          )} */}
-        </div>
+     
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -227,33 +219,10 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
       <div
         className={cn(
           "relative flex min-h-screen flex-col transition-[padding] duration-300",
-          collapsed ? "md:pl-[6.5rem]" : "md:pl-[19rem]",
+          collapsed ? "md:pl-[4.5rem]" : "md:pl-[16.5rem]",
         )}
       >
-        <header className="glass-panel sticky top-0 z-30 rounded-none border-x-0 border-t-0 bg-white">
-          <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-lg"
-                className="rounded-2xl bg-white/50 md:hidden"
-                aria-label="Mở sidebar quản trị"
-                onClick={() => setMobileOpen(true)}
-              >
-                <Menu className="size-5" />
-              </Button>
-              <div className="md:hidden">
-                <BrandMark />
-              </div>
-              <div className="hidden md:block">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Admin workspace</p>
-                <p className="mt-1 text-sm text-slate-600">Quản lý nội dung, dữ liệu và cấu hình website</p>
-              </div>
-            </div>
-            {/* <UserBadge username={username} /> */}
-          </div>
-        </header>
+       
 
         <main className="relative flex-1 px-4 py-8 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-[1500px]">{children}</div>

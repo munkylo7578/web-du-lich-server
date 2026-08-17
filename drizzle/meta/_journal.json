@@ -22,6 +22,27 @@
       "when": 1786679700000,
       "tag": "0002_destination_description_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786956100000,
+      "tag": "0003_site_settings_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786956800000,
+      "tag": "0004_site_settings_description_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786959100000,
+      "tag": "0005_site_settings_can_delete",
+      "breakpoints": true
     }
   ]
 }

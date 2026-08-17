@@ -155,7 +155,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
                 <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
                 {(["vi", "en"] as const).map((locale) => (
                   <TabsContent key={locale} value={locale} className="space-y-4 pt-3">
-                    <FormField fieldPath={`translations.${locale}.name`} label={`Tên tour (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.name?.message}>
+                    <FormField fieldPath={`translations.${locale}.name`} label={`Tên tour (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.translations?.[locale]?.name?.message}>
                       <Input aria-invalid={Boolean(form.formState.errors.translations?.[locale]?.name)} {...form.register(`translations.${locale}.name`)} placeholder={locale === "vi" ? "Ví dụ: Khám phá Đà Nẵng 3N2Đ" : "Example: Discover Da Nang 3D2N"} />
                     </FormField>
                     <FormField fieldPath={`translations.${locale}.description`} label={`Mô tả (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.description?.message}>
@@ -185,13 +185,13 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
 
             <Separator />
             <section className="tour-drawer-panel relative z-0 space-y-4 rounded-[28px] p-5 sm:p-7">
-              <div className="flex items-center justify-between gap-4">
-                <SectionHeading title="Lịch trình" description="Tên và mô tả từng ngày theo ngôn ngữ." />
-                <Button type="button" variant="outline" onClick={() => plans.append({ sortOrder: plans.fields.length, name: { vi: "", en: "" }, description: { vi: "", en: "" } })}><Plus data-icon="inline-start" />Thêm chặng</Button>
-              </div>
-              {!plans.fields.length && <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">Chưa có lịch trình. Bấm “Thêm chặng” để bắt đầu.</div>}
+                <div className="flex items-center justify-between gap-4">
+                  <SectionHeading title="Lịch trình" description="Tên và mô tả từng ngày theo ngôn ngữ." />
+                  <Button type="button" variant="outline" onClick={() => plans.append({ sortOrder: plans.fields.length, name: { vi: "", en: "" }, description: { vi: "", en: "" } })}><Plus data-icon="inline-start" />Thêm chặng</Button>
+                </div>
+              {!plans.fields.length && <div className="rounded-2xl border border-dashed border-cyan-800/35 bg-cyan-50/50 p-6 text-center text-sm font-medium text-slate-700">Chưa có lịch trình. Bấm “Thêm chặng” để bắt đầu.</div>}
               {plans.fields.map((plan, index) => (
-                <div key={plan.id} className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+                <div key={plan.id} className="rounded-2xl border border-cyan-900/15 bg-white/95 p-4 shadow-[0_12px_32px_-28px_rgba(8,47,73,0.55)] sm:p-5">
                   <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium"><GripVertical className="size-4 text-muted-foreground" />Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => plans.remove(index)}><Trash2 /></Button></div>
                   <Tabs
                     value={planLocales[index] ?? "vi"}
@@ -203,10 +203,10 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
                     <TabsList><TabsTrigger value="vi">VI *</TabsTrigger><TabsTrigger value="en">EN</TabsTrigger></TabsList>
                     {(["vi", "en"] as const).map((locale) => (
                       <TabsContent key={locale} value={locale} className="space-y-3 pt-3">
-                        <FormField fieldPath={`plans.${index}.name.${locale}`} label={`Tên chặng (${locale.toUpperCase()})`} error={form.formState.errors.plans?.[index]?.name?.[locale]?.message}>
+                        <FormField fieldPath={`plans.${index}.name.${locale}`} label={`Tên chặng (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.plans?.[index]?.name?.[locale]?.message}>
                           <Input aria-invalid={Boolean(form.formState.errors.plans?.[index]?.name?.[locale])} {...form.register(`plans.${index}.name.${locale}`)} placeholder={locale === "vi" ? "Tên chặng" : "Plan name"} />
                         </FormField>
-                        <FormField fieldPath={`plans.${index}.description.${locale}`} label={`Mô tả chặng (${locale.toUpperCase()})`} error={form.formState.errors.plans?.[index]?.description?.[locale]?.message}>
+                        <FormField fieldPath={`plans.${index}.description.${locale}`} label={`Mô tả chặng (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.plans?.[index]?.description?.[locale]?.message}>
                           <Controller control={form.control} name={`plans.${index}.description.${locale}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nội dung lịch trình..." invalid={Boolean(form.formState.errors.plans?.[index]?.description?.[locale])} />} />
                         </FormField>
                       </TabsContent>
@@ -226,8 +226,8 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
 
           <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
             <div className="mx-auto flex w-full max-w-[1480px] flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" disabled={isPending} onClick={closeAndReset}>Hủy</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? "Đang lưu..." : tour ? "Lưu thay đổi" : "Tạo tour"}</Button>
+              <Button type="button" variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending} onClick={closeAndReset}>Hủy</Button>
+              <Button type="submit" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending}>{isPending ? "Đang lưu..." : tour ? "Lưu thay đổi" : "Tạo tour"}</Button>
             </div>
           </SheetFooter>
         </form>
@@ -240,8 +240,12 @@ function SectionHeading({ title, description }: { title: string; description: st
   return <div><h3 className="font-heading text-base font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{description}</p></div>;
 }
 
-function FormField({ fieldPath, label, error, children }: { fieldPath: string; label: string; error?: string; children: React.ReactNode }) {
-  return <div data-field-path={fieldPath} className="space-y-2"><Label>{label}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
+function FormField({ fieldPath, label, required, error, children }: { fieldPath: string; label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  return <div data-field-path={fieldPath} className="space-y-2"><Label className="gap-0">{label}{required && <RequiredMark />}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
+}
+
+function RequiredMark() {
+  return <span className="ml-0.5 text-destructive" aria-label="required">*</span>;
 }
 
 function isLocale(value: unknown): value is Locale {
