@@ -45,6 +45,14 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
     return { success: false, message: "Không tìm thấy setting." };
   }
 
+  if (existing && data.type !== existing.toSnapshot().type) {
+    return {
+      success: false,
+      message: "Loại setting không thể thay đổi sau khi tạo.",
+      fieldErrors: { type: ["Loại setting không thể thay đổi sau khi tạo."] },
+    };
+  }
+
   const uploadedPaths: string[] = [];
   try {
     let value = data.value;
@@ -65,12 +73,12 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
       description: data.description,
       type: data.type,
       value,
+      canDelete: data.canDelete,
     });
 
     if (existing) {
       setting.update({
         description: data.description,
-        type: data.type,
         value,
       });
     }

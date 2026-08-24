@@ -139,6 +139,38 @@ export const tourDestinations = pgTable(
   ],
 );
 
+export const services = pgTable("services", {
+  id: uuid("id").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const serviceTranslations = pgTable(
+  "service_translations",
+  {
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    locale: tourLocale("locale").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.serviceId, table.locale] }),
+    check(
+      "service_translations_name_length_check",
+      sql`char_length(trim(${table.name})) >= 2`,
+    ),
+    check(
+      "service_translations_description_length_check",
+      sql`${table.description} is null or char_length(trim(${table.description})) >= 10`,
+    ),
+    index("service_translations_locale_name_idx").on(table.locale, table.name),
+  ],
+);
+
 export const images = pgTable(
   "images",
   {
@@ -191,10 +223,49 @@ export const tourImages = pgTable(
   ],
 );
 
+export const serviceImages = pgTable(
+  "service_images",
+  {
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    imageId: uuid("image_id")
+      .notNull()
+      .references(() => images.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.serviceId, table.imageId] }),
+    check("service_images_sort_order_check", sql`${table.sortOrder} >= 0`),
+    uniqueIndex("service_images_service_sort_order_idx").on(table.serviceId, table.sortOrder),
+    index("service_images_image_id_idx").on(table.imageId),
+  ],
+);
+
+export const tourServices = pgTable(
+  "tour_services",
+  {
+    tourId: uuid("tour_id")
+      .notNull()
+      .references(() => tours.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tourId, table.serviceId] }),
+    check("tour_services_sort_order_check", sql`${table.sortOrder} >= 0`),
+    uniqueIndex("tour_services_tour_sort_order_idx").on(table.tourId, table.sortOrder),
+    index("tour_services_service_id_idx").on(table.serviceId),
+  ],
+);
+
 export const toursRelations = relations(tours, ({ many }) => ({
   imageLinks: many(tourImages),
   translations: many(tourTranslations),
   destinationLinks: many(tourDestinations),
+  serviceLinks: many(tourServices),
 }));
 
 export const tourTranslationsRelations = relations(tourTranslations, ({ one }) => ({
@@ -239,8 +310,22 @@ export const tourDestinationsRelations = relations(tourDestinations, ({ one }) =
   }),
 }));
 
+export const servicesRelations = relations(services, ({ many }) => ({
+  translations: many(serviceTranslations),
+  imageLinks: many(serviceImages),
+  tourLinks: many(tourServices),
+}));
+
+export const serviceTranslationsRelations = relations(serviceTranslations, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceTranslations.serviceId],
+    references: [services.id],
+  }),
+}));
+
 export const imagesRelations = relations(images, ({ many }) => ({
   tourLinks: many(tourImages),
+  serviceLinks: many(serviceImages),
 }));
 
 export const tourImagesRelations = relations(tourImages, ({ one }) => ({
@@ -251,5 +336,27 @@ export const tourImagesRelations = relations(tourImages, ({ one }) => ({
   image: one(images, {
     fields: [tourImages.imageId],
     references: [images.id],
+  }),
+}));
+
+export const serviceImagesRelations = relations(serviceImages, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceImages.serviceId],
+    references: [services.id],
+  }),
+  image: one(images, {
+    fields: [serviceImages.imageId],
+    references: [images.id],
+  }),
+}));
+
+export const tourServicesRelations = relations(tourServices, ({ one }) => ({
+  tour: one(tours, {
+    fields: [tourServices.tourId],
+    references: [tours.id],
+  }),
+  service: one(services, {
+    fields: [tourServices.serviceId],
+    references: [services.id],
   }),
 }));

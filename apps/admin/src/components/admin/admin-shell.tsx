@@ -9,6 +9,7 @@ import {
   ChevronRight,
   MapPin,
   PlaneTakeoff,
+  ConciergeBell,
   Settings,
 } from "lucide-react";
 
@@ -45,6 +46,11 @@ const adminNavItems: AdminNavItem[] = [
     title: "Điểm đến",
     href: "/admin/destinations",
     icon: MapPin,
+  },
+  {
+    title: "Dịch vụ",
+    href: "/admin/services",
+    icon: ConciergeBell,
   },
   // {
   //   title: "Bookings",

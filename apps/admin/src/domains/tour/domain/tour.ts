@@ -7,6 +7,7 @@ import {
   type TourLocale,
 } from "./tour-locale";
 import { TourPlan, type TourPlanSnapshot } from "./tour-plan";
+import { TourService, type TourServiceSnapshot } from "./tour-service";
 
 export type TourTranslationSnapshot = {
   locale: TourLocale;
@@ -18,6 +19,7 @@ export type TourSnapshot = {
   id: string;
   translations: TourTranslationSnapshot[];
   destinations: TourDestinationSnapshot[];
+  services: TourServiceSnapshot[];
   plans: TourPlanSnapshot[];
   images: TourImageRefSnapshot[];
   createdAt: Date;
@@ -27,6 +29,7 @@ export type TourSnapshot = {
 export type CreateTourProps = {
   translations: TourTranslationSnapshot[];
   destinations?: TourDestination[];
+  services?: TourService[];
   plans?: TourPlan[];
   images?: TourImageRef[];
 };
@@ -36,6 +39,7 @@ export class Tour {
     private readonly id: TourId,
     private translations: TourTranslationSnapshot[],
     private destinations: TourDestination[],
+    private services: TourService[],
     private plans: TourPlan[],
     private images: TourImageRef[],
     private readonly createdAt: Date,
@@ -49,6 +53,7 @@ export class Tour {
       TourId.create(),
       Tour.validateTranslations(props.translations),
       Tour.validateDestinations(props.destinations ?? []),
+      Tour.validateServices(props.services ?? []),
       Tour.validatePlans(props.plans ?? []),
       Tour.validateImages(props.images ?? []),
       now,
@@ -61,6 +66,7 @@ export class Tour {
       TourId.create(snapshot.id),
       Tour.validateTranslations(snapshot.translations),
       Tour.validateDestinations(snapshot.destinations.map(TourDestination.fromSnapshot)),
+      Tour.validateServices(snapshot.services.map(TourService.fromSnapshot)),
       Tour.validatePlans(snapshot.plans.map(TourPlan.fromSnapshot)),
       Tour.validateImages(snapshot.images.map(TourImageRef.fromSnapshot)),
       snapshot.createdAt,
@@ -85,6 +91,11 @@ export class Tour {
 
   replaceDestinations(destinations: TourDestination[]): void {
     this.destinations = Tour.validateDestinations(destinations);
+    this.touch();
+  }
+
+  replaceServices(services: TourService[]): void {
+    this.services = Tour.validateServices(services);
     this.touch();
   }
 
@@ -119,6 +130,7 @@ export class Tour {
       id: this.id.value,
       translations: this.translations.map((translation) => ({ ...translation })),
       destinations: this.destinations.map((destination) => destination.toSnapshot()),
+      services: this.services.map((service) => service.toSnapshot()),
       plans: this.plans.map((plan) => plan.toSnapshot()),
       images: this.images.map((image) => image.toSnapshot()),
       createdAt: new Date(this.createdAt),
@@ -214,6 +226,17 @@ export class Tour {
     }
 
     return [...destinations].sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  private static validateServices(services: TourService[]): TourService[] {
+    const ids = new Set<string>();
+    const orders = new Set<number>();
+    for (const service of services) {
+      if (ids.has(service.serviceId) || orders.has(service.sortOrder)) throw new Error("Tour services and their orders must be unique.");
+      ids.add(service.serviceId);
+      orders.add(service.sortOrder);
+    }
+    return [...services].sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
   private static validateImages(images: TourImageRef[]): TourImageRef[] {

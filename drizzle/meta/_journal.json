@@ -43,6 +43,13 @@
       "when": 1786959100000,
       "tag": "0005_site_settings_can_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787554551404,
+      "tag": "0006_glorious_smasher",
+      "breakpoints": true
     }
   ]
 }

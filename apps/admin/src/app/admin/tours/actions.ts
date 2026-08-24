@@ -8,6 +8,7 @@ import {
   TourDestination,
   TourImageRef,
   TourPlan,
+  TourService,
   type TourTranslationSnapshot,
 } from "@/domains/tour/domain";
 import { requireSession } from "@/lib/auth/session";
@@ -126,6 +127,9 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     const destinations = data.destinations.map((destination, index) =>
       TourDestination.create({ destinationId: destination.destinationId, sortOrder: index }),
     );
+    const services = data.services.map((service, index) =>
+      TourService.create({ serviceId: service.serviceId, sortOrder: index }),
+    );
     const plans = data.plans.map((plan, index) =>
       TourPlan.create({ ...plan, sortOrder: index }),
     );
@@ -133,10 +137,11 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     const tour = data.id ? await tourRepository.findById(data.id) : null;
     if (data.id && !tour) return { success: false, message: "Không tìm thấy tour." };
 
-    const aggregate = tour || Tour.create({ translations, destinations, plans });
+    const aggregate = tour || Tour.create({ translations, destinations, services, plans });
     if (tour) {
       aggregate.replaceTranslations(translations);
       aggregate.replaceDestinations(destinations);
+      aggregate.replaceServices(services);
       aggregate.replacePlans(plans);
     }
 

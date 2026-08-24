@@ -7,6 +7,7 @@ import { GripVertical, Plus, Trash2 } from "lucide-react";
 
 import { saveTourAction } from "@/app/admin/tours/actions";
 import { DestinationManager } from "./destination-manager";
+import { ServiceManager } from "./service-manager";
 import { ImageUploadField, type PendingImage } from "./image-upload-field";
 import { RichTextEditor } from "./rich-text-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -25,6 +26,7 @@ function createEmptyValues(): TourFormValues {
   return {
     translations: { vi: { name: "", description: "" }, en: { name: "", description: "" } },
     destinations: [],
+    services: [],
     plans: [],
     existingImages: [],
   };
@@ -44,6 +46,7 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
       destinationId: destination.destinationId,
       sortOrder: destination.sortOrder,
     })),
+    services: tour.services.map((service) => ({ serviceId: service.serviceId, sortOrder: service.sortOrder })),
     plans: tour.plans.map((plan) => ({
       sortOrder: plan.sortOrder,
       name: { vi: plan.name.vi || "", en: plan.name.en || "" },
@@ -181,6 +184,12 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
                   />
                 )}
               />
+            </section>
+
+            <Separator />
+            <section className="tour-drawer-panel relative z-20 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
+              <SectionHeading title="Dịch vụ" description="Tìm và gắn các dịch vụ dùng chung vào tour theo thứ tự." />
+              <Controller control={form.control} name="services" render={({ field }) => <ServiceManager value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
             </section>
 
             <Separator />

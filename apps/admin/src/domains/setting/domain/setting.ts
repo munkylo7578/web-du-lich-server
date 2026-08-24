@@ -17,12 +17,12 @@ export type CreateSettingProps = {
   description?: string;
   value: string;
   type: SettingType;
+  canDelete: boolean;
 };
 
 export type UpdateSettingProps = {
   description?: string;
   value: string;
-  type: SettingType;
 };
 
 export class Setting {
@@ -44,7 +44,7 @@ export class Setting {
       Setting.validateDescription(props.description),
       Setting.validateValue(props.value, props.type),
       Setting.validateType(props.type),
-      true,
+      props.canDelete,
       now,
       now,
     );
@@ -68,7 +68,6 @@ export class Setting {
 
   update(props: UpdateSettingProps): void {
     this.description = Setting.validateDescription(props.description);
-    this.type = Setting.validateType(props.type);
     this.value = Setting.validateValue(props.value, this.type);
     this.touch();
   }

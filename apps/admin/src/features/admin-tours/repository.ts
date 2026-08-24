@@ -9,6 +9,7 @@ import {
   provinces,
   tourDestinations,
   tourImages,
+  tourServices,
   tours,
   tourTranslations,
   wards,
@@ -18,6 +19,7 @@ import { asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import type { TourRepository, TourSaveDestination, TourSaveImage } from "@/domains/tour/domain";
 import { TourMapper } from "./tour-mapper";
 import type { AdminDestination, AdminTour, AdminWard } from "./tour-types";
+import { hydrateServices } from "@/features/admin-services/repository";
 
 const WARD_SEARCH_LIMIT = 20;
 const DESTINATION_SEARCH_LIMIT = 20;
@@ -169,6 +171,9 @@ async function hydrateAdminTours(rows: (typeof tours.$inferSelect)[]): Promise<A
   const hydratedDestinations = await hydrateDestinations(
     [...new Set(destinationLinkRows.map((link) => link.destinationId))],
   );
+  const serviceLinkRows = await db.select().from(tourServices)
+    .where(inArray(tourServices.tourId, ids)).orderBy(asc(tourServices.sortOrder));
+  const hydratedServices = await hydrateServices([...new Set(serviceLinkRows.map((link) => link.serviceId))]);
   const imageRows = await db
     .select({
       tourId: tourImages.tourId,
@@ -202,6 +207,10 @@ async function hydrateAdminTours(rows: (typeof tours.$inferSelect)[]): Promise<A
         return destination ? { ...destination, sortOrder: link.sortOrder } : null;
       })
       .filter((destination): destination is AdminDestination => Boolean(destination)),
+    services: serviceLinkRows.filter((link) => link.tourId === row.id).map((link) => {
+      const service = hydratedServices.find((item) => item.serviceId === link.serviceId);
+      return service ? { ...service, sortOrder: link.sortOrder } : null;
+    }).filter((service): service is import("@/features/admin-services/service-types").AdminService => Boolean(service)),
     plans: row.plans,
     images: imageRows
       .filter((image) => image.tourId === row.id)
@@ -328,6 +337,7 @@ export class DrizzleTourRepository implements TourRepository {
       .select()
       .from(tourDestinations)
       .where(eq(tourDestinations.tourId, id));
+    const serviceLinks = await db.select().from(tourServices).where(eq(tourServices.tourId, id));
     const links = await db
       .select()
       .from(tourImages)
@@ -344,6 +354,7 @@ export class DrizzleTourRepository implements TourRepository {
         destinationId: link.destinationId,
         sortOrder: link.sortOrder,
       })),
+      services: serviceLinks.map((link) => ({ serviceId: link.serviceId, sortOrder: link.sortOrder })),
       plans: row[0].plans,
       images: links.map((link) => ({
         imageId: link.imageId,
@@ -395,6 +406,13 @@ export class DrizzleTourRepository implements TourRepository {
           sortOrder: destination.sortOrder,
         })));
       }
+
+      await tx.delete(tourServices).where(eq(tourServices.tourId, snapshot.id));
+      if (snapshot.services.length) await tx.insert(tourServices).values(snapshot.services.map((service) => ({
+        tourId: snapshot.id,
+        serviceId: service.serviceId,
+        sortOrder: service.sortOrder,
+      })));
 
       const oldLinks = await tx.select({ imageId: tourImages.imageId }).from(tourImages).where(eq(tourImages.tourId, snapshot.id));
       const nextIds = new Set(snapshot.images.map((image) => image.imageId));

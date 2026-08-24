@@ -12,6 +12,7 @@ export const settingFormSchema = z.object({
   key: settingKeySchema,
   description: z.string().trim().optional().default(""),
   type: settingTypeSchema,
+  canDelete: z.boolean().default(true),
   value: z.string().trim().optional().default(""),
 }).superRefine((value, context) => {
   if (value.originalKey && value.originalKey !== value.key) {

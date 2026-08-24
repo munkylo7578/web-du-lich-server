@@ -1,4 +1,5 @@
 import type { TourPlanSnapshot, TourTranslationSnapshot } from "@/domains/tour/domain";
+import type { AdminService } from "@/features/admin-services/service-types";
 
 export type AdminWard = {
   code: string;
@@ -36,6 +37,7 @@ export type AdminTour = {
   id: string;
   translations: TourTranslationSnapshot[];
   destinations: AdminDestination[];
+  services: AdminService[];
   plans: TourPlanSnapshot[];
   images: AdminTourImage[];
   createdAt: string;

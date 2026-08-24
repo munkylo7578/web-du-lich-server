@@ -43,6 +43,7 @@ export const tourFormSchema = z.object({
       sortOrder: z.number().int().min(0),
     }),
   ),
+  services: z.array(z.object({ serviceId: z.string().uuid(), sortOrder: z.number().int().min(0) })),
   plans: z.array(
     z.object({
       sortOrder: z.number().int().min(0),

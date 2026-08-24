@@ -263,7 +263,7 @@ function SettingFormDrawer({
         <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
           <div className="mx-auto w-full max-w-[980px] pr-12">
             <SheetTitle className="text-xl sm:text-2xl">{setting ? "Chỉnh sửa setting" : "Tạo setting"}</SheetTitle>
-            <SheetDescription className="mt-1">Key không thể đổi sau khi tạo. Khi đổi loại, giá trị sẽ được reset.</SheetDescription>
+            <SheetDescription className="mt-1">Key và loại không thể đổi sau khi tạo.</SheetDescription>
           </div>
         </SheetHeader>
 
@@ -291,15 +291,47 @@ function SettingFormDrawer({
                   <Textarea aria-invalid={Boolean(form.formState.errors.description)} {...form.register("description")} placeholder="Ví dụ: Logo chính hiển thị trên header website" />
                 </FormField>
                 <FormField label="Loại" required error={form.formState.errors.type?.message}>
-                  <select
-                    className="glass-input h-10 w-full rounded-2xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                    aria-invalid={Boolean(form.formState.errors.type)}
-                    {...form.register("type")}
-                  >
-                    <option value="text">Text</option>
-                    <option value="image">Ảnh</option>
-                  </select>
+                  {setting ? (
+                    <>
+                      <select
+                        className="glass-input h-10 w-full cursor-not-allowed rounded-2xl border border-input bg-muted/40 px-3 text-sm opacity-70 outline-none"
+                        aria-label="Loại setting"
+                        disabled
+                        value={setting.type}
+                      >
+                        <option value="text">Text</option>
+                        <option value="image">Ảnh</option>
+                      </select>
+                      <input type="hidden" {...form.register("type")} />
+                      <p className="text-xs text-muted-foreground">Loại setting được cố định sau khi tạo.</p>
+                    </>
+                  ) : (
+                    <select
+                      className="glass-input h-10 w-full rounded-2xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                      aria-invalid={Boolean(form.formState.errors.type)}
+                      {...form.register("type")}
+                    >
+                      <option value="text">Text</option>
+                      <option value="image">Ảnh</option>
+                    </select>
+                  )}
                 </FormField>
+                {!setting && (
+                  <div className="rounded-2xl border border-cyan-900/15 bg-cyan-50/60 p-4">
+                    <label className="flex cursor-pointer items-start gap-3" htmlFor="setting-can-delete">
+                      <input
+                        id="setting-can-delete"
+                        type="checkbox"
+                        className="mt-0.5 size-4 shrink-0 accent-cyan-800"
+                        {...form.register("canDelete")}
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-slate-900">Cho phép xóa</span>
+                       
+                      </span>
+                    </label>
+                  </div>
+                )}
                 {watchedType === "text" ? (
                   <FormField label="Giá trị" required error={form.formState.errors.value?.message}>
                     <Textarea aria-invalid={Boolean(form.formState.errors.value)} {...form.register("value")} placeholder="Nhập giá trị cấu hình" />
@@ -376,6 +408,7 @@ function toFormValues(setting: AdminSetting | null): SettingFormValues {
       key: "",
       description: "",
       type: "text",
+      canDelete: true,
       value: "",
     };
   }
@@ -385,6 +418,7 @@ function toFormValues(setting: AdminSetting | null): SettingFormValues {
     key: setting.key,
     description: setting.description ?? "",
     type: setting.type,
+    canDelete: setting.canDelete,
     value: setting.value,
   };
 }
