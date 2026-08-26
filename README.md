@@ -1,10 +1,11 @@
 # web-server-du-lich
 
-Nx monorepo for the travel admin Next.js app and shared database library.
+Nx monorepo for the travel admin Next.js app, read-only NestJS content API, and shared database library.
 
 ## Workspace layout
 
 - `apps/admin`: Next.js 16 admin application.
+- `apps/api`: NestJS read-only REST API consumed by server-side frontends.
 - `libs/database`: internal Nx TypeScript library exported as `@database`.
 - `drizzle.config.ts`: Drizzle Kit config that reads schemas from `libs/database/src/schema.ts`.
 
@@ -15,6 +16,9 @@ npm run dev
 npm run build
 npm run start
 npm run lint
+npm run api:dev
+npm run api:build
+npm run api:test
 ```
 
 Equivalent Nx commands:
@@ -129,6 +133,53 @@ import { db, tours, tourTranslations } from "@database";
 ```
 
 Keep Drizzle table definitions and DB persistence-only snapshot types inside `libs/database`. Avoid importing application domain classes into the database library so it remains reusable by future apps in this monorepo.
+
+## Read-only content API
+
+Copy [`.env.example`](.env.example), set `DATABASE_URL`, and set one or more comma-separated `API_KEYS` of at least 32 characters. During rotation, deploy both the old and new key, update callers, then remove the old key. Start locally with `npm run api:dev`; the default address is `http://localhost:3001/api/v1`.
+
+Content routes require both `x-api-key` and an explicit `locale=vi|en` query parameter:
+
+- `GET /api/v1/tours?page=1&limit=20&locale=en`
+- `GET /api/v1/tours/:id?locale=vi`
+- `GET /api/v1/destinations` and `GET /api/v1/destinations/:id`
+- `GET /api/v1/services` and `GET /api/v1/services/:id`
+- `GET /api/v1/settings` and `GET /api/v1/settings/:key`
+- Public checks: `GET /api/v1/health/live` and `GET /api/v1/health/ready`
+
+If an entity lacks the requested translation, the API falls back to Vietnamese and reports `requested`, `effective`, and `fallback` in its locale metadata. Site settings are only returned when their keys are explicitly listed in `API_PUBLIC_SETTING_KEYS`. Swagger is available at `/api/v1/docs` when `API_DOCS_ENABLED=true`; disable it or protect it at Nginx in production.
+
+### Nuxt/Nitro integration
+
+Keep the API key in private runtime configuration—not `runtimeConfig.public`—and call NestJS only from Nitro handlers or server utilities:
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  runtimeConfig: {
+    travelApiKey: process.env.NUXT_TRAVEL_API_KEY,
+    travelApiBase: process.env.NUXT_TRAVEL_API_BASE,
+  },
+})
+
+// server/api/tours.get.ts
+export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig(event)
+  const locale = getQuery(event).locale === 'en' ? 'en' : 'vi'
+  return $fetch('/tours', {
+    baseURL: config.travelApiBase,
+    query: { locale, page: 1, limit: 20 },
+    headers: { 'x-api-key': config.travelApiKey },
+    timeout: 5000,
+  })
+})
+```
+
+Do not call NestJS directly from browser components: that exposes the shared key. Always use HTTPS, configure Nginx rate limits and request-size limits, and set `API_TRUST_PROXY=1` only when exactly one trusted proxy sits in front of NestJS.
+
+### API production process
+
+Build with `npm run api:build`, then use `pm2 start dist/apps/api/main.js --name web-server-du-lich-api`. Put secrets in PM2's environment or another secret manager, proxy `/api/` through HTTPS Nginx, and restart with `pm2 restart web-server-du-lich-api --update-env` after rotation.
 
 ## Nx commands used for migration
 

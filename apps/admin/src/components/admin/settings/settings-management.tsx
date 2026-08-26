@@ -8,6 +8,7 @@ import { Edit3, ImageIcon, MoreHorizontal, Plus, Search, Settings2, Trash2, Type
 
 import { deleteSettingAction, saveSettingAction } from "@/app/admin/settings/actions";
 import { ImagePickerField, type ImagePickerPendingImage } from "@/components/admin/shared/image-picker-field";
+import { RichTextEditor } from "@/components/admin/tours/rich-text-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { settingFormSchema, type SettingFormValues } from "@/features/admin-settings/settings-form-schema";
 import type { AdminSetting } from "@/features/admin-settings/settings-types";
@@ -36,7 +38,7 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
     if (!term) return settings;
 
     return settings.filter((setting) =>
-      [setting.key, setting.description ?? "", setting.value, setting.type]
+      [setting.key, setting.description ?? "", setting.value ?? "", setting.translations.vi, setting.translations.en ?? "", setting.type]
         .some((value) => value.toLowerCase().includes(term)),
     );
   }, [query, settings]);
@@ -212,6 +214,7 @@ function SettingFormDrawer({
     pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setPendingImages([]);
     form.setValue("value", "", { shouldDirty: true, shouldValidate: true });
+    form.setValue("translations", { vi: "", en: "" }, { shouldDirty: true, shouldValidate: true });
   }, [form, pendingImages, watchedType]);
 
   const resetDraft = () => {
@@ -226,7 +229,7 @@ function SettingFormDrawer({
       key: data.key,
       originalKey: data.originalKey,
       type: data.type,
-      hasValue: Boolean(data.value),
+      hasValue: data.type === "image" ? Boolean(data.value) : Boolean(data.translations?.vi),
       pendingImages: pendingImages.length,
     });
     setMessage(undefined);
@@ -333,9 +336,34 @@ function SettingFormDrawer({
                   </div>
                 )}
                 {watchedType === "text" ? (
-                  <FormField label="Giá trị" required error={form.formState.errors.value?.message}>
-                    <Textarea aria-invalid={Boolean(form.formState.errors.value)} {...form.register("value")} placeholder="Nhập giá trị cấu hình" />
-                  </FormField>
+                  <Tabs defaultValue="vi" className="gap-4">
+                    <div>
+                      <Label className="mb-2 gap-0">Giá trị<RequiredMark /></Label>
+                      <p className="mb-3 text-xs text-muted-foreground">Soạn nội dung riêng cho từng ngôn ngữ. Tiếng Anh sẽ fallback sang tiếng Việt khi để trống.</p>
+                      <TabsList className="h-10 rounded-xl p-1">
+                        <TabsTrigger value="vi" className="px-4">Tiếng Việt</TabsTrigger>
+                        <TabsTrigger value="en" className="px-4">English</TabsTrigger>
+                      </TabsList>
+                    </div>
+                    <TabsContent value="vi">
+                      <FormField label="Nội dung tiếng Việt" required error={form.formState.errors.translations?.vi?.message}>
+                        <Controller
+                          control={form.control}
+                          name="translations.vi"
+                          render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nhập giá trị cấu hình bằng tiếng Việt..." invalid={Boolean(form.formState.errors.translations?.vi)} />}
+                        />
+                      </FormField>
+                    </TabsContent>
+                    <TabsContent value="en">
+                      <FormField label="English content" error={form.formState.errors.translations?.en?.message}>
+                        <Controller
+                          control={form.control}
+                          name="translations.en"
+                          render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Enter the setting value in English..." invalid={Boolean(form.formState.errors.translations?.en)} />}
+                        />
+                      </FormField>
+                    </TabsContent>
+                  </Tabs>
                 ) : (
                   <FormField label="Ảnh" required error={form.formState.errors.value?.message}>
                     <Controller
@@ -391,7 +419,7 @@ function SettingValuePreview({ setting }: { setting: AdminSetting }) {
     );
   }
 
-  return <p className="line-clamp-2 max-w-xs text-sm text-slate-700">{setting.value}</p>;
+  return <p className="line-clamp-2 max-w-xs text-sm text-slate-700">{stripHtml(setting.translations.vi)}</p>;
 }
 
 function FormField({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
@@ -410,6 +438,7 @@ function toFormValues(setting: AdminSetting | null): SettingFormValues {
       type: "text",
       canDelete: true,
       value: "",
+      translations: { vi: "", en: "" },
     };
   }
 
@@ -419,8 +448,13 @@ function toFormValues(setting: AdminSetting | null): SettingFormValues {
     description: setting.description ?? "",
     type: setting.type,
     canDelete: setting.canDelete,
-    value: setting.value,
+    value: setting.value ?? "",
+    translations: { vi: setting.translations.vi, en: setting.translations.en ?? "" },
   };
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim();
 }
 
 function formatDate(value: string): string {

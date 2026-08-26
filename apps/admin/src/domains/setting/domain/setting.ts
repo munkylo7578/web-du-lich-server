@@ -1,11 +1,15 @@
 export const SETTING_TYPES = ["text", "image"] as const;
+export const SETTING_LOCALES = ["vi", "en"] as const;
 
 export type SettingType = (typeof SETTING_TYPES)[number];
+export type SettingLocale = (typeof SETTING_LOCALES)[number];
+export type SettingTranslations = { vi: string; en?: string };
 
 export type SettingSnapshot = {
   key: string;
   description?: string;
-  value: string;
+  value?: string;
+  translations: SettingTranslations;
   type: SettingType;
   canDelete: boolean;
   createdAt: Date;
@@ -15,21 +19,24 @@ export type SettingSnapshot = {
 export type CreateSettingProps = {
   key: string;
   description?: string;
-  value: string;
+  value?: string;
+  translations?: SettingTranslations;
   type: SettingType;
   canDelete: boolean;
 };
 
 export type UpdateSettingProps = {
   description?: string;
-  value: string;
+  value?: string;
+  translations?: SettingTranslations;
 };
 
 export class Setting {
   private constructor(
     private readonly key: string,
     private description: string | undefined,
-    private value: string,
+    private value: string | undefined,
+    private translations: SettingTranslations,
     private type: SettingType,
     private readonly canDelete: boolean,
     private readonly createdAt: Date,
@@ -38,12 +45,15 @@ export class Setting {
 
   static create(props: CreateSettingProps): Setting {
     const now = new Date();
+    const type = Setting.validateType(props.type);
+    const content = Setting.validateContent(type, props.value, props.translations);
 
     return new Setting(
       Setting.validateKey(props.key),
       Setting.validateDescription(props.description),
-      Setting.validateValue(props.value, props.type),
-      Setting.validateType(props.type),
+      content.value,
+      content.translations,
+      type,
       props.canDelete,
       now,
       now,
@@ -51,11 +61,15 @@ export class Setting {
   }
 
   static rehydrate(snapshot: SettingSnapshot): Setting {
+    const type = Setting.validateType(snapshot.type);
+    const content = Setting.validateContent(type, snapshot.value, snapshot.translations);
+
     return new Setting(
       Setting.validateKey(snapshot.key),
       Setting.validateDescription(snapshot.description),
-      Setting.validateValue(snapshot.value, snapshot.type),
-      Setting.validateType(snapshot.type),
+      content.value,
+      content.translations,
+      type,
       snapshot.canDelete,
       snapshot.createdAt,
       snapshot.updatedAt,
@@ -67,8 +81,10 @@ export class Setting {
   }
 
   update(props: UpdateSettingProps): void {
+    const content = Setting.validateContent(this.type, props.value, props.translations);
     this.description = Setting.validateDescription(props.description);
-    this.value = Setting.validateValue(props.value, this.type);
+    this.value = content.value;
+    this.translations = content.translations;
     this.touch();
   }
 
@@ -83,6 +99,7 @@ export class Setting {
       key: this.key,
       description: this.description,
       value: this.value,
+      translations: { ...this.translations },
       type: this.type,
       canDelete: this.canDelete,
       createdAt: new Date(this.createdAt),
@@ -96,45 +113,45 @@ export class Setting {
 
   private static validateKey(key: string): string {
     const value = key.trim();
-
-    if (!value) {
-      throw new Error("Setting key is required.");
-    }
-
+    if (!value) throw new Error("Setting key is required.");
     return value;
   }
 
   private static validateDescription(description?: string): string | undefined {
     const value = description?.trim();
-
-    if (!value) {
-      return undefined;
-    }
-
-    return value;
+    return value || undefined;
   }
 
   private static validateType(type: SettingType): SettingType {
-    if (!SETTING_TYPES.includes(type)) {
-      throw new Error(`Unsupported setting type: ${type}.`);
-    }
-
+    if (!SETTING_TYPES.includes(type)) throw new Error(`Unsupported setting type: ${type}.`);
     return type;
   }
 
-  private static validateValue(value: string, type: SettingType): string {
-    const normalized = value.trim();
-
-    if (!normalized) {
-      throw new Error("Setting value is required.");
+  private static validateContent(type: SettingType, value?: string, translations?: SettingTranslations) {
+    if (type === "image") {
+      const normalized = value?.trim();
+      if (!normalized) throw new Error("Setting value is required.");
+      if (!isImageUrl(normalized)) throw new Error("Image setting value must be a local upload path or an absolute URL.");
+      return { value: normalized, translations: { vi: "" } as SettingTranslations };
     }
 
-    if (type === "image" && !isImageUrl(normalized)) {
-      throw new Error("Image setting value must be a local upload path or an absolute URL.");
-    }
+    const vi = normalizeRichText(translations?.vi);
+    const en = normalizeRichText(translations?.en);
+    if (!hasTextContent(vi)) throw new Error("Giá trị tiếng Việt là bắt buộc.");
 
-    return normalized;
+    return {
+      value: undefined,
+      translations: { vi, ...(hasTextContent(en) ? { en } : {}) },
+    };
   }
+}
+
+function normalizeRichText(value?: string): string {
+  return value?.trim() ?? "";
+}
+
+function hasTextContent(value?: string): boolean {
+  return Boolean(value?.replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim());
 }
 
 function isImageUrl(value: string): boolean {

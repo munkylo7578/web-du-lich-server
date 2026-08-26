@@ -72,14 +72,16 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
       key: data.key,
       description: data.description,
       type: data.type,
-      value,
+      value: data.type === "image" ? value : undefined,
+      translations: data.type === "text" ? data.translations : undefined,
       canDelete: data.canDelete,
     });
 
     if (existing) {
       setting.update({
         description: data.description,
-        value,
+        value: data.type === "image" ? value : undefined,
+        translations: data.type === "text" ? data.translations : undefined,
       });
     }
 
