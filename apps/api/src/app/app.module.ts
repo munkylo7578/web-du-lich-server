@@ -9,7 +9,6 @@ import { ContentController } from './content/content.controller';
 import { ContentService } from './content/content.service';
 import { API_ENV, loadEnvironment } from './config/env';
 import { DatabaseModule } from './database/database.module';
-import { HealthController } from './health/health.controller';
 
 const env = loadEnvironment();
 
@@ -18,7 +17,7 @@ const env = loadEnvironment();
     DatabaseModule,
     ThrottlerModule.forRoot([{ ttl: env.rateLimitTtlMs, limit: env.rateLimitLimit }]),
   ],
-  controllers: [HealthController, ContentController],
+  controllers: [ContentController],
   providers: [
     ContentService,
     { provide: API_ENV, useValue: env },
