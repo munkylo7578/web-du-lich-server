@@ -7,7 +7,7 @@ import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Đăng nhập",
-  description: "Đăng nhập để truy cập trang quản trị tạm thời.",
+  description: "Đăng nhập để truy cập trang quản trị",
 };
 
 export default async function LoginPage() {

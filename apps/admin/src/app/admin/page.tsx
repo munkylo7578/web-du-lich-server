@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Trang quản trị",
-  description: "Trang quản trị tạm thời sau khi đăng nhập.",
+  description: "Trang quản trị",
 };
 
 export default async function AdminPage() {
