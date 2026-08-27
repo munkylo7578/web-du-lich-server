@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
+import { ApiExceptionFilter } from './common/api-exception.filter';
 import { ApiKeyGuard } from './common/api-key.guard';
+import { ApiResponseInterceptor } from './common/api-response.interceptor';
 import { ContentController } from './content/content.controller';
 import { ContentService } from './content/content.service';
 import { API_ENV, loadEnvironment } from './config/env';
@@ -22,6 +24,8 @@ const env = loadEnvironment();
     { provide: API_ENV, useValue: env },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: ApiKeyGuard },
+    { provide: APP_INTERCEPTOR, useClass: ApiResponseInterceptor },
+    { provide: APP_FILTER, useClass: ApiExceptionFilter },
   ],
 })
 export class AppModule {}
