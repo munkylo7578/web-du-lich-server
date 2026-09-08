@@ -21,6 +21,7 @@ type DestinationRow = { id: string; translations: TranslationRow[]; wardLinks?: 
 type ServiceRow = { id: string; translations: TranslationRow[]; imageLinks?: ImageLinkRow[]; createdAt: Date; updatedAt: Date };
 type TourRow = {
   id: string;
+  departureStartMonth: number | null;
   translations: TranslationRow[];
   plans: TourPlanSnapshot[];
   imageLinks: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
@@ -184,6 +185,7 @@ export class ContentService {
     if (!translation) return null;
     return {
       id: row.id,
+      departureStartMonth: row.departureStartMonth ?? null,
       name: translation.value.name,
       description: translation.value.description,
       locale: translation.locale,

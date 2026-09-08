@@ -1,5 +1,42 @@
 import { ContentService } from './content.service';
 
+describe('ContentService tour departure start month', () => {
+  function createService(departureStartMonth: number | null) {
+    const row = {
+      id: 'b2a985d1-2a16-43da-848f-c533aa56ae3c',
+      departureStartMonth,
+      translations: [{ locale: 'vi', name: 'Tour thử nghiệm', description: null }],
+      plans: [],
+      imageLinks: [],
+      destinationLinks: [],
+      serviceLinks: [],
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    const db = {
+      select: jest.fn().mockReturnValue({ from: jest.fn().mockResolvedValue([{ value: 1 }]) }),
+      query: {
+        tours: {
+          findMany: jest.fn().mockResolvedValue([row]),
+          findFirst: jest.fn().mockResolvedValue(row),
+        },
+      },
+    };
+    return { service: new ContentService(db as never, { maxPageSize: 100 } as never), id: row.id };
+  }
+
+  it.each([1, 6, 12, null])('returns %s in list and detail responses, including locale fallback', async (month) => {
+    const { service, id } = createService(month);
+    for (const locale of ['vi', 'en'] as const) {
+      const list = await service.tours(locale, 1, 20);
+      const detail = await service.tour(id, locale);
+      expect(list.data[0]).toHaveProperty('departureStartMonth', month);
+      expect(detail.data).toHaveProperty('departureStartMonth', month);
+      expect(JSON.parse(JSON.stringify(detail.data))).toHaveProperty('departureStartMonth', month);
+    }
+  });
+});
+
 describe('ContentService setting localization', () => {
   const env = {
     publicSettingKeys: ['site.footer'],
