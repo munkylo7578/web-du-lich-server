@@ -24,6 +24,11 @@ export const localizedTextSchema = z.object({
 
 export const tourFormSchema = z.object({
   id: z.string().uuid().optional(),
+  departureStartMonth: z.number({ error: "Vui lòng chọn tháng từ 1 đến 12." })
+    .int("Tháng khởi hành phải là số nguyên.")
+    .min(1, "Tháng khởi hành phải từ 1 đến 12.")
+    .max(12, "Tháng khởi hành phải từ 1 đến 12.")
+    .nullish(),
   translations: z.object({
     vi: z.object({
       name: z.string().trim().min(2, "Tên tour cần ít nhất 2 ký tự."),

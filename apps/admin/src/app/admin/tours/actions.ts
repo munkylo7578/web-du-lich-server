@@ -137,8 +137,10 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     const tour = data.id ? await tourRepository.findById(data.id) : null;
     if (data.id && !tour) return { success: false, message: "Không tìm thấy tour." };
 
-    const aggregate = tour || Tour.create({ translations, destinations, services, plans });
+    const departureStartMonth = data.departureStartMonth ?? undefined;
+    const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth });
     if (tour) {
+      aggregate.updateDepartureStartMonth(departureStartMonth);
       aggregate.replaceTranslations(translations);
       aggregate.replaceDestinations(destinations);
       aggregate.replaceServices(services);

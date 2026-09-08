@@ -24,6 +24,7 @@ type Locale = "vi" | "en";
 
 function createEmptyValues(): TourFormValues {
   return {
+    departureStartMonth: null,
     translations: { vi: { name: "", description: "" }, en: { name: "", description: "" } },
     destinations: [],
     services: [],
@@ -38,6 +39,7 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
   const en = tour.translations.find((item) => item.locale === "en");
   return {
     id: tour.id,
+    departureStartMonth: tour.departureStartMonth ?? null,
     translations: {
       vi: { name: vi?.name || "", description: vi?.description || "" },
       en: { name: en?.name || "", description: en?.description || "" },
@@ -151,6 +153,38 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
           <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto px-5 py-6 sm:px-8">
             <div className="mx-auto w-full max-w-[1480px] space-y-7">
             {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
+
+            <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+              <SectionHeading title="Thông tin khởi hành" description="Chọn tháng bắt đầu khởi hành của tour, không bao gồm ngày hoặc năm." />
+              <div data-field-path="departureStartMonth" className="space-y-2 sm:max-w-sm">
+                <Label htmlFor="departure-start-month">Tháng bắt đầu khởi hành</Label>
+                <Controller
+                  control={form.control}
+                  name="departureStartMonth"
+                  render={({ field, fieldState }) => (
+                    <select
+                      {...field}
+                      id="departure-start-month"
+                      value={field.value ?? ""}
+                      onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))}
+                      disabled={isPending}
+                      aria-invalid={Boolean(fieldState.error)}
+                      aria-describedby={fieldState.error ? "departure-start-month-help departure-start-month-error" : "departure-start-month-help"}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Chưa xác định</option>
+                      {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                        <option key={month} value={month}>Tháng {month}</option>
+                      ))}
+                    </select>
+                  )}
+                />
+                <p id="departure-start-month-help" className="text-sm text-muted-foreground">Không bắt buộc. Chọn “Chưa xác định” để bỏ tháng đã chọn.</p>
+                {form.formState.errors.departureStartMonth && (
+                  <p id="departure-start-month-error" role="alert" className="text-xs text-destructive">{form.formState.errors.departureStartMonth.message}</p>
+                )}
+              </div>
+            </section>
 
             <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
               <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên và mô tả hiển thị trên website client." />

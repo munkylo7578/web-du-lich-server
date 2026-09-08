@@ -17,6 +17,7 @@ export type TourTranslationSnapshot = {
 
 export type TourSnapshot = {
   id: string;
+  departureStartMonth?: number;
   translations: TourTranslationSnapshot[];
   destinations: TourDestinationSnapshot[];
   services: TourServiceSnapshot[];
@@ -27,6 +28,7 @@ export type TourSnapshot = {
 };
 
 export type CreateTourProps = {
+  departureStartMonth?: number;
   translations: TourTranslationSnapshot[];
   destinations?: TourDestination[];
   services?: TourService[];
@@ -44,6 +46,7 @@ export class Tour {
     private images: TourImageRef[],
     private readonly createdAt: Date,
     private updatedAt: Date,
+    private departureStartMonth: number | undefined,
   ) {}
 
   static create(props: CreateTourProps): Tour {
@@ -58,6 +61,7 @@ export class Tour {
       Tour.validateImages(props.images ?? []),
       now,
       now,
+      Tour.validateDepartureStartMonth(props.departureStartMonth),
     );
   }
 
@@ -71,11 +75,17 @@ export class Tour {
       Tour.validateImages(snapshot.images.map(TourImageRef.fromSnapshot)),
       snapshot.createdAt,
       snapshot.updatedAt,
+      Tour.validateDepartureStartMonth(snapshot.departureStartMonth),
     );
   }
 
   getId(): TourId {
     return this.id;
+  }
+
+  updateDepartureStartMonth(month?: number): void {
+    this.departureStartMonth = Tour.validateDepartureStartMonth(month);
+    this.touch();
   }
 
   upsertTranslation(translation: TourTranslationSnapshot): void {
@@ -128,6 +138,7 @@ export class Tour {
   toSnapshot(): TourSnapshot {
     return {
       id: this.id.value,
+      departureStartMonth: this.departureStartMonth,
       translations: this.translations.map((translation) => ({ ...translation })),
       destinations: this.destinations.map((destination) => destination.toSnapshot()),
       services: this.services.map((service) => service.toSnapshot()),
@@ -140,6 +151,16 @@ export class Tour {
 
   private touch(): void {
     this.updatedAt = new Date();
+  }
+
+  private static validateDepartureStartMonth(month?: number): number | undefined {
+    if (month === undefined) return undefined;
+
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      throw new Error("Tour departure start month must be an integer from 1 to 12.");
+    }
+
+    return month;
   }
 
   private static validateName(name: string): string {

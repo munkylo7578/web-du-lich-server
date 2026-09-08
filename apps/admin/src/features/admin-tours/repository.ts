@@ -190,6 +190,7 @@ async function hydrateAdminTours(rows: (typeof tours.$inferSelect)[]): Promise<A
 
   return rows.map((row) => ({
     id: row.id,
+    departureStartMonth: row.departureStartMonth ?? undefined,
     translations: translationRows
       .filter((translation) => translation.tourId === row.id)
       .map((translation) => ({
@@ -345,6 +346,7 @@ export class DrizzleTourRepository implements TourRepository {
 
     return TourMapper.toDomain({
       id: row[0].id,
+      departureStartMonth: row[0].departureStartMonth ?? undefined,
       translations: translations.map((translation) => ({
         locale: translation.locale,
         name: translation.name,
@@ -376,12 +378,14 @@ export class DrizzleTourRepository implements TourRepository {
     await db.transaction(async (tx) => {
       if (existing.length) {
         await tx.update(tours).set({
+          departureStartMonth: snapshot.departureStartMonth ?? null,
           plans: snapshot.plans,
           updatedAt: snapshot.updatedAt,
         }).where(eq(tours.id, snapshot.id));
       } else {
         await tx.insert(tours).values({
           id: snapshot.id,
+          departureStartMonth: snapshot.departureStartMonth ?? null,
           plans: snapshot.plans,
           createdAt: snapshot.createdAt,
           updatedAt: snapshot.updatedAt,

@@ -57,6 +57,13 @@
       "when": 1787712681649,
       "tag": "0007_gorgeous_george_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788852397010,
+      "tag": "0008_tour_departure_start_month",
+      "breakpoints": true
     }
   ]
 }

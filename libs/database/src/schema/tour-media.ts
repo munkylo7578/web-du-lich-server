@@ -35,6 +35,7 @@ export const tours = pgTable(
   "tours",
   {
     id: uuid("id").primaryKey(),
+    departureStartMonth: integer("departure_start_month"),
     plans: jsonb("plans").$type<TourPlanSnapshot[]>().default(sql`'[]'::jsonb`).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -45,6 +46,10 @@ export const tours = pgTable(
   },
   (table) => [
     check("tours_plans_array_check", sql`jsonb_typeof(${table.plans}) = 'array'`),
+    check(
+      "tours_departure_start_month_check",
+      sql`${table.departureStartMonth} between 1 and 12`,
+    ),
   ],
 );
 

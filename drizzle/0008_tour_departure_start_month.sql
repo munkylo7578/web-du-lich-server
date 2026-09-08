@@ -1,0 +1,2 @@
+ALTER TABLE "tours" ADD COLUMN "departure_start_month" integer;--> statement-breakpoint
+ALTER TABLE "tours" ADD CONSTRAINT "tours_departure_start_month_check" CHECK ("tours"."departure_start_month" between 1 and 12);
