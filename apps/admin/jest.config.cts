@@ -3,13 +3,7 @@ module.exports = {
   testEnvironment: 'node',
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        target: 'ES2017',
-        module: 'commonjs',
-        esModuleInterop: true,
-        strict: true,
-        skipLibCheck: true,
-      },
+      tsconfig: '<rootDir>/tsconfig.spec.json',
     }],
   },
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
