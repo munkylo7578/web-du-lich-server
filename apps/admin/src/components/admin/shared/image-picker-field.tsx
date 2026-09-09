@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useId } from "react";
 import { ImagePlus, Star, Trash2, Upload } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 export type ImagePickerMode = "single" | "multiple";
@@ -44,6 +45,10 @@ export type ImagePickerFieldProps<TMeta = Record<string, unknown>> = {
   maxSizeMb?: number;
   allowPaste?: boolean;
   allowAltText?: boolean;
+  altTextLabel?: string;
+  altTextPlaceholder?: string;
+  altTextMaxLength?: number;
+  getAltTextField?: (item: ImagePickerItem<TMeta>) => { error?: string; path?: string };
   emptyText?: string;
   helperText?: string;
   primaryActiveLabel?: string;
@@ -63,6 +68,10 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
   maxSizeMb = 8,
   allowPaste = true,
   allowAltText = true,
+  altTextLabel,
+  altTextPlaceholder = "Alt text cho ảnh",
+  altTextMaxLength,
+  getAltTextField,
   emptyText = "Chưa có ảnh nào.",
   helperText,
   primaryActiveLabel = "Ảnh chính",
@@ -150,6 +159,10 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
                 isPrimary={getIsPrimary?.(item) ?? false}
                 showPrimaryAction={Boolean(onPrimaryChange)}
                 allowAltText={allowAltText}
+                altTextLabel={altTextLabel}
+                altTextPlaceholder={altTextPlaceholder}
+                altTextMaxLength={altTextMaxLength}
+                altTextField={getAltTextField?.(item)}
                 primaryActiveLabel={primaryActiveLabel}
                 primaryInactiveLabel={primaryInactiveLabel}
                 onPrimary={() => onPrimaryChange?.(item)}
@@ -169,6 +182,10 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
                 isPrimary={getIsPrimary?.(item) ?? false}
                 showPrimaryAction={Boolean(onPrimaryChange)}
                 allowAltText={allowAltText}
+                altTextLabel={altTextLabel}
+                altTextPlaceholder={altTextPlaceholder}
+                altTextMaxLength={altTextMaxLength}
+                altTextField={getAltTextField?.(item)}
                 primaryActiveLabel={primaryActiveLabel}
                 primaryInactiveLabel={primaryInactiveLabel}
                 onPrimary={() => onPrimaryChange?.(item)}
@@ -192,6 +209,10 @@ function ImageCard({
   isPrimary,
   showPrimaryAction,
   allowAltText,
+  altTextLabel,
+  altTextPlaceholder,
+  altTextMaxLength,
+  altTextField,
   primaryActiveLabel,
   primaryInactiveLabel,
   onPrimary,
@@ -203,17 +224,32 @@ function ImageCard({
   isPrimary: boolean;
   showPrimaryAction: boolean;
   allowAltText: boolean;
+  altTextLabel?: string;
+  altTextPlaceholder: string;
+  altTextMaxLength?: number;
+  altTextField?: { error?: string; path?: string };
   primaryActiveLabel: string;
   primaryInactiveLabel: string;
   onPrimary: () => void;
   onAlt: (value: string) => void;
   onRemove: () => void;
 }) {
+  const inputId = useId();
   return (
     <div className="overflow-hidden rounded-2xl border border-white/65 bg-white/80 shadow-sm">
       <img src={src} alt={altText || "Ảnh xem trước"} className="aspect-[16/10] w-full object-cover" />
       <div className="space-y-2 p-3">
-        {allowAltText && <Input value={altText} onChange={(event) => onAlt(event.target.value)} placeholder="Alt text cho ảnh" />}
+        {allowAltText && (
+          <div className="space-y-2" data-field-path={altTextField?.path}>
+            {altTextLabel && <Label htmlFor={inputId}>{altTextLabel}</Label>}
+            <Input id={inputId} value={altText} onChange={(event) => onAlt(event.target.value)}
+              placeholder={altTextPlaceholder} maxLength={altTextMaxLength}
+              aria-label={altTextLabel ? undefined : altTextPlaceholder}
+              aria-invalid={Boolean(altTextField?.error)}
+              aria-describedby={altTextField?.error ? `${inputId}-error` : undefined} />
+            {altTextField?.error && <p id={`${inputId}-error`} role="alert" className="text-xs text-destructive">{altTextField.error}</p>}
+          </div>
+        )}
         <div className="flex gap-2">
           {showPrimaryAction && (
             <Button type="button" variant={isPrimary ? "secondary" : "outline"} className="flex-1" onClick={onPrimary}>

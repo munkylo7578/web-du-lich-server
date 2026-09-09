@@ -115,6 +115,10 @@ export class Image {
       throw new Error("Image alt text must have at least 2 characters.");
     }
 
+    if (value.length > 500) {
+      throw new Error("Image alt text must not exceed 500 characters.");
+    }
+
     return value;
   }
 

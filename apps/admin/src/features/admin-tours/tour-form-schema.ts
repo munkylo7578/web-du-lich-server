@@ -2,6 +2,30 @@ import { z } from "zod";
 
 const optionalHtml = z.string().trim().optional().default("");
 
+export const imageNameSchema = z.string().trim()
+  .max(500, "Tên ảnh không được vượt quá 500 ký tự.")
+  .refine((value) => !value || value.length >= 2, "Tên ảnh cần ít nhất 2 ký tự.")
+  .optional().default("");
+
+export const pendingImagesSchema = z.array(z.object({
+  clientId: z.string().uuid(),
+  altText: imageNameSchema,
+  role: z.enum(["cover", "gallery"]),
+  sortOrder: z.number().int().min(0),
+})).refine(
+  (items) => new Set(items.map((item) => item.clientId)).size === items.length,
+  "Danh sách ảnh mới chứa mã ảnh trùng lặp.",
+);
+
+export function imageFieldErrors(issues: readonly z.core.$ZodIssue[], prefix = ""): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
+  for (const issue of issues) {
+    const path = [prefix, ...issue.path].filter((part) => part !== "").join(".");
+    (errors[path] ??= []).push(issue.message);
+  }
+  return errors;
+}
+
 export const destinationEditorSchema = z.object({
   destinationId: z.string().uuid().optional(),
   wardCodes: z.array(z.string().trim().min(1)).default([]),
@@ -60,7 +84,7 @@ export const tourFormSchema = z.object({
     z.object({
       imageId: z.string().uuid(),
       url: z.string(),
-      altText: z.string().optional().default(""),
+      altText: imageNameSchema,
       role: z.enum(["cover", "gallery"]),
       sortOrder: z.number().int().min(0),
     }),
@@ -75,9 +99,4 @@ export type DestinationEditorFormValues = z.input<typeof destinationEditorSchema
 
 export type DestinationEditorValues = z.output<typeof destinationEditorSchema>;
 
-export type PendingImageMeta = {
-  clientId: string;
-  altText: string;
-  role: "cover" | "gallery";
-  sortOrder: number;
-};
+export type PendingImageMeta = z.output<typeof pendingImagesSchema>[number];

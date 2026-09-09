@@ -17,11 +17,13 @@ export function ImageUploadField({
   pending,
   onExistingChange,
   onPendingChange,
+  errors = {},
 }: {
   existing: AdminTourImage[];
   pending: PendingImage[];
   onExistingChange: (images: AdminTourImage[]) => void;
   onPendingChange: (images: PendingImage[]) => void;
+  errors?: Record<string, string[]>;
 }) {
   const pickerExisting: ImagePickerExistingImage<TourImageMeta>[] = existing.map((image) => ({
     id: image.imageId,
@@ -42,6 +44,15 @@ export function ImageUploadField({
   return (
     <ImagePickerField<TourImageMeta>
       mode="multiple"
+      altTextLabel="Tên ảnh"
+      altTextPlaceholder="Ví dụ: hà giang"
+      altTextMaxLength={500}
+      getAltTextField={(item) => {
+        const path = item.source === "existing"
+          ? `existingImages.${existing.findIndex((image) => image.imageId === item.image.id)}.altText`
+          : `pendingImages.${pending.findIndex((image) => image.clientId === item.image.clientId)}.altText`;
+        return { path, error: errors[path]?.[0] };
+      }}
       existing={pickerExisting}
       pending={pickerPending}
       createPendingMeta={({ index, totalBefore }) => ({ role: totalBefore + index === 0 ? "cover" : "gallery" })}

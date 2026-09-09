@@ -17,6 +17,8 @@ import {
 import { asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 
 import type { TourRepository, TourSaveDestination, TourSaveImage } from "@/domains/tour/domain";
+import type { TourImageMetadataUpdate } from "@/domains/tour/domain/tour-repository";
+import { Image } from "@/domains/image/domain";
 import { TourMapper } from "./tour-mapper";
 import type { AdminDestination, AdminTour, AdminWard } from "./tour-types";
 import { hydrateServices } from "@/features/admin-services/repository";
@@ -371,11 +373,48 @@ export class DrizzleTourRepository implements TourRepository {
   async save(
     tour: import("@/domains/tour/domain").Tour,
     newImages: TourSaveImage[] = [],
+    _saveDestinations: TourSaveDestination[] = [],
+    imageUpdates: TourImageMetadataUpdate[] = [],
   ) {
+    // Reserved by the existing repository contract; destinations are saved separately.
+    void _saveDestinations;
     const snapshot = TourMapper.toPersistence(tour);
     const existing = await db.select({ id: tours.id }).from(tours).where(eq(tours.id, snapshot.id)).limit(1);
 
     await db.transaction(async (tx) => {
+      // Check membership against persisted links, before replacing any links.
+      const oldLinks = await tx.select({ imageId: tourImages.imageId }).from(tourImages).where(eq(tourImages.tourId, snapshot.id));
+      const oldIds = new Set(oldLinks.map((link) => link.imageId));
+      const nextIds = new Set(snapshot.images.map((image) => image.imageId));
+      const newIds = new Set(newImages.map(({ image }) => image.getId().toString()));
+      if (snapshot.images.some((image) => !oldIds.has(image.imageId) && !newIds.has(image.imageId))
+        || imageUpdates.some((update) => !oldIds.has(update.imageId) || !nextIds.has(update.imageId))
+        || new Set(imageUpdates.map((update) => update.imageId)).size !== imageUpdates.length) {
+        throw new Error("Ảnh không thuộc tour hoặc dữ liệu cập nhật ảnh không hợp lệ.");
+      }
+
+      if (imageUpdates.length) {
+        const rows = await tx.select().from(images).where(inArray(images.id, imageUpdates.map((update) => update.imageId)));
+        const byId = new Map(rows.map((row) => [row.id, row]));
+        for (const update of imageUpdates) {
+          const row = byId.get(update.imageId);
+          if (!row) throw new Error("Không tìm thấy ảnh của tour.");
+          const image = Image.rehydrate({
+            ...row,
+            altText: row.altText ?? undefined,
+            fileName: row.fileName ?? undefined,
+            mimeType: row.mimeType ?? undefined,
+            sizeInBytes: row.sizeInBytes ?? undefined,
+          });
+          image.changeAltText(update.altText);
+          const value = image.toSnapshot();
+          if (value.altText !== (row.altText ?? undefined)) {
+            await tx.update(images).set({ altText: value.altText ?? null, updatedAt: value.updatedAt })
+              .where(eq(images.id, update.imageId));
+          }
+        }
+      }
+
       if (existing.length) {
         await tx.update(tours).set({
           departureStartMonth: snapshot.departureStartMonth ?? null,
@@ -418,8 +457,6 @@ export class DrizzleTourRepository implements TourRepository {
         sortOrder: service.sortOrder,
       })));
 
-      const oldLinks = await tx.select({ imageId: tourImages.imageId }).from(tourImages).where(eq(tourImages.tourId, snapshot.id));
-      const nextIds = new Set(snapshot.images.map((image) => image.imageId));
       const removedIds = oldLinks.map((link) => link.imageId).filter((id) => !nextIds.has(id));
       await tx.delete(tourImages).where(eq(tourImages.tourId, snapshot.id));
       if (removedIds.length) await tx.delete(images).where(inArray(images.id, removedIds));

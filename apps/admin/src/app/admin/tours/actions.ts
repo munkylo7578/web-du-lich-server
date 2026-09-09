@@ -13,7 +13,7 @@ import {
 } from "@/domains/tour/domain";
 import { requireSession } from "@/lib/auth/session";
 import { saveDestinationRecord, searchDestinations, searchWards, tourRepository } from "@/features/admin-tours/repository";
-import { destinationEditorSchema, type PendingImageMeta, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
+import { destinationEditorSchema, imageFieldErrors, pendingImagesSchema, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
 import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
 import { removeUploadedFiles, saveTourImage } from "@/features/admin-tours/upload";
 
@@ -79,14 +79,24 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
   });
 
   let payload: unknown;
-  let pendingMeta: PendingImageMeta[];
+  let pendingPayload: unknown;
   try {
     payload = JSON.parse(String(formData.get("payload") || "{}"));
-    pendingMeta = JSON.parse(String(formData.get("pendingImages") || "[]"));
+    pendingPayload = JSON.parse(String(formData.get("pendingImages") || "[]"));
   } catch {
     console.error("[TourUpload] saveTourAction:parse_failed", { requestId });
     return { success: false, message: "Dữ liệu biểu mẫu không hợp lệ." };
   }
+
+  const parsedPending = pendingImagesSchema.safeParse(pendingPayload);
+  if (!parsedPending.success) {
+    return {
+      success: false,
+      message: "Vui lòng kiểm tra lại thông tin ảnh mới.",
+      fieldErrors: imageFieldErrors(parsedPending.error.issues, "pendingImages"),
+    };
+  }
+  const pendingMeta = parsedPending.data;
 
   console.info("[TourUpload] saveTourAction:parsed", {
     requestId,
@@ -103,7 +113,7 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     return {
       success: false,
       message: "Vui lòng kiểm tra lại các trường thông tin.",
-      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fieldErrors: imageFieldErrors(parsed.error.issues),
     };
   }
 
@@ -136,6 +146,15 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
 
     const tour = data.id ? await tourRepository.findById(data.id) : null;
     if (data.id && !tour) return { success: false, message: "Không tìm thấy tour." };
+
+    const linkedIds = new Set(tour?.toSnapshot().images.map((image) => image.imageId) ?? []);
+    if (data.existingImages.some((image) => !linkedIds.has(image.imageId))) {
+      return { success: false, message: "Ảnh không thuộc tour đang chỉnh sửa." };
+    }
+    // Reject missing files before writing any uploads, rather than silently dropping images.
+    if (pendingMeta.some((meta) => !(formData.get(`file:${meta.clientId}`) instanceof File))) {
+      return { success: false, message: "Không tìm thấy tệp ảnh mới. Vui lòng chọn lại ảnh." };
+    }
 
     const departureStartMonth = data.departureStartMonth ?? undefined;
     const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth });
@@ -178,7 +197,7 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
           clientId: meta.clientId,
           availableFormDataKeys: Array.from(formData.keys()),
         });
-        continue;
+        throw new Error("Không tìm thấy tệp ảnh mới.");
       }
 
       const stored = await saveTourImage(file);
@@ -200,7 +219,9 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     }
 
     aggregate.replaceImages([...existingRefs, ...newRefs]);
-    await tourRepository.save(aggregate, newImages);
+    await tourRepository.save(aggregate, newImages, undefined,
+      data.existingImages.map(({ imageId, altText }) => ({ imageId, altText })),
+    );
     console.info("[TourUpload] saveTourAction:success", {
       requestId,
       tourId: aggregate.getId().toString(),

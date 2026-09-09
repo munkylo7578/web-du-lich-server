@@ -7,6 +7,11 @@ export type TourSaveImage = {
   physicalPath: string;
 };
 
+export type TourImageMetadataUpdate = {
+  imageId: string;
+  altText?: string;
+};
+
 export type TourSaveDestinationTranslation = {
   locale: TourLocale;
   name: string;
@@ -21,6 +26,6 @@ export type TourSaveDestination = {
 
 export interface TourRepository {
   findById(id: string): Promise<Tour | null>;
-  save(tour: Tour, newImages?: TourSaveImage[], saveDestinations?: TourSaveDestination[]): Promise<void>;
+  save(tour: Tour, newImages?: TourSaveImage[], saveDestinations?: TourSaveDestination[], imageUpdates?: TourImageMetadataUpdate[]): Promise<void>;
   delete(id: string): Promise<void>;
 }

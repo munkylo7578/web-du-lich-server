@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { tourFormSchema, type TourFormValues } from "@/features/admin-tours/tour-form-schema";
+import { imageFieldErrors, pendingImagesSchema, tourFormSchema, type TourFormValues } from "@/features/admin-tours/tour-form-schema";
 import type { AdminTour } from "@/features/admin-tours/tour-types";
 
 type Locale = "vi" | "en";
@@ -63,6 +63,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [message, setMessage] = useState<string>();
+  const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
   const [translationLocale, setTranslationLocale] = useState<Locale>("vi");
   const [planLocales, setPlanLocales] = useState<Record<string, Locale>>({});
   const [isPending, startTransition] = useTransition();
@@ -73,6 +74,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
     pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setPendingImages([]);
     setMessage(undefined);
+    setImageErrors({});
     setTranslationLocale("vi");
     setPlanLocales({});
     form.reset(values);
@@ -113,8 +115,16 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
     });
   };
 
-  const submit = form.handleSubmit((data) => {
+  const submit = (event: React.FormEvent<HTMLFormElement>) => form.handleSubmit((data) => {
     setMessage(undefined);
+    const parsedPending = pendingImagesSchema.safeParse(pendingImages);
+    if (!parsedPending.success) {
+      const errors = imageFieldErrors(parsedPending.error.issues, "pendingImages");
+      setImageErrors(errors);
+      scrollToError(Object.keys(errors)[0]);
+      return;
+    }
+    setImageErrors({});
     startTransition(async () => {
       const payload = {
         ...data,
@@ -124,10 +134,15 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
       const normalizedPending = pendingImages.map((image, index) => ({ ...image, sortOrder: data.existingImages.length + index }));
       const body = new FormData();
       body.set("payload", JSON.stringify(payload));
-      body.set("pendingImages", JSON.stringify(normalizedPending.map(({ file: _file, previewUrl: _preview, ...meta }) => meta)));
+      body.set("pendingImages", JSON.stringify(normalizedPending.map(({ clientId, altText, role, sortOrder }) => ({ clientId, altText, role, sortOrder }))));
       normalizedPending.forEach((image) => body.set(`file:${image.clientId}`, image.file));
       const result = await saveTourAction(body);
       setMessage(result.message);
+      if (result.fieldErrors) {
+        setImageErrors(result.fieldErrors);
+        const path = Object.keys(result.fieldErrors)[0];
+        if (path) scrollToError(path);
+      }
       if (result.success) {
         pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
         setPendingImages([]);
@@ -135,9 +150,11 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
       }
     });
   }, (errors) => {
+    const pending = pendingImagesSchema.safeParse(pendingImages);
+    setImageErrors(pending.success ? {} : imageFieldErrors(pending.error.issues, "pendingImages"));
     const firstErrorPath = getFirstErrorPath(errors);
     if (firstErrorPath) scrollToError(firstErrorPath);
-  });
+  })(event);
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) resetDraft(); onOpenChange(nextOpen); }}>
@@ -261,8 +278,31 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
 
             <Separator />
             <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-              <SectionHeading title="Hình ảnh" description="Chọn, kéo thả hoặc paste ảnh. Chỉ một ảnh được đặt làm ảnh bìa." />
-              <Controller control={form.control} name="existingImages" render={({ field }) => <ImageUploadField existing={field.value as AdminTour["images"]} pending={pendingImages} onExistingChange={field.onChange} onPendingChange={setPendingImages} />} />
+              <SectionHeading title="Hình ảnh" description="Chọn, kéo thả hoặc paste ảnh. Tên ảnh không bắt buộc và dùng chung cho mọi ngôn ngữ. Chỉ một ảnh được đặt làm ảnh bìa." />
+              <fieldset disabled={isPending}>
+                <legend className="sr-only">Hình ảnh tour</legend>
+                <Controller control={form.control} name="existingImages" render={({ field }) => (
+                  <ImageUploadField existing={field.value as AdminTour["images"]} pending={pendingImages}
+                    errors={{
+                      ...imageErrors,
+                      ...Object.fromEntries(field.value.flatMap((_, index) => {
+                        const error = form.formState.errors.existingImages?.[index]?.altText?.message;
+                        return error ? [[`existingImages.${index}.altText`, [error]]] : [];
+                      })),
+                    }}
+                    onExistingChange={(images) => {
+                      if (isPending) return;
+                      setImageErrors({});
+                      field.onChange(images);
+                      if (form.formState.isSubmitted) void form.trigger("existingImages");
+                    }}
+                    onPendingChange={(images) => {
+                      if (isPending) return;
+                      setImageErrors({});
+                      setPendingImages(images);
+                    }} />
+                )} />
+              </fieldset>
             </section>
             </div>
           </div>
