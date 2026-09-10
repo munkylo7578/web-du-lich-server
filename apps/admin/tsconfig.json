@@ -3,7 +3,8 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"],
-      "@database": ["../../libs/database/src/index.ts"]
+      "@database": ["../../libs/database/src/index.ts"],
+      "@destination-country": ["../../libs/database/src/contracts/destination-country.ts"]
     },
     "jsx": "preserve",
     "strict": true,

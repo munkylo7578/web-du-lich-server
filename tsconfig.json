@@ -28,6 +28,9 @@
       ],
       "@database": [
         "./libs/database/src/index.ts"
+      ],
+      "@destination-country": [
+        "./libs/database/src/contracts/destination-country.ts"
       ]
     }
   },

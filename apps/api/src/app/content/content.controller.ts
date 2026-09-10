@@ -12,14 +12,14 @@ import { ContentService } from './content.service';
 export class ContentController {
   constructor(private readonly content: ContentService) {}
 
-  @Get('tours') @ApiSuccessEnvelope({ isArray: true, hasMeta: true, description: 'Paginated tours' })
+  @Get('tours') @ApiSuccessEnvelope({ isArray: true, hasMeta: true, description: 'Paginated tours. Nested destinations include country: LA (Laos), KH (Cambodia), or VN (Vietnam), independent of locale.' })
   listTours(@Query() query: PageQueryDto) { return this.content.tours(query.locale, query.page, query.limit); }
-  @Get('tours/:id') @ApiSuccessEnvelope({ description: 'Tour detail' })
+  @Get('tours/:id') @ApiSuccessEnvelope({ description: 'Tour detail. Nested destinations include country: LA (Laos), KH (Cambodia), or VN (Vietnam), independent of locale.' })
   getTour(@Param('id', new ParseUUIDPipe()) id: string, @Query() query: LocaleQueryDto) { return this.content.tour(id, query.locale); }
 
-  @Get('destinations') @ApiSuccessEnvelope({ isArray: true, hasMeta: true, description: 'Paginated destinations' })
+  @Get('destinations') @ApiSuccessEnvelope({ isArray: true, hasMeta: true, description: 'Paginated destinations. Each destination includes country: LA (Laos), KH (Cambodia), or VN (Vietnam), independent of locale.' })
   listDestinations(@Query() query: PageQueryDto) { return this.content.destinations(query.locale, query.page, query.limit); }
-  @Get('destinations/:id') @ApiSuccessEnvelope({ description: 'Destination detail' })
+  @Get('destinations/:id') @ApiSuccessEnvelope({ description: 'Destination detail including country: LA (Laos), KH (Cambodia), or VN (Vietnam), independent of locale.' })
   getDestination(@Param('id', new ParseUUIDPipe()) id: string, @Query() query: LocaleQueryDto) { return this.content.destination(id, query.locale); }
 
   @Get('services') @ApiSuccessEnvelope({ isArray: true, hasMeta: true, description: 'Paginated services' })

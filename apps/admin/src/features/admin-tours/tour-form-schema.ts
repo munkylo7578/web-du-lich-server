@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DESTINATION_COUNTRIES } from "@destination-country";
 
 const optionalHtml = z.string().trim().optional().default("");
 
@@ -28,6 +29,7 @@ export function imageFieldErrors(issues: readonly z.core.$ZodIssue[], prefix = "
 
 export const destinationEditorSchema = z.object({
   destinationId: z.string().uuid().optional(),
+  country: z.enum(DESTINATION_COUNTRIES, { error: "Vui lòng chọn quốc gia hợp lệ." }),
   wardCodes: z.array(z.string().trim().min(1)).default([]),
   translations: z.object({
     vi: z.object({

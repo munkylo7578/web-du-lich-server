@@ -3,7 +3,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./apps/admin/src/*"],
-      "@database": ["./libs/database/src/index.ts"]
+      "@database": ["./libs/database/src/index.ts"],
+      "@destination-country": ["./libs/database/src/contracts/destination-country.ts"]
     }
   }
 }

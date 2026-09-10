@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Check, Loader2, Search, Trash2 } from "lucide-react";
+import { DESTINATION_COUNTRY_LABELS } from "@destination-country";
 
 import { searchDestinationsAction } from "@/app/admin/tours/actions";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ export function DestinationManager({ value, existingDestinations, error, onChang
                     onClick={() => addExistingDestination(destination)}
                   >
                     <span>
-                      <span className="block font-medium text-foreground">{getDestinationName(destination)}</span>
+                    <span className="block font-medium text-foreground">{getDestinationName(destination)} · {DESTINATION_COUNTRY_LABELS[destination.country]}</span>
                       <span className="mt-0.5 block text-xs text-muted-foreground">{formatWardList(destination.wards)}</span>
                     </span>
                     <Check className="mt-1 size-4 text-cyan-700" />
@@ -126,9 +127,9 @@ export function DestinationManager({ value, existingDestinations, error, onChang
           return (
             <div key={destination.destinationId} className="flex items-start justify-between gap-4 rounded-2xl border bg-white p-4 shadow-sm">
               <div>
-                <p className="font-medium">{detail ? getDestinationName(detail) : destination.destinationId}</p>
+                <p className="font-medium">{detail ? `${getDestinationName(detail)} · ${DESTINATION_COUNTRY_LABELS[detail.country]}` : destination.destinationId}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {detail ? formatWardList(detail.wards) : "Điểm đến đã được gắn với tour."}
+                  {detail ? (detail.country === "VN" ? formatWardList(detail.wards) : "Không áp dụng liên kết phường/xã.") : "Điểm đến đã được gắn với tour."}
                 </p>
               </div>
               <Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa điểm đến ${index + 1}`} onClick={() => removeDestination(index)}>

@@ -1,0 +1,2 @@
+ALTER TABLE "destinations" ADD COLUMN "country" varchar(2) NOT NULL;--> statement-breakpoint
+ALTER TABLE "destinations" ADD CONSTRAINT "destinations_country_check" CHECK ("destinations"."country" in ('LA', 'KH', 'VN'));

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
+import { DESTINATION_COUNTRIES, DESTINATION_COUNTRY_LABELS, isDestinationCountry } from "@destination-country";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -33,6 +34,7 @@ import { RichTextEditor } from "@/components/admin/tours/rich-text-editor";
 import {
   destinationEditorSchema,
   type DestinationEditorFormValues,
+  type DestinationEditorValues,
 } from "@/features/admin-tours/tour-form-schema";
 import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
 
@@ -67,6 +69,11 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
         </div>
       ),
     }),
+    helper.accessor((destination) => DESTINATION_COUNTRY_LABELS[destination.country], {
+      id: "country",
+      header: "Quốc gia",
+      cell: ({ getValue }) => <Badge variant="outline">{getValue()}</Badge>,
+    }),
     helper.display({
       id: "wards",
       header: "Phường/xã",
@@ -79,7 +86,7 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
           ))}
           {row.original.wards.length > 3 && <Badge variant="outline">+{row.original.wards.length - 3}</Badge>}
         </div>
-      ) : <span className="text-muted-foreground">Chưa liên kết</span>,
+      ) : <span className="text-muted-foreground">{row.original.country === "VN" ? "Chưa liên kết" : "Không áp dụng"}</span>,
     }),
     helper.display({
       id: "languages",
@@ -255,7 +262,9 @@ function DestinationFormDrawer({
   const [wardResults, setWardResults] = useState<AdminWard[]>([]);
   const [knownWards, setKnownWards] = useState<AdminWard[]>(initialWards);
   const [isPending, startTransition] = useTransition();
-  const form = useForm<DestinationEditorFormValues>({ resolver: zodResolver(destinationEditorSchema), values });
+  const form = useForm<DestinationEditorFormValues, unknown, DestinationEditorValues>({ resolver: zodResolver(destinationEditorSchema), values });
+  const country = form.watch("country");
+  const wardSearchVersion = useRef(0);
   const watchedWardCodes = form.watch("wardCodes") ?? [];
   const wardMap = useMemo(() => {
     const map = new Map<string, AdminWard>();
@@ -268,26 +277,30 @@ function DestinationFormDrawer({
   }, [knownWards]);
 
   const searchWards = (query: string) => {
+    const version = ++wardSearchVersion.current;
     setWardQuery(query);
 
-    if (query.trim().length < 2) {
+    if (form.getValues("country") !== "VN" || query.trim().length < 2) {
       setWardResults([]);
       return;
     }
 
     startTransition(async () => {
       const results = await searchDestinationWardsAction(query);
+      if (version !== wardSearchVersion.current || form.getValues("country") !== "VN") return;
       setWardResults(results);
       mergeKnownWards(results);
     });
   };
 
   const addWard = (ward: AdminWard) => {
+    if (form.getValues("country") !== "VN") return;
     const currentCodes = form.getValues("wardCodes") ?? [];
     if (currentCodes.includes(ward.code)) return;
 
     mergeKnownWards([ward]);
     form.setValue("wardCodes", [...currentCodes, ward.code], { shouldDirty: true, shouldValidate: true });
+    wardSearchVersion.current += 1;
     setWardQuery("");
     setWardResults([]);
   };
@@ -305,6 +318,9 @@ function DestinationFormDrawer({
     startTransition(async () => {
       const result = await saveAdminDestinationAction(data);
       setMessage(result.message);
+      if (result.fieldErrors?.country?.[0]) {
+        form.setError("country", { type: "server", message: result.fieldErrors.country[0] });
+      }
       if (result.success) {
         onOpenChange(false);
         onSaved();
@@ -340,6 +356,37 @@ function DestinationFormDrawer({
               {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
 
               <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+                <SectionHeading title="Quốc gia" description="Quốc gia dùng chung cho tất cả bản dịch và các tour liên kết." />
+                <div className="space-y-2 sm:max-w-sm">
+                  <Label htmlFor="destination-country">Quốc gia<RequiredMark /></Label>
+                  <select
+                    id="destination-country"
+                    required
+                    disabled={isPending}
+                    aria-invalid={Boolean(form.formState.errors.country)}
+                    aria-describedby={form.formState.errors.country ? "destination-country-error" : undefined}
+                    className="glass-input h-11 w-full rounded-2xl border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50"
+                    {...form.register("country", {
+                      onChange: (event) => {
+                        const nextCountry: unknown = event.target.value;
+                        if (!isDestinationCountry(nextCountry)) return;
+                        wardSearchVersion.current += 1;
+                        setWardQuery("");
+                        setWardResults([]);
+                        if (nextCountry !== "VN") {
+                          form.setValue("wardCodes", [], { shouldDirty: true, shouldValidate: true });
+                        }
+                      },
+                    })}
+                  >
+                    {DESTINATION_COUNTRIES.map((value) => <option key={value} value={value}>{DESTINATION_COUNTRY_LABELS[value]}</option>)}
+                  </select>
+                  {form.formState.errors.country && <p id="destination-country-error" role="alert" className="text-xs text-destructive">{form.formState.errors.country.message}</p>}
+                </div>
+                {country !== "VN" && <p className="text-sm text-muted-foreground">Liên kết phường/xã chỉ áp dụng cho Việt Nam. Khi lưu quốc gia Lào hoặc Campuchia, các liên kết phường/xã trước đó sẽ được xóa.</p>}
+              </section>
+
+              <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
                 <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên tiếng Việt là bắt buộc, tiếng Anh có thể bổ sung sau." />
                 <Tabs value={locale} onValueChange={(value) => isLocale(value) && setLocale(value)}>
                   <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
@@ -356,7 +403,7 @@ function DestinationFormDrawer({
                 </Tabs>
               </section>
 
-              <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
+              {country === "VN" && <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
                 <SectionHeading title="Phường/xã liên quan" description="Chọn các phường/xã để hỗ trợ tìm kiếm và phân loại điểm đến." />
                 <div className="space-y-2">
                   <Label>Tìm phường/xã</Label>
@@ -389,7 +436,7 @@ function DestinationFormDrawer({
                     );
                   }) : <p className="text-xs text-muted-foreground">Chưa chọn phường/xã. Có thể bổ sung sau.</p>}
                 </div>
-              </section>
+              </section>}
             </div>
           </div>
 
@@ -407,6 +454,7 @@ function DestinationFormDrawer({
 
 function createEmptyEditorValues(): DestinationEditorFormValues {
   return {
+    country: "VN",
     wardCodes: [],
     translations: {
       vi: { name: "", description: "" },
@@ -422,7 +470,8 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
 
   return {
     destinationId: destination.destinationId,
-    wardCodes: destination.wards.map((ward) => ward.code),
+    country: destination.country,
+    wardCodes: destination.country === "VN" ? destination.wards.map((ward) => ward.code) : [],
     translations: {
       vi: { name: vi?.name || "", description: vi?.description || "" },
       en: { name: en?.name || "", description: en?.description || "" },

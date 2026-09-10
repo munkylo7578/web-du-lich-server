@@ -1,4 +1,5 @@
 import "server-only";
+import { destinationWardCodes } from "@destination-country";
 
 import {
   db,
@@ -90,6 +91,7 @@ export async function searchDestinations(query: string): Promise<AdminDestinatio
 }
 
 export async function saveDestinationRecord(destination: TourSaveDestination): Promise<AdminDestination> {
+  const wardCodes = destinationWardCodes(destination.country, destination.wardCodes);
   const now = new Date();
 
   await db.transaction(async (tx) => {
@@ -100,10 +102,11 @@ export async function saveDestinationRecord(destination: TourSaveDestination): P
       .limit(1);
 
     if (existingDestination.length) {
-      await tx.update(destinations).set({ updatedAt: now }).where(eq(destinations.id, destination.destinationId));
+      await tx.update(destinations).set({ country: destination.country, updatedAt: now }).where(eq(destinations.id, destination.destinationId));
     } else {
       await tx.insert(destinations).values({
         id: destination.destinationId,
+        country: destination.country,
         createdAt: now,
         updatedAt: now,
       });
@@ -120,8 +123,8 @@ export async function saveDestinationRecord(destination: TourSaveDestination): P
     })));
 
     await tx.delete(destinationWards).where(eq(destinationWards.destinationId, destination.destinationId));
-    if (destination.wardCodes.length) {
-      await tx.insert(destinationWards).values(destination.wardCodes.map((wardCode) => ({
+    if (wardCodes.length) {
+      await tx.insert(destinationWards).values(wardCodes.map((wardCode) => ({
         destinationId: destination.destinationId,
         wardCode,
       })));
@@ -235,6 +238,7 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
   const destinationRows = await db
     .select({
       id: destinations.id,
+      country: destinations.country,
       createdAt: destinations.createdAt,
       updatedAt: destinations.updatedAt,
     })
@@ -269,11 +273,13 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
     tourCountMap.set(link.destinationId, (tourCountMap.get(link.destinationId) ?? 0) + 1);
   }
 
-  return ids.map((id) => {
+  return ids.flatMap((id) => {
     const meta = destinationMeta.get(id);
+    if (!meta) return [];
 
-    return {
+    return [{
       destinationId: id,
+      country: meta.country,
       translations: translationRows
         .filter((translation) => translation.destinationId === id)
         .map((translation) => ({
@@ -288,7 +294,7 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
       tourCount: tourCountMap.get(id) ?? 0,
       createdAt: meta?.createdAt.toISOString(),
       updatedAt: meta?.updatedAt.toISOString(),
-    };
+    }];
   });
 }
 

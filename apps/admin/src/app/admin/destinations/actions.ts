@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { destinationWardCodes } from "@destination-country";
 
 import { requireSession } from "@/lib/auth/session";
 import {
@@ -44,7 +45,8 @@ export async function saveAdminDestinationAction(
   const data = parsed.data;
   const destination = await saveDestinationRecord({
     destinationId: data.destinationId ?? crypto.randomUUID(),
-    wardCodes: [...new Set(data.wardCodes)],
+    country: data.country,
+    wardCodes: destinationWardCodes(data.country, data.wardCodes),
     translations: [
       {
         locale: "vi",

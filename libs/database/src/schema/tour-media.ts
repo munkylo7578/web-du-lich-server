@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { wards } from "./geo-location";
+import { DESTINATION_COUNTRIES } from "../contracts/destination-country";
 
 export const TOUR_LOCALES = ["vi", "en"] as const;
 
@@ -83,9 +84,12 @@ export const tourTranslations = pgTable(
 
 export const destinations = pgTable("destinations", {
   id: uuid("id").primaryKey(),
+  country: varchar("country", { length: 2, enum: DESTINATION_COUNTRIES }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  check("destinations_country_check", sql`${table.country} in ('LA', 'KH', 'VN')`),
+]);
 
 export const destinationTranslations = pgTable(
   "destination_translations",

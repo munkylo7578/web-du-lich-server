@@ -1,5 +1,6 @@
 import type { TourPlanSnapshot, TourTranslationSnapshot } from "@/domains/tour/domain";
 import type { AdminService } from "@/features/admin-services/service-types";
+import type { DestinationCountry } from "@destination-country";
 
 export type AdminWard = {
   code: string;
@@ -17,6 +18,7 @@ export type AdminDestinationTranslation = {
 
 export type AdminDestination = {
   destinationId: string;
+  country: DestinationCountry;
   translations: AdminDestinationTranslation[];
   wards: AdminWard[];
   sortOrder: number;

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { destinationWardCodes } from "@destination-country";
 
 import { Image } from "@/domains/image/domain";
 import {
@@ -49,7 +50,8 @@ export async function saveDestinationAction(payload: unknown): Promise<TourActio
   const destinationId = data.destinationId ?? crypto.randomUUID();
   const destination = await saveDestinationRecord({
     destinationId,
-    wardCodes: [...new Set(data.wardCodes)],
+    country: data.country,
+    wardCodes: destinationWardCodes(data.country, data.wardCodes),
     translations: [
       {
         locale: "vi",
@@ -66,6 +68,8 @@ export async function saveDestinationAction(payload: unknown): Promise<TourActio
     ],
   });
 
+  revalidatePath("/admin/destinations");
+  revalidatePath("/admin/tours");
   return { success: true, message: "Đã lưu điểm đến.", destination };
 }
 

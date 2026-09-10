@@ -1,4 +1,5 @@
 import type { Image } from "@/domains/image/domain";
+import type { DestinationCountry } from "@destination-country";
 import type { TourLocale } from "./tour-locale";
 import type { Tour } from "./tour";
 
@@ -20,6 +21,7 @@ export type TourSaveDestinationTranslation = {
 
 export type TourSaveDestination = {
   destinationId: string;
+  country: DestinationCountry;
   translations: TourSaveDestinationTranslation[];
   wardCodes: string[];
 };

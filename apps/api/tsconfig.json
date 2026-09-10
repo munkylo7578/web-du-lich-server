@@ -13,7 +13,8 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "paths": {
-      "@database": ["libs/database/src/index.ts"]
+      "@database": ["libs/database/src/index.ts"],
+      "@destination-country": ["libs/database/src/contracts/destination-country.ts"]
     }
   }
 }

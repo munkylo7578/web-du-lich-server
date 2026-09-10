@@ -6,6 +6,9 @@ module.exports = {
       tsconfig: '<rootDir>/tsconfig.spec.json',
     }],
   },
-  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@destination-country$': '<rootDir>/../../libs/database/src/contracts/destination-country.ts',
+  },
   testMatch: ['<rootDir>/src/**/*.spec.ts'],
 };
