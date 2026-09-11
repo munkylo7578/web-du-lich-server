@@ -10,25 +10,28 @@ import {
   provinces,
   tourDestinations,
   tourImages,
+  tourPlans,
+  tourPlanImages,
+  serviceImages,
   tourServices,
   tours,
   tourTranslations,
   wards,
 } from "@database";
-import { asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
 import type { TourRepository, TourSaveDestination, TourSaveImage } from "@/domains/tour/domain";
 import type { TourImageMetadataUpdate } from "@/domains/tour/domain/tour-repository";
 import { Image } from "@/domains/image/domain";
 import { TourMapper } from "./tour-mapper";
-import type { AdminDestination, AdminTour, AdminWard } from "./tour-types";
+import type { AdminDestination, AdminTour, AdminTourPlan, AdminWard } from "./tour-types";
 import { hydrateServices } from "@/features/admin-services/repository";
 
 const WARD_SEARCH_LIMIT = 20;
 const DESTINATION_SEARCH_LIMIT = 20;
 
 export async function listAdminTours(): Promise<AdminTour[]> {
-  const rows = await db.select().from(tours).orderBy(desc(tours.updatedAt));
+  const rows = await db.select(tourColumns).from(tours).orderBy(desc(tours.updatedAt));
   return hydrateAdminTours(rows);
 }
 
@@ -155,15 +158,39 @@ export async function deleteDestinationRecord(id: string): Promise<void> {
 }
 
 export async function findAdminTour(id: string): Promise<AdminTour | null> {
-  const rows = await db.select().from(tours).where(eq(tours.id, id)).limit(1);
+  const rows = await db.select(tourColumns).from(tours).where(eq(tours.id, id)).limit(1);
   const hydrated = await hydrateAdminTours(rows);
   return hydrated[0] ?? null;
 }
 
-async function hydrateAdminTours(rows: (typeof tours.$inferSelect)[]): Promise<AdminTour[]> {
+const tourColumns = {
+  id: tours.id, departureStartMonth: tours.departureStartMonth,
+  createdAt: tours.createdAt, updatedAt: tours.updatedAt,
+};
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function loadPlans(ids: string[]) {
+  const rows = await db.query.tourPlans.findMany({
+    where: inArray(tourPlans.tourId, ids),
+    orderBy: [asc(tourPlans.sortOrder)],
+    with: { imageLinks: { orderBy: [asc(tourPlanImages.sortOrder)], with: { image: true } } },
+  });
+  return rows.map((row): AdminTourPlan & { tourId: string } => ({
+    tourId: row.tourId, planId: row.id,
+    name: { ...row.name }, description: { ...row.description }, sortOrder: row.sortOrder,
+    images: row.imageLinks.map((link) => ({
+      imageId: link.imageId, sortOrder: link.sortOrder,
+      url: link.image.url, altText: link.image.altText ?? undefined,
+    })),
+  }));
+}
+
+async function hydrateAdminTours(rows: Array<Omit<typeof tours.$inferSelect, "plans">>): Promise<AdminTour[]> {
   if (!rows.length) return [];
 
   const ids = rows.map((row) => row.id);
+  const plans = await loadPlans(ids);
   const translationRows = await db
     .select()
     .from(tourTranslations)
@@ -217,7 +244,10 @@ async function hydrateAdminTours(rows: (typeof tours.$inferSelect)[]): Promise<A
       const service = hydratedServices.find((item) => item.serviceId === link.serviceId);
       return service ? { ...service, sortOrder: link.sortOrder } : null;
     }).filter((service): service is import("@/features/admin-services/service-types").AdminService => Boolean(service)),
-    plans: row.plans,
+    plans: plans.filter((plan) => plan.tourId === row.id).map((plan) => ({
+      planId: plan.planId, name: plan.name, description: plan.description,
+      sortOrder: plan.sortOrder, images: plan.images,
+    })),
     images: imageRows
       .filter((image) => image.tourId === row.id)
       .map((image) => ({
@@ -320,22 +350,34 @@ function normalizeOptionalText(value?: string): string | null {
 }
 
 export async function deleteTourRecord(id: string) {
-  const linkedImages = await db
-    .select({ imageId: tourImages.imageId })
-    .from(tourImages)
-    .where(eq(tourImages.tourId, id));
-
   await db.transaction(async (tx) => {
+    await tx.select({ id: tours.id }).from(tours).where(eq(tours.id, id)).for("update");
+    const linkedIds = await existingImageIds(tx, id);
     await tx.delete(tours).where(eq(tours.id, id));
-    if (linkedImages.length) {
-      await tx.delete(images).where(inArray(images.id, linkedImages.map((item) => item.imageId)));
-    }
+    await deleteUnreferencedImages(tx, [...linkedIds]);
   });
+}
+
+async function existingImageIds(tx: Transaction, tourId: string): Promise<Set<string>> {
+  const gallery = await tx.select({ imageId: tourImages.imageId }).from(tourImages).where(eq(tourImages.tourId, tourId));
+  const plans = await tx.select({ imageId: tourPlanImages.imageId }).from(tourPlanImages)
+    .innerJoin(tourPlans, eq(tourPlanImages.planId, tourPlans.id)).where(eq(tourPlans.tourId, tourId));
+  return new Set([...gallery, ...plans].map((link) => link.imageId));
+}
+
+async function deleteUnreferencedImages(tx: Transaction, ids: string[]) {
+  if (!ids.length) return;
+  // FK RESTRICT is the final guard against concurrent references. No filesystem IO here.
+  await tx.delete(images).where(and(inArray(images.id, ids),
+    sql`not exists (select 1 from ${tourImages} where ${tourImages.imageId} = ${images.id})`,
+    sql`not exists (select 1 from ${tourPlanImages} where ${tourPlanImages.imageId} = ${images.id})`,
+    sql`not exists (select 1 from ${serviceImages} where ${serviceImages.imageId} = ${images.id})`,
+  ));
 }
 
 export class DrizzleTourRepository implements TourRepository {
   async findById(id: string) {
-    const row = await db.select().from(tours).where(eq(tours.id, id)).limit(1);
+    const row = await db.select(tourColumns).from(tours).where(eq(tours.id, id)).limit(1);
     if (!row[0]) return null;
 
     const translations = await db
@@ -365,7 +407,10 @@ export class DrizzleTourRepository implements TourRepository {
         sortOrder: link.sortOrder,
       })),
       services: serviceLinks.map((link) => ({ serviceId: link.serviceId, sortOrder: link.sortOrder })),
-      plans: row[0].plans,
+      plans: (await loadPlans([id])).map((plan) => ({
+        planId: plan.planId, name: plan.name, description: plan.description, sortOrder: plan.sortOrder,
+        images: plan.images.map((image) => ({ imageId: image.imageId, sortOrder: image.sortOrder })),
+      })),
       images: links.map((link) => ({
         imageId: link.imageId,
         role: link.role,
@@ -385,18 +430,26 @@ export class DrizzleTourRepository implements TourRepository {
     // Reserved by the existing repository contract; destinations are saved separately.
     void _saveDestinations;
     const snapshot = TourMapper.toPersistence(tour);
-    const existing = await db.select({ id: tours.id }).from(tours).where(eq(tours.id, snapshot.id)).limit(1);
 
     await db.transaction(async (tx) => {
+      const existing = await tx.select({ id: tours.id }).from(tours).where(eq(tours.id, snapshot.id)).for("update");
       // Check membership against persisted links, before replacing any links.
-      const oldLinks = await tx.select({ imageId: tourImages.imageId }).from(tourImages).where(eq(tourImages.tourId, snapshot.id));
-      const oldIds = new Set(oldLinks.map((link) => link.imageId));
-      const nextIds = new Set(snapshot.images.map((image) => image.imageId));
+      const oldIds = await existingImageIds(tx, snapshot.id);
+      const nextIds = new Set([...snapshot.images, ...snapshot.plans.flatMap((plan) => plan.images)].map((image) => image.imageId));
       const newIds = new Set(newImages.map(({ image }) => image.getId().toString()));
-      if (snapshot.images.some((image) => !oldIds.has(image.imageId) && !newIds.has(image.imageId))
+      if ([...nextIds].some((id) => !oldIds.has(id) && !newIds.has(id))
+        || newIds.size !== newImages.length
+        || [...newIds].some((id) => oldIds.has(id) || !nextIds.has(id))
         || imageUpdates.some((update) => !oldIds.has(update.imageId) || !nextIds.has(update.imageId))
         || new Set(imageUpdates.map((update) => update.imageId)).size !== imageUpdates.length) {
         throw new Error("Ảnh không thuộc tour hoặc dữ liệu cập nhật ảnh không hợp lệ.");
+      }
+
+      const oldPlans = await tx.select().from(tourPlans).where(eq(tourPlans.tourId, snapshot.id));
+      const planIds = snapshot.plans.map((plan) => plan.planId);
+      if (planIds.length) {
+        const claimed = await tx.select({ tourId: tourPlans.tourId }).from(tourPlans).where(inArray(tourPlans.id, planIds));
+        if (claimed.some((plan) => plan.tourId !== snapshot.id)) throw new Error("Tour plan belongs to another tour.");
       }
 
       if (imageUpdates.length) {
@@ -424,14 +477,12 @@ export class DrizzleTourRepository implements TourRepository {
       if (existing.length) {
         await tx.update(tours).set({
           departureStartMonth: snapshot.departureStartMonth ?? null,
-          plans: snapshot.plans,
           updatedAt: snapshot.updatedAt,
         }).where(eq(tours.id, snapshot.id));
       } else {
         await tx.insert(tours).values({
           id: snapshot.id,
           departureStartMonth: snapshot.departureStartMonth ?? null,
-          plans: snapshot.plans,
           createdAt: snapshot.createdAt,
           updatedAt: snapshot.updatedAt,
         });
@@ -463,9 +514,30 @@ export class DrizzleTourRepository implements TourRepository {
         sortOrder: service.sortOrder,
       })));
 
-      const removedIds = oldLinks.map((link) => link.imageId).filter((id) => !nextIds.has(id));
+      const removedIds = [...oldIds].filter((id) => !nextIds.has(id));
       await tx.delete(tourImages).where(eq(tourImages.tourId, snapshot.id));
-      if (removedIds.length) await tx.delete(images).where(inArray(images.id, removedIds));
+
+      if (oldPlans.length) await tx.delete(tourPlanImages).where(inArray(tourPlanImages.planId, oldPlans.map((plan) => plan.id)));
+      const removedPlans = oldPlans.filter((plan) => !planIds.includes(plan.id));
+      if (removedPlans.length) await tx.delete(tourPlans).where(and(eq(tourPlans.tourId, snapshot.id), inArray(tourPlans.id, removedPlans.map((plan) => plan.id))));
+
+      // Temporary slots are disjoint from old AND final orders; safe even at INT_MAX.
+      const occupied = new Set([...oldPlans.map((plan) => plan.sortOrder), ...snapshot.plans.map((plan) => plan.sortOrder)]);
+      let temporaryOrder = 0;
+      for (const plan of oldPlans.filter((plan) => planIds.includes(plan.id))) {
+        while (occupied.has(temporaryOrder)) temporaryOrder++;
+        await tx.update(tourPlans).set({ sortOrder: temporaryOrder }).where(and(eq(tourPlans.id, plan.id), eq(tourPlans.tourId, snapshot.id)));
+        occupied.add(temporaryOrder++);
+      }
+      const oldPlanIds = new Set(oldPlans.map((plan) => plan.id));
+      for (const plan of snapshot.plans) {
+        const values = { name: plan.name, description: plan.description, sortOrder: plan.sortOrder, updatedAt: snapshot.updatedAt };
+        if (oldPlanIds.has(plan.planId)) {
+          await tx.update(tourPlans).set(values).where(and(eq(tourPlans.id, plan.planId), eq(tourPlans.tourId, snapshot.id)));
+        } else {
+          await tx.insert(tourPlans).values({ ...values, id: plan.planId, tourId: snapshot.id, createdAt: snapshot.updatedAt });
+        }
+      }
 
       if (newImages.length) {
         await tx.insert(images).values(newImages.map(({ image }) => {
@@ -491,6 +563,11 @@ export class DrizzleTourRepository implements TourRepository {
           sortOrder: image.sortOrder,
         })));
       }
+      const planImageLinks = snapshot.plans.flatMap((plan) => plan.images.map((image) => ({
+        planId: plan.planId, imageId: image.imageId, sortOrder: image.sortOrder,
+      })));
+      if (planImageLinks.length) await tx.insert(tourPlanImages).values(planImageLinks);
+      await deleteUnreferencedImages(tx, removedIds);
     });
   }
 

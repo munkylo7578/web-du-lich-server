@@ -56,6 +56,21 @@ export const tours = pgTable(
 
 export const tourLocale = pgEnum("tour_locale", ["vi", "en"]);
 
+export const tourPlans = pgTable("tour_plans", {
+  id: uuid("id").primaryKey(),
+  tourId: uuid("tour_id").notNull().references(() => tours.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  name: jsonb("name").$type<LocalizedText>().notNull(),
+  description: jsonb("description").$type<LocalizedText>().notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  check("tour_plans_sort_order_check", sql`${table.sortOrder} >= 0`),
+  check("tour_plans_name_check", sql`(jsonb_typeof(${table.name}) = 'object' and jsonb_typeof(${table.name}->'vi') = 'string' and length(btrim(${table.name}->>'vi')) > 0) is true`),
+  check("tour_plans_description_check", sql`(jsonb_typeof(${table.description}) = 'object' and jsonb_typeof(${table.description}->'vi') = 'string' and length(btrim(${table.description}->>'vi')) > 0) is true`),
+  uniqueIndex("tour_plans_tour_sort_order_idx").on(table.tourId, table.sortOrder),
+]);
+
 export const tourTranslations = pgTable(
   "tour_translations",
   {
@@ -251,6 +266,17 @@ export const serviceImages = pgTable(
   ],
 );
 
+export const tourPlanImages = pgTable("tour_plan_images", {
+  planId: uuid("plan_id").notNull().references(() => tourPlans.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  imageId: uuid("image_id").notNull().references(() => images.id, { onDelete: "restrict", onUpdate: "cascade" }),
+  sortOrder: integer("sort_order").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.planId, table.imageId] }),
+  check("tour_plan_images_sort_order_check", sql`${table.sortOrder} >= 0`),
+  uniqueIndex("tour_plan_images_plan_sort_order_idx").on(table.planId, table.sortOrder),
+  index("tour_plan_images_image_id_idx").on(table.imageId),
+]);
+
 export const tourServices = pgTable(
   "tour_services",
   {
@@ -271,6 +297,7 @@ export const tourServices = pgTable(
 );
 
 export const toursRelations = relations(tours, ({ many }) => ({
+  planRows: many(tourPlans),
   imageLinks: many(tourImages),
   translations: many(tourTranslations),
   destinationLinks: many(tourDestinations),
@@ -333,8 +360,19 @@ export const serviceTranslationsRelations = relations(serviceTranslations, ({ on
 }));
 
 export const imagesRelations = relations(images, ({ many }) => ({
+  planLinks: many(tourPlanImages),
   tourLinks: many(tourImages),
   serviceLinks: many(serviceImages),
+}));
+
+export const tourPlansRelations = relations(tourPlans, ({ one, many }) => ({
+  tour: one(tours, { fields: [tourPlans.tourId], references: [tours.id] }),
+  imageLinks: many(tourPlanImages),
+}));
+
+export const tourPlanImagesRelations = relations(tourPlanImages, ({ one }) => ({
+  plan: one(tourPlans, { fields: [tourPlanImages.planId], references: [tourPlans.id] }),
+  image: one(images, { fields: [tourPlanImages.imageId], references: [images.id] }),
 }));
 
 export const tourImagesRelations = relations(tourImages, ({ one }) => ({

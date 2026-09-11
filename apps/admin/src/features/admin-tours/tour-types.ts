@@ -1,4 +1,4 @@
-import type { TourPlanSnapshot, TourTranslationSnapshot } from "@/domains/tour/domain";
+import type { LocalizedText, TourTranslationSnapshot } from "@/domains/tour/domain";
 import type { AdminService } from "@/features/admin-services/service-types";
 import type { DestinationCountry } from "@destination-country";
 
@@ -41,8 +41,16 @@ export type AdminTour = {
   translations: TourTranslationSnapshot[];
   destinations: AdminDestination[];
   services: AdminService[];
-  plans: TourPlanSnapshot[];
+  plans: AdminTourPlan[];
   images: AdminTourImage[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type AdminTourPlan = {
+  planId: string;
+  name: LocalizedText;
+  description: LocalizedText;
+  sortOrder: number;
+  images: { imageId: string; url: string; altText?: string; sortOrder: number }[];
 };

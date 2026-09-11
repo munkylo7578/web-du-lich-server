@@ -20,4 +20,6 @@ export {
   type TourLocale,
 } from "./tour-locale";
 export { TourPlan, type TourPlanProps, type TourPlanSnapshot } from "./tour-plan";
+export { TourPlanId } from "./tour-plan-id";
+export { TourPlanImageRef, type TourPlanImageRefSnapshot } from "./tour-plan-image-ref";
 export { TourService, type TourServiceSnapshot } from "./tour-service";

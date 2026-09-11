@@ -73,8 +73,8 @@ export class Tour {
       Tour.validateServices(snapshot.services.map(TourService.fromSnapshot)),
       Tour.validatePlans(snapshot.plans.map(TourPlan.fromSnapshot)),
       Tour.validateImages(snapshot.images.map(TourImageRef.fromSnapshot)),
-      snapshot.createdAt,
-      snapshot.updatedAt,
+      new Date(snapshot.createdAt),
+      new Date(snapshot.updatedAt),
       Tour.validateDepartureStartMonth(snapshot.departureStartMonth),
     );
   }
@@ -217,8 +217,11 @@ export class Tour {
 
   private static validatePlans(plans: TourPlan[]): TourPlan[] {
     const sortOrders = new Set<number>();
+    const ids = new Set<string>();
 
     for (const plan of plans) {
+      if (ids.has(plan.planId)) throw new Error("Tour plan ids must be unique.");
+      ids.add(plan.planId);
       if (sortOrders.has(plan.sortOrder)) {
         throw new Error("Tour plan sort orders must be unique.");
       }
@@ -226,7 +229,7 @@ export class Tour {
       sortOrders.add(plan.sortOrder);
     }
 
-    return [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
+    return plans.map((plan) => TourPlan.fromSnapshot(plan.toSnapshot())).sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
   private static validateDestinations(destinations: TourDestination[]): TourDestination[] {

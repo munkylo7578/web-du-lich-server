@@ -7,7 +7,7 @@ import {
   siteSettingTranslations,
   siteSettings,
   tours,
-  type TourPlanSnapshot,
+  type LocalizedText,
 } from '@database';
 
 import { API_ENV, type ApiEnvironment } from '../config/env';
@@ -20,11 +20,12 @@ type ImageLinkRow = { sortOrder: number; image: ImageRow };
 type WardLinkRow = { ward: { code: string; name: string; nameEn: string | null; fullName: string | null; fullNameEn: string | null; province: { code: string; name: string; nameEn: string | null } | null } };
 type DestinationRow = { id: string; country: DestinationCountry; translations: TranslationRow[]; wardLinks?: WardLinkRow[]; createdAt: Date; updatedAt: Date };
 type ServiceRow = { id: string; translations: TranslationRow[]; imageLinks?: ImageLinkRow[]; createdAt: Date; updatedAt: Date };
+type PlanRow = { id: string; name: LocalizedText; description: LocalizedText; sortOrder: number; imageLinks: ImageLinkRow[] };
 type TourRow = {
   id: string;
   departureStartMonth: number | null;
   translations: TranslationRow[];
-  plans: TourPlanSnapshot[];
+  planRows: PlanRow[];
   imageLinks: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   destinationLinks: Array<{ destination: DestinationRow }>;
   serviceLinks: Array<{ service: ServiceRow }>;
@@ -43,10 +44,15 @@ export class ContentService {
     const limit = Math.min(requestedLimit, this.env.maxPageSize);
     const [{ value: total }] = await this.db.select({ value: count() }).from(tours);
     const rows = await this.db.query.tours.findMany({
+      columns: { plans: false },
       limit,
       offset: (page - 1) * limit,
       orderBy: (table, { desc }) => [desc(table.updatedAt), desc(table.id)],
       with: {
+        planRows: {
+          orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
+          with: { imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+        },
         translations: true,
         imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
         destinationLinks: {
@@ -64,8 +70,13 @@ export class ContentService {
 
   async tour(id: string, locale: Locale) {
     const row = await this.db.query.tours.findFirst({
+      columns: { plans: false },
       where: (table, { eq: equals }) => equals(table.id, id),
       with: {
+        planRows: {
+          orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
+          with: { imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+        },
         translations: true,
         imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
         destinationLinks: {
@@ -190,7 +201,7 @@ export class ContentService {
       name: translation.value.name,
       description: translation.value.description,
       locale: translation.locale,
-      plans: this.localizePlans(row.plans, locale),
+      plans: this.localizePlans(row.planRows, locale),
       images: row.imageLinks.map((link) => ({ role: link.role, sortOrder: link.sortOrder, ...this.mapImage(link.image) })),
       destinations: row.destinationLinks.map((link) => this.mapDestination(link.destination, locale)).filter(Boolean),
       services: row.serviceLinks.map((link) => this.mapService(link.service, locale)).filter(Boolean),
@@ -230,8 +241,10 @@ export class ContentService {
     return { id: image.id, url, altText: image.altText };
   }
 
-  private localizePlans(plans: TourPlanSnapshot[], locale: Locale) {
+  private localizePlans(plans: PlanRow[], locale: Locale) {
     return plans.map((plan) => ({
+      planId: plan.id,
+      images: [...plan.imageLinks].sort((a, b) => a.sortOrder - b.sortOrder).map((link) => ({ sortOrder: link.sortOrder, ...this.mapImage(link.image) })),
       name: plan.name[locale] ?? plan.name.vi ?? '',
       description: plan.description[locale] ?? plan.description.vi ?? '',
       sortOrder: plan.sortOrder,

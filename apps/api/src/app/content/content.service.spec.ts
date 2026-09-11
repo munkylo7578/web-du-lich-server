@@ -6,7 +6,7 @@ describe('ContentService tour departure start month', () => {
       id: 'b2a985d1-2a16-43da-848f-c533aa56ae3c',
       departureStartMonth,
       translations: [{ locale: 'vi', name: 'Tour thử nghiệm', description: null }],
-      plans: [],
+      planRows: [],
       imageLinks: [],
       destinationLinks: [],
       serviceLinks: [],
