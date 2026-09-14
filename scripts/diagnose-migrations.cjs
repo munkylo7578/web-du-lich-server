@@ -66,8 +66,9 @@ async function main() {
       from pg_constraint where conrelid = to_regclass('public.site_settings')
       order by conname`);
     await inspect('site setting ownership and permissions', `select
-      pg_has_role(current_user, c.relowner, 'MEMBER') as member_of_owner_role,
-      has_table_privilege(current_user, c.oid, 'ALTER') as can_alter_table,
+      pg_get_userbyid(c.relowner) as table_owner,
+      pg_has_role(current_user, c.relowner, 'MEMBER') as member_of_table_owner_role,
+      pg_get_userbyid(t.typowner) as enum_owner,
       pg_has_role(current_user, t.typowner, 'MEMBER') as member_of_enum_owner_role
       from pg_class c
       join pg_type t on t.typname = 'site_setting_type'
