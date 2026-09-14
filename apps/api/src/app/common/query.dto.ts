@@ -6,7 +6,11 @@ export const LOCALES = ['vi', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
 
 export class LocaleQueryDto {
-  @ApiProperty({ enum: LOCALES, description: 'Required content locale. Vietnamese is used only as a per-entity fallback.' })
+  @ApiProperty({
+    enum: LOCALES,
+    description:
+      'Required content locale. Vietnamese is used only as a per-entity fallback.',
+  })
   @IsIn(LOCALES)
   locale!: Locale;
 }
@@ -28,12 +32,28 @@ export class PageQueryDto extends LocaleQueryDto {
   limit = 20;
 }
 
-export type LocaleMeta = { requested: Locale; effective: Locale; fallback: boolean };
+export type LocaleMeta = {
+  requested: Locale;
+  effective: Locale;
+  fallback: boolean;
+};
 
-export function localized<T extends { locale: Locale }>(rows: T[], requested: Locale): { value: T; locale: LocaleMeta } | null {
-  const value = rows.find((row) => row.locale === requested) ?? rows.find((row) => row.locale === 'vi');
+export function localized<T extends { locale: Locale }>(
+  rows: T[],
+  requested: Locale,
+): { value: T; locale: LocaleMeta } | null {
+  const value =
+    rows.find((row) => row.locale === requested) ??
+    rows.find((row) => row.locale === 'vi');
   if (!value) return null;
-  return { value, locale: { requested, effective: value.locale, fallback: value.locale !== requested } };
+  return {
+    value,
+    locale: {
+      requested,
+      effective: value.locale,
+      fallback: value.locale !== requested,
+    },
+  };
 }
 
 export function pageMeta(page: number, limit: number, total: number) {

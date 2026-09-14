@@ -1,5 +1,5 @@
-import type { ServiceTranslationSnapshot } from "@/domains/service/domain";
-import type { ServiceCategory } from "@service-category";
+import type { ServiceTranslationSnapshot } from '@/domains/service/domain';
+import type { ServiceCategory } from '@service-category';
 
 export type AdminServiceImage = {
   imageId: string;

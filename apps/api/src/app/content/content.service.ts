@@ -1,9 +1,10 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { count } from 'drizzle-orm';
+import { count, inArray, sql } from 'drizzle-orm';
 import type { DestinationCountry } from '@destination-country';
 import type { ServiceCategory } from '@service-category';
 import {
   destinations,
+  gisWards,
   services,
   siteSettingTranslations,
   siteSettings,
@@ -15,10 +16,24 @@ import { API_ENV, type ApiEnvironment } from '../config/env';
 import { DATABASE, type Database } from '../database/database.module';
 import { localized, pageMeta, type Locale } from '../common/query.dto';
 
-type TranslationRow = { locale: Locale; name: string; description: string | null };
+type TranslationRow = {
+  locale: Locale;
+  name: string;
+  description: string | null;
+};
 type ImageRow = { id: string; url: string; altText: string | null };
 type ImageLinkRow = { sortOrder: number; image: ImageRow };
-type WardLinkRow = { ward: { code: string; name: string; nameEn: string | null; fullName: string | null; fullNameEn: string | null; province: { code: string; name: string; nameEn: string | null } | null } };
+type WardLinkRow = {
+  ward: {
+    code: string;
+    name: string;
+    nameEn: string | null;
+    fullName: string | null;
+    fullNameEn: string | null;
+    province: { code: string; name: string; nameEn: string | null } | null;
+  };
+};
+type WardCoordinate = { latitude: number | null; longitude: number | null };
 type DestinationTourLinkRow = {
   tour: {
     id: string;
@@ -34,8 +49,21 @@ type DestinationRow = {
   createdAt: Date;
   updatedAt: Date;
 };
-type ServiceRow = { id: string; category: ServiceCategory; translations: TranslationRow[]; imageLinks?: ImageLinkRow[]; createdAt: Date; updatedAt: Date };
-type PlanRow = { id: string; name: LocalizedText; description: LocalizedText; sortOrder: number; imageLinks: ImageLinkRow[] };
+type ServiceRow = {
+  id: string;
+  category: ServiceCategory;
+  translations: TranslationRow[];
+  imageLinks?: ImageLinkRow[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+type PlanRow = {
+  id: string;
+  name: LocalizedText;
+  description: LocalizedText;
+  sortOrder: number;
+  imageLinks: ImageLinkRow[];
+};
 type TourRow = {
   id: string;
   departureStartMonth: number | null;
@@ -57,7 +85,9 @@ export class ContentService {
 
   async tours(locale: Locale, page: number, requestedLimit: number) {
     const limit = Math.min(requestedLimit, this.env.maxPageSize);
-    const [{ value: total }] = await this.db.select({ value: count() }).from(tours);
+    const [{ value: total }] = await this.db
+      .select({ value: count() })
+      .from(tours);
     const rows = await this.db.query.tours.findMany({
       columns: { plans: false },
       limit,
@@ -66,21 +96,39 @@ export class ContentService {
       with: {
         planRows: {
           orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
-          with: { imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+          with: {
+            imageLinks: {
+              orderBy: (link, { asc }) => [asc(link.sortOrder)],
+              with: { image: true },
+            },
+          },
         },
         translations: true,
-        imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
+        imageLinks: {
+          orderBy: (link, { asc }) => [asc(link.sortOrder)],
+          with: { image: true },
+        },
         destinationLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
           with: { destination: { with: { translations: true } } },
         },
         serviceLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
-          with: { service: { with: { translations: true, imageLinks: { with: { image: true } } } } },
+          with: {
+            service: {
+              with: {
+                translations: true,
+                imageLinks: { with: { image: true } },
+              },
+            },
+          },
         },
       },
     });
-    return { data: rows.map((row) => this.mapTour(row, locale)).filter(Boolean), meta: pageMeta(page, limit, total) };
+    return {
+      data: rows.map((row) => this.mapTour(row, locale)).filter(Boolean),
+      meta: pageMeta(page, limit, total),
+    };
   }
 
   async tour(id: string, locale: Locale) {
@@ -90,17 +138,32 @@ export class ContentService {
       with: {
         planRows: {
           orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
-          with: { imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+          with: {
+            imageLinks: {
+              orderBy: (link, { asc }) => [asc(link.sortOrder)],
+              with: { image: true },
+            },
+          },
         },
         translations: true,
-        imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
+        imageLinks: {
+          orderBy: (link, { asc }) => [asc(link.sortOrder)],
+          with: { image: true },
+        },
         destinationLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
           with: { destination: { with: { translations: true } } },
         },
         serviceLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
-          with: { service: { with: { translations: true, imageLinks: { with: { image: true } } } } },
+          with: {
+            service: {
+              with: {
+                translations: true,
+                imageLinks: { with: { image: true } },
+              },
+            },
+          },
         },
       },
     });
@@ -111,7 +174,9 @@ export class ContentService {
 
   async destinations(locale: Locale, page: number, requestedLimit: number) {
     const limit = Math.min(requestedLimit, this.env.maxPageSize);
-    const [{ value: total }] = await this.db.select({ value: count() }).from(destinations);
+    const [{ value: total }] = await this.db
+      .select({ value: count() })
+      .from(destinations);
     const rows = await this.db.query.destinations.findMany({
       limit,
       offset: (page - 1) * limit,
@@ -124,13 +189,24 @@ export class ContentService {
           with: {
             tour: {
               columns: { id: true },
-              with: { imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+              with: {
+                imageLinks: {
+                  orderBy: (link, { asc }) => [asc(link.sortOrder)],
+                  with: { image: true },
+                },
+              },
             },
           },
         },
       },
     });
-    return { data: rows.map((row) => this.mapDestination(row, locale)).filter(Boolean), meta: pageMeta(page, limit, total) };
+    const wardCoordinates = await this.destinationWardCoordinates(rows);
+    return {
+      data: rows
+        .map((row) => this.mapDestination(row, locale, wardCoordinates))
+        .filter(Boolean),
+      meta: pageMeta(page, limit, total),
+    };
   }
 
   async destination(id: string, locale: Locale) {
@@ -144,43 +220,77 @@ export class ContentService {
           with: {
             tour: {
               columns: { id: true },
-              with: { imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+              with: {
+                imageLinks: {
+                  orderBy: (link, { asc }) => [asc(link.sortOrder)],
+                  with: { image: true },
+                },
+              },
             },
           },
         },
       },
     });
-    const result = row && this.mapDestination(row, locale);
-    if (!result) throw new NotFoundException('Destination or translation not found');
+    const wardCoordinates = row
+      ? await this.destinationWardCoordinates([row])
+      : new Map<string, WardCoordinate>();
+    const result = row && this.mapDestination(row, locale, wardCoordinates);
+    if (!result)
+      throw new NotFoundException('Destination or translation not found');
     return { data: result };
   }
 
   async services(locale: Locale, page: number, requestedLimit: number) {
     const limit = Math.min(requestedLimit, this.env.maxPageSize);
-    const [{ value: total }] = await this.db.select({ value: count() }).from(services);
+    const [{ value: total }] = await this.db
+      .select({ value: count() })
+      .from(services);
     const rows = await this.db.query.services.findMany({
       limit,
       offset: (page - 1) * limit,
       orderBy: (table, { desc }) => [desc(table.updatedAt), desc(table.id)],
-      with: { translations: true, imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+      with: {
+        translations: true,
+        imageLinks: {
+          orderBy: (link, { asc }) => [asc(link.sortOrder)],
+          with: { image: true },
+        },
+      },
     });
-    return { data: rows.map((row) => this.mapService(row, locale)).filter(Boolean), meta: pageMeta(page, limit, total) };
+    return {
+      data: rows.map((row) => this.mapService(row, locale)).filter(Boolean),
+      meta: pageMeta(page, limit, total),
+    };
   }
 
   async service(id: string, locale: Locale) {
     const row = await this.db.query.services.findFirst({
       where: (table, { eq: equals }) => equals(table.id, id),
-      with: { translations: true, imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } } },
+      with: {
+        translations: true,
+        imageLinks: {
+          orderBy: (link, { asc }) => [asc(link.sortOrder)],
+          with: { image: true },
+        },
+      },
     });
     const result = row && this.mapService(row, locale);
-    if (!result) throw new NotFoundException('Service or translation not found');
+    if (!result)
+      throw new NotFoundException('Service or translation not found');
     return { data: result };
   }
 
   async settings(locale: Locale) {
-    if (this.env.publicSettingKeys.length === 0) return { data: [], meta: { locale: { requested: locale, effective: locale, fallback: false } } };
+    if (this.env.publicSettingKeys.length === 0)
+      return {
+        data: [],
+        meta: {
+          locale: { requested: locale, effective: locale, fallback: false },
+        },
+      };
     const rows = await this.db.query.siteSettings.findMany({
-      where: (table, { inArray: includedIn }) => includedIn(table.key, this.env.publicSettingKeys),
+      where: (table, { inArray: includedIn }) =>
+        includedIn(table.key, this.env.publicSettingKeys),
       orderBy: (table, { asc }) => [asc(table.key)],
       with: { translations: true },
     });
@@ -191,7 +301,8 @@ export class ContentService {
   }
 
   async setting(key: string, locale: Locale) {
-    if (!this.env.publicSettingKeys.includes(key)) throw new NotFoundException('Setting not found');
+    if (!this.env.publicSettingKeys.includes(key))
+      throw new NotFoundException('Setting not found');
     const row = await this.db.query.siteSettings.findFirst({
       where: (table, { eq: equals }) => equals(table.key, key),
       with: { translations: true },
@@ -202,7 +313,9 @@ export class ContentService {
   }
 
   private mapSetting(
-    row: typeof siteSettings.$inferSelect & { translations: Array<typeof siteSettingTranslations.$inferSelect> },
+    row: typeof siteSettings.$inferSelect & {
+      translations: Array<typeof siteSettingTranslations.$inferSelect>;
+    },
     locale: Locale,
   ) {
     if (row.type === 'image') {
@@ -215,8 +328,12 @@ export class ContentService {
       };
     }
 
-    const requested = row.translations.find((translation) => translation.locale === locale);
-    const vietnamese = row.translations.find((translation) => translation.locale === 'vi');
+    const requested = row.translations.find(
+      (translation) => translation.locale === locale,
+    );
+    const vietnamese = row.translations.find(
+      (translation) => translation.locale === 'vi',
+    );
     const translation = requested ?? vietnamese;
     return {
       key: row.key,
@@ -241,25 +358,51 @@ export class ContentService {
       description: translation.value.description,
       locale: translation.locale,
       plans: this.localizePlans(row.planRows, locale),
-      images: row.imageLinks.map((link) => ({ role: link.role, sortOrder: link.sortOrder, ...this.mapImage(link.image) })),
-      destinations: row.destinationLinks.map((link) => this.mapDestination(link.destination, locale)).filter(Boolean),
-      services: row.serviceLinks.map((link) => this.mapService(link.service, locale)).filter(Boolean),
+      images: row.imageLinks.map((link) => ({
+        role: link.role,
+        sortOrder: link.sortOrder,
+        ...this.mapImage(link.image),
+      })),
+      destinations: row.destinationLinks
+        .map((link) => this.mapDestination(link.destination, locale))
+        .filter(Boolean),
+      services: row.serviceLinks
+        .map((link) => this.mapService(link.service, locale))
+        .filter(Boolean),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
   }
 
-  private mapDestination(row: DestinationRow, locale: Locale) {
+  private mapDestination(
+    row: DestinationRow,
+    locale: Locale,
+    wardCoordinates = new Map<string, WardCoordinate>(),
+  ) {
     const translation = localized(row.translations, locale);
     if (!translation) return null;
     return {
       country: row.country,
-      id: row.id, name: translation.value.name, description: translation.value.description, locale: translation.locale,
+      id: row.id,
+      name: translation.value.name,
+      description: translation.value.description,
+      locale: translation.locale,
       wards: (row.wardLinks ?? []).map(({ ward }) => ({
         code: ward.code,
         name: locale === 'en' ? (ward.nameEn ?? ward.name) : ward.name,
-        fullName: locale === 'en' ? (ward.fullNameEn ?? ward.fullName) : ward.fullName,
-        province: ward.province ? { code: ward.province.code, name: locale === 'en' ? (ward.province.nameEn ?? ward.province.name) : ward.province.name } : null,
+        fullName:
+          locale === 'en' ? (ward.fullNameEn ?? ward.fullName) : ward.fullName,
+        latitude: wardCoordinates.get(ward.code)?.latitude ?? null,
+        longitude: wardCoordinates.get(ward.code)?.longitude ?? null,
+        province: ward.province
+          ? {
+              code: ward.province.code,
+              name:
+                locale === 'en'
+                  ? (ward.province.nameEn ?? ward.province.name)
+                  : ward.province.name,
+            }
+          : null,
       })),
       tours: (row.tourLinks ?? []).map(({ tour }) => ({
         id: tour.id,
@@ -269,7 +412,8 @@ export class ContentService {
           ...this.mapImage(link.image),
         })),
       })),
-      createdAt: row.createdAt, updatedAt: row.updatedAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 
@@ -277,25 +421,82 @@ export class ContentService {
     const translation = localized(row.translations, locale);
     if (!translation) return null;
     return {
-      id: row.id, category: row.category, name: translation.value.name, description: translation.value.description, locale: translation.locale,
-      images: (row.imageLinks ?? []).map((link) => ({ sortOrder: link.sortOrder, ...this.mapImage(link.image) })),
-      createdAt: row.createdAt, updatedAt: row.updatedAt,
+      id: row.id,
+      category: row.category,
+      name: translation.value.name,
+      description: translation.value.description,
+      locale: translation.locale,
+      images: (row.imageLinks ?? []).map((link) => ({
+        sortOrder: link.sortOrder,
+        ...this.mapImage(link.image),
+      })),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 
   private mapImage(image: { id: string; url: string; altText: string | null }) {
-    const url = /^https?:\/\//.test(image.url) ? image.url : `${this.env.uploadPublicBaseUrl}/${image.url.replace(/^\//, '')}`;
+    const url = /^https?:\/\//.test(image.url)
+      ? image.url
+      : `${this.env.uploadPublicBaseUrl}/${image.url.replace(/^\//, '')}`;
     return { id: image.id, url, altText: image.altText };
   }
 
+  private async destinationWardCoordinates(
+    rows: DestinationRow[],
+  ): Promise<Map<string, WardCoordinate>> {
+    const wardCodes = [
+      ...new Set(
+        rows.flatMap((row) =>
+          (row.wardLinks ?? []).map(({ ward }) => ward.code),
+        ),
+      ),
+    ];
+    if (!wardCodes.length) return new Map();
+
+    const coordinates = await this.db
+      .select({
+        wardCode: gisWards.wardCode,
+        longitude: sql<
+          number | null
+        >`ST_X(ST_PointOnSurface(${gisWards.geom}))`,
+        latitude: sql<number | null>`ST_Y(ST_PointOnSurface(${gisWards.geom}))`,
+      })
+      .from(gisWards)
+      .where(inArray(gisWards.wardCode, wardCodes));
+
+    return new Map(
+      coordinates.map((coordinate) => [
+        coordinate.wardCode,
+        {
+          latitude:
+            coordinate.latitude === null ? null : Number(coordinate.latitude),
+          longitude:
+            coordinate.longitude === null ? null : Number(coordinate.longitude),
+        },
+      ]),
+    );
+  }
+
   private localizePlans(plans: PlanRow[], locale: Locale) {
-    return plans.map((plan) => ({
-      planId: plan.id,
-      images: [...plan.imageLinks].sort((a, b) => a.sortOrder - b.sortOrder).map((link) => ({ sortOrder: link.sortOrder, ...this.mapImage(link.image) })),
-      name: plan.name[locale] ?? plan.name.vi ?? '',
-      description: plan.description[locale] ?? plan.description.vi ?? '',
-      sortOrder: plan.sortOrder,
-      locale: { requested: locale, effective: plan.name[locale] ? locale : 'vi', fallback: !plan.name[locale] },
-    })).sort((a, b) => a.sortOrder - b.sortOrder);
+    return plans
+      .map((plan) => ({
+        planId: plan.id,
+        images: [...plan.imageLinks]
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((link) => ({
+            sortOrder: link.sortOrder,
+            ...this.mapImage(link.image),
+          })),
+        name: plan.name[locale] ?? plan.name.vi ?? '',
+        description: plan.description[locale] ?? plan.description.vi ?? '',
+        sortOrder: plan.sortOrder,
+        locale: {
+          requested: locale,
+          effective: plan.name[locale] ? locale : 'vi',
+          fallback: !plan.name[locale],
+        },
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
   }
 }

@@ -129,7 +129,7 @@ npx nx db:studio database
 Application code should import database client and schema objects from `@database`:
 
 ```ts
-import { db, tours, tourTranslations } from "@database";
+import { db, tours, tourTranslations } from '@database';
 ```
 
 Keep Drizzle table definitions and DB persistence-only snapshot types inside `libs/database`. Avoid importing application domain classes into the database library so it remains reusable by future apps in this monorepo.
@@ -147,6 +147,8 @@ Content routes require both `x-api-key` and an explicit `locale=vi|en` query par
 - `GET /api/v1/settings` and `GET /api/v1/settings/:key`
 - Public checks: `GET /api/v1/health/live` and `GET /api/v1/health/ready`
 
+Service responses include a stable `category` key: `accommodation`, `transportation`, or `tourguide`. Destination responses include `latitude` and `longitude` on each Vietnamese ward. These coordinates are derived from `ST_PointOnSurface(gis_wards.geom)` and are `null` when GIS geometry is unavailable. Swagger documents the concrete response fields for list and detail endpoints.
+
 If an entity lacks the requested translation, the API falls back to Vietnamese and reports `requested`, `effective`, and `fallback` in its locale metadata. Site settings are only returned when their keys are explicitly listed in `API_PUBLIC_SETTING_KEYS`. Swagger is available at `/api/v1/docs` when `API_DOCS_ENABLED=true`; disable it or protect it at Nginx in production.
 
 ### Nuxt/Nitro integration
@@ -160,19 +162,19 @@ export default defineNuxtConfig({
     travelApiKey: process.env.NUXT_TRAVEL_API_KEY,
     travelApiBase: process.env.NUXT_TRAVEL_API_BASE,
   },
-})
+});
 
 // server/api/tours.get.ts
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig(event)
-  const locale = getQuery(event).locale === 'en' ? 'en' : 'vi'
+  const config = useRuntimeConfig(event);
+  const locale = getQuery(event).locale === 'en' ? 'en' : 'vi';
   return $fetch('/tours', {
     baseURL: config.travelApiBase,
     query: { locale, page: 1, limit: 20 },
     headers: { 'x-api-key': config.travelApiKey },
     timeout: 5000,
-  })
-})
+  });
+});
 ```
 
 Do not call NestJS directly from browser components: that exposes the shared key. Always use HTTPS, configure Nginx rate limits and request-size limits, and set `API_TRUST_PROXY=1` only when exactly one trusted proxy sits in front of NestJS.

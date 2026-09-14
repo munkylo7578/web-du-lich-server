@@ -20,7 +20,8 @@ class ApiErrorBodyDto {
   message!: string;
 
   @ApiPropertyOptional({
-    description: 'Optional structured error context, such as validation messages.',
+    description:
+      'Optional structured error context, such as validation messages.',
     type: Object,
   })
   details?: unknown;
@@ -41,14 +42,18 @@ type ApiSuccessResponseOptions = {
   isArray?: boolean;
 };
 
-export function ApiSuccessEnvelope(options: ApiSuccessResponseOptions = {}): MethodDecorator {
+export function ApiSuccessEnvelope(
+  options: ApiSuccessResponseOptions = {},
+): MethodDecorator {
   const itemSchema = options.dataType
     ? { $ref: getSchemaPath(options.dataType) }
     : { type: 'object' as const };
   const dataSchema = options.isArray
     ? { type: 'array' as const, items: itemSchema }
     : itemSchema;
-  const required = options.hasMeta ? ['success', 'data', 'meta'] : ['success', 'data'];
+  const required = options.hasMeta
+    ? ['success', 'data', 'meta']
+    : ['success', 'data'];
 
   return applyDecorators(
     ...(options.dataType ? [ApiExtraModels(options.dataType)] : []),
@@ -69,10 +74,26 @@ export function ApiSuccessEnvelope(options: ApiSuccessResponseOptions = {}): Met
 
 export function ApiCommonErrorResponses(): ClassDecorator & MethodDecorator {
   return applyDecorators(
-    ApiBadRequestResponse({ description: 'Invalid request', type: ApiErrorResponseDto }),
-    ApiUnauthorizedResponse({ description: 'Invalid or missing API key', type: ApiErrorResponseDto }),
-    ApiNotFoundResponse({ description: 'Resource not found', type: ApiErrorResponseDto }),
-    ApiResponse({ status: 429, description: 'Rate limit exceeded', type: ApiErrorResponseDto }),
-    ApiInternalServerErrorResponse({ description: 'Unexpected server error', type: ApiErrorResponseDto }),
+    ApiBadRequestResponse({
+      description: 'Invalid request',
+      type: ApiErrorResponseDto,
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Invalid or missing API key',
+      type: ApiErrorResponseDto,
+    }),
+    ApiNotFoundResponse({
+      description: 'Resource not found',
+      type: ApiErrorResponseDto,
+    }),
+    ApiResponse({
+      status: 429,
+      description: 'Rate limit exceeded',
+      type: ApiErrorResponseDto,
+    }),
+    ApiInternalServerErrorResponse({
+      description: 'Unexpected server error',
+      type: ApiErrorResponseDto,
+    }),
   );
 }
