@@ -25,7 +25,10 @@ type Locale = "vi" | "en";
 function createEmptyValues(): TourFormValues {
   return {
     departureStartMonth: null,
-    translations: { vi: { name: "", description: "" }, en: { name: "", description: "" } },
+    translations: {
+      vi: { name: "", description: "", inclusions: "", exclusions: "" },
+      en: { name: "", description: "", inclusions: "", exclusions: "" },
+    },
     destinations: [],
     services: [],
     plans: [],
@@ -41,8 +44,18 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
     id: tour.id,
     departureStartMonth: tour.departureStartMonth ?? null,
     translations: {
-      vi: { name: vi?.name || "", description: vi?.description || "" },
-      en: { name: en?.name || "", description: en?.description || "" },
+      vi: {
+        name: vi?.name || "",
+        description: vi?.description || "",
+        inclusions: vi?.inclusions || "",
+        exclusions: vi?.exclusions || "",
+      },
+      en: {
+        name: en?.name || "",
+        description: en?.description || "",
+        inclusions: en?.inclusions || "",
+        exclusions: en?.exclusions || "",
+      },
     },
     destinations: tour.destinations.map((destination) => ({
       destinationId: destination.destinationId,
@@ -214,6 +227,12 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
                     </FormField>
                     <FormField fieldPath={`translations.${locale}.description`} label={`Mô tả (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.description?.message}>
                       <Controller control={form.control} name={`translations.${locale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của tour..." invalid={Boolean(form.formState.errors.translations?.[locale]?.description)} />} />
+                    </FormField>
+                    <FormField fieldPath={`translations.${locale}.inclusions`} label={`Dịch vụ bao gồm (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.inclusions?.message}>
+                      <Controller control={form.control} name={`translations.${locale}.inclusions`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Các dịch vụ và quyền lợi đã bao gồm..." invalid={Boolean(form.formState.errors.translations?.[locale]?.inclusions)} />} />
+                    </FormField>
+                    <FormField fieldPath={`translations.${locale}.exclusions`} label={`Dịch vụ không bao gồm (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.exclusions?.message}>
+                      <Controller control={form.control} name={`translations.${locale}.exclusions`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Các chi phí và dịch vụ không bao gồm..." invalid={Boolean(form.formState.errors.translations?.[locale]?.exclusions)} />} />
                     </FormField>
                   </TabsContent>
                 ))}

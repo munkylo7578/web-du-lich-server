@@ -108,6 +108,8 @@ export const tourTranslations = pgTable(
     locale: tourLocale('locale').notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    inclusions: text('inclusions'),
+    exclusions: text('exclusions'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -124,6 +126,14 @@ export const tourTranslations = pgTable(
     check(
       'tour_translations_description_length_check',
       sql`${table.description} is null or char_length(trim(${table.description})) >= 10`,
+    ),
+    check(
+      'tour_translations_inclusions_length_check',
+      sql`${table.inclusions} is null or char_length(trim(${table.inclusions})) >= 10`,
+    ),
+    check(
+      'tour_translations_exclusions_length_check',
+      sql`${table.exclusions} is null or char_length(trim(${table.exclusions})) >= 10`,
     ),
     index('tour_translations_locale_name_idx').on(table.locale, table.name),
   ],

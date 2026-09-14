@@ -23,6 +23,8 @@ type TranslationRow = {
   locale: Locale;
   name: string;
   description: string | null;
+  inclusions?: string | null;
+  exclusions?: string | null;
 };
 type ImageRow = { id: string; url: string; altText: string | null };
 type ImageLinkRow = { sortOrder: number; image: ImageRow };
@@ -422,6 +424,8 @@ export class ContentService {
       departureStartMonth: row.departureStartMonth ?? null,
       name: translation.value.name,
       description: translation.value.description,
+      inclusions: translation.value.inclusions ?? null,
+      exclusions: translation.value.exclusions ?? null,
       locale: translation.locale,
       plans: this.localizePlans(row.planRows, locale),
       images: row.imageLinks.map((link) => ({

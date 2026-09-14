@@ -229,6 +229,8 @@ async function hydrateAdminTours(rows: Array<Omit<typeof tours.$inferSelect, "pl
         locale: translation.locale,
         name: translation.name,
         description: translation.description ?? undefined,
+        inclusions: translation.inclusions ?? undefined,
+        exclusions: translation.exclusions ?? undefined,
       })),
     destinations: destinationLinkRows
       .filter((link) => link.tourId === row.id)
@@ -401,6 +403,8 @@ export class DrizzleTourRepository implements TourRepository {
         locale: translation.locale,
         name: translation.name,
         description: translation.description ?? undefined,
+        inclusions: translation.inclusions ?? undefined,
+        exclusions: translation.exclusions ?? undefined,
       })),
       destinations: destinationLinks.map((link) => ({
         destinationId: link.destinationId,
@@ -494,6 +498,8 @@ export class DrizzleTourRepository implements TourRepository {
         locale: translation.locale,
         name: translation.name,
         description: translation.description ?? null,
+        inclusions: translation.inclusions ?? null,
+        exclusions: translation.exclusions ?? null,
         createdAt: snapshot.createdAt,
         updatedAt: snapshot.updatedAt,
       })));

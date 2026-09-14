@@ -13,6 +13,8 @@ export type TourTranslationSnapshot = {
   locale: TourLocale;
   name: string;
   description?: string;
+  inclusions?: string;
+  exclusions?: string;
 };
 
 export type TourSnapshot = {
@@ -173,15 +175,15 @@ export class Tour {
     return value;
   }
 
-  private static validateDescription(description?: string): string | undefined {
-    const value = description?.trim();
+  private static validateOptionalContent(content?: string, fieldName = "description"): string | undefined {
+    const value = content?.trim();
 
     if (!value) {
       return undefined;
     }
 
     if (value.length < 10) {
-      throw new Error("Tour description must have at least 10 characters.");
+      throw new Error(`Tour ${fieldName} must have at least 10 characters.`);
     }
 
     return value;
@@ -204,7 +206,9 @@ export class Tour {
       return {
         locale: translation.locale,
         name: Tour.validateName(translation.name),
-        description: Tour.validateDescription(translation.description),
+        description: Tour.validateOptionalContent(translation.description),
+        inclusions: Tour.validateOptionalContent(translation.inclusions, "inclusions"),
+        exclusions: Tour.validateOptionalContent(translation.exclusions, "exclusions"),
       };
     });
 

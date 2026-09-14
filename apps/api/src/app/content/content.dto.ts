@@ -105,6 +105,8 @@ export class TourContentDto {
   departureStartMonth!: number | null;
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ nullable: true }) description!: string | null;
+  @ApiPropertyOptional({ nullable: true }) inclusions!: string | null;
+  @ApiPropertyOptional({ nullable: true }) exclusions!: string | null;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
   @ApiProperty({ type: TourPlanContentDto, isArray: true })
   plans!: TourPlanContentDto[];

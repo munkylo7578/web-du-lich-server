@@ -2,6 +2,10 @@ import { z } from "zod";
 import { DESTINATION_COUNTRIES } from "@destination-country";
 
 const optionalHtml = z.string().trim().optional().default("");
+const optionalVietnameseTourHtml = (message: string) => optionalHtml.refine(
+  (value) => !value || value.replace(/<[^>]*>/g, "").trim().length >= 10,
+  message,
+);
 
 export const imageNameSchema = z.string().trim()
   .max(500, "Tên ảnh không được vượt quá 500 ký tự.")
@@ -58,14 +62,15 @@ export const tourFormSchema = z.object({
   translations: z.object({
     vi: z.object({
       name: z.string().trim().min(2, "Tên tour cần ít nhất 2 ký tự."),
-      description: optionalHtml.refine(
-        (value) => !value || value.replace(/<[^>]*>/g, "").trim().length >= 10,
-        "Mô tả cần ít nhất 10 ký tự.",
-      ),
+      description: optionalVietnameseTourHtml("Mô tả cần ít nhất 10 ký tự."),
+      inclusions: optionalVietnameseTourHtml("Dịch vụ bao gồm cần ít nhất 10 ký tự."),
+      exclusions: optionalVietnameseTourHtml("Dịch vụ không bao gồm cần ít nhất 10 ký tự."),
     }),
     en: z.object({
       name: z.string().trim().optional().default(""),
       description: optionalHtml,
+      inclusions: optionalHtml,
+      exclusions: optionalHtml,
     }),
   }),
   destinations: z.array(

@@ -129,12 +129,16 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
         locale: "vi",
         name: data.translations.vi.name,
         description: data.translations.vi.description || undefined,
+        inclusions: data.translations.vi.inclusions || undefined,
+        exclusions: data.translations.vi.exclusions || undefined,
       },
       ...(data.translations.en.name
         ? [{
             locale: "en" as const,
             name: data.translations.en.name,
             description: data.translations.en.description || undefined,
+            inclusions: data.translations.en.inclusions || undefined,
+            exclusions: data.translations.en.exclusions || undefined,
           }]
         : []),
     ];
