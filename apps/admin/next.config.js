@@ -4,8 +4,9 @@
 const nextConfig = {
   transpilePackages: ["@database"],
   experimental: {
+    proxyClientMaxBodySize: "55mb",
     serverActions: {
-      bodySizeLimit: "10mb",
+      bodySizeLimit: "55mb",
     },
   },
 };

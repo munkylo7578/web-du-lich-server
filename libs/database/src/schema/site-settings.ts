@@ -3,7 +3,7 @@ import { boolean, check, pgEnum, pgTable, primaryKey, text, timestamp } from "dr
 
 import { tourLocale } from "./tour-media";
 
-export const SITE_SETTING_TYPES = ["text", "image"] as const;
+export const SITE_SETTING_TYPES = ["text", "image", "video"] as const;
 
 export type SiteSettingType = (typeof SITE_SETTING_TYPES)[number];
 
@@ -28,7 +28,7 @@ export const siteSettings = pgTable(
     check("site_settings_key_not_blank_check", sql`char_length(trim(${table.key})) > 0`),
     check(
       "site_settings_value_by_type_check",
-      sql`(${table.type} = 'image' and ${table.value} is not null and char_length(trim(${table.value})) > 0) or (${table.type} = 'text' and ${table.value} is null)`,
+      sql`(${table.type} in ('image', 'video') and ${table.value} is not null and char_length(trim(${table.value})) > 0) or (${table.type} = 'text' and ${table.value} is null)`,
     ),
   ],
 );

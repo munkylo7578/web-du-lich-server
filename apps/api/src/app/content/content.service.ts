@@ -346,7 +346,7 @@ export class ContentService {
     },
     locale: Locale,
   ) {
-    if (row.type === 'image') {
+    if (row.type === 'image' || row.type === 'video') {
       return {
         key: row.key,
         value: row.value,

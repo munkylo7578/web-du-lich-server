@@ -1,4 +1,4 @@
-export const SETTING_TYPES = ["text", "image"] as const;
+export const SETTING_TYPES = ["text", "image", "video"] as const;
 export const SETTING_LOCALES = ["vi", "en"] as const;
 
 export type SettingType = (typeof SETTING_TYPES)[number];
@@ -128,10 +128,11 @@ export class Setting {
   }
 
   private static validateContent(type: SettingType, value?: string, translations?: SettingTranslations) {
-    if (type === "image") {
+    if (type === "image" || type === "video") {
       const normalized = value?.trim();
       if (!normalized) throw new Error("Setting value is required.");
-      if (!isImageUrl(normalized)) throw new Error("Image setting value must be a local upload path or an absolute URL.");
+      if (type === "image" && !isImageUrl(normalized)) throw new Error("Image setting value must be a local upload path or an absolute URL.");
+      if (type === "video" && !isVideoUrl(normalized)) throw new Error("Video setting value must be a local settings video upload path.");
       return { value: normalized, translations: { vi: "" } as SettingTranslations };
     }
 
@@ -156,4 +157,8 @@ function hasTextContent(value?: string): boolean {
 
 function isImageUrl(value: string): boolean {
   return value.startsWith("/uploads/") || value.startsWith("http://") || value.startsWith("https://");
+}
+
+function isVideoUrl(value: string): boolean {
+  return value.startsWith("/uploads/settings/videos/");
 }

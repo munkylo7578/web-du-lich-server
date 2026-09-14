@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { Setting } from "@/domains/setting/domain";
 import { settingKeySchema, settingFormSchema } from "@/features/admin-settings/settings-form-schema";
 import { settingRepository } from "@/features/admin-settings/repository";
-import { removeUploadedSettingFiles, saveSettingImage } from "@/features/admin-settings/upload";
+import { removeUploadedSettingFiles, saveSettingImage, saveSettingVideo } from "@/features/admin-settings/upload";
 import { requireSession } from "@/lib/auth/session";
 
 export type SettingActionState = {
@@ -68,11 +68,24 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
       }
     }
 
+    if (data.type === "video") {
+      const file = formData.get("videoFile");
+      if (file instanceof File && file.size > 0) {
+        const stored = await saveSettingVideo(file);
+        uploadedPaths.push(stored.physicalPath);
+        value = stored.url;
+      } else if (existing) {
+        value = existing.toSnapshot().value;
+      } else {
+        throw new Error("Vui lòng chọn video MP4 cho setting loại Video.");
+      }
+    }
+
     const setting = existing ?? Setting.create({
       key: data.key,
       description: data.description,
       type: data.type,
-      value: data.type === "image" ? value : undefined,
+      value: data.type === "image" || data.type === "video" ? value : undefined,
       translations: data.type === "text" ? data.translations : undefined,
       canDelete: data.canDelete,
     });
@@ -80,7 +93,7 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
     if (existing) {
       setting.update({
         description: data.description,
-        value: data.type === "image" ? value : undefined,
+        value: data.type === "image" || data.type === "video" ? value : undefined,
         translations: data.type === "text" ? data.translations : undefined,
       });
     }

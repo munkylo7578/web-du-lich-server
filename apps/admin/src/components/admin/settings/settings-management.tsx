@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { Edit3, ImageIcon, MoreHorizontal, Plus, Search, Settings2, Trash2, Type } from "lucide-react";
+import { Edit3, ImageIcon, MoreHorizontal, Plus, Search, Settings2, Trash2, Type, Upload, Video } from "lucide-react";
 
 import { deleteSettingAction, saveSettingAction } from "@/app/admin/settings/actions";
 import { ImagePickerField, type ImagePickerPendingImage } from "@/components/admin/shared/image-picker-field";
@@ -24,6 +24,7 @@ import { settingFormSchema, type SettingFormValues } from "@/features/admin-sett
 import type { AdminSetting } from "@/features/admin-settings/settings-types";
 
 type PendingSettingImage = ImagePickerPendingImage;
+type PendingSettingVideo = { file: File; previewUrl: string };
 
 export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
   const router = useRouter();
@@ -194,6 +195,7 @@ function SettingFormDrawer({
   const values = useMemo(() => toFormValues(setting), [setting]);
   const previousTypeRef = useRef(values.type);
   const [pendingImages, setPendingImages] = useState<PendingSettingImage[]>([]);
+  const [pendingVideo, setPendingVideo] = useState<PendingSettingVideo>();
   const [message, setMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
   const form = useForm<SettingFormValues>({ resolver: zodResolver(settingFormSchema), values });
@@ -213,13 +215,17 @@ function SettingFormDrawer({
     previousTypeRef.current = watchedType;
     pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setPendingImages([]);
+    if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
+    setPendingVideo(undefined);
     form.setValue("value", "", { shouldDirty: true, shouldValidate: true });
     form.setValue("translations", { vi: "", en: "" }, { shouldDirty: true, shouldValidate: true });
-  }, [form, pendingImages, watchedType]);
+  }, [form, pendingImages, pendingVideo, watchedType]);
 
   const resetDraft = () => {
     pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setPendingImages([]);
+    if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
+    setPendingVideo(undefined);
     setMessage(undefined);
     form.reset(values);
   };
@@ -229,12 +235,17 @@ function SettingFormDrawer({
       key: data.key,
       originalKey: data.originalKey,
       type: data.type,
-      hasValue: data.type === "image" ? Boolean(data.value) : Boolean(data.translations?.vi),
+      hasValue: data.type === "text" ? Boolean(data.translations?.vi) : Boolean(data.value),
       pendingImages: pendingImages.length,
+      pendingVideo: Boolean(pendingVideo),
     });
     setMessage(undefined);
     if (data.type === "image" && !data.value && !pendingImages.length) {
       setMessage("Vui lòng chọn ảnh cho setting loại ảnh.");
+      return;
+    }
+    if (data.type === "video" && !data.value && !pendingVideo) {
+      setMessage("Vui lòng chọn video MP4 cho setting loại Video.");
       return;
     }
 
@@ -245,12 +256,15 @@ function SettingFormDrawer({
         body.set("pendingImageClientId", pendingImages[0].clientId);
         body.set(`file:${pendingImages[0].clientId}`, pendingImages[0].file);
       }
+      if (pendingVideo) body.set("videoFile", pendingVideo.file);
 
       const result = await saveSettingAction(body);
       setMessage(result.message);
       if (result.success) {
         pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
         setPendingImages([]);
+        if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
+        setPendingVideo(undefined);
         onOpenChange(false);
         onSaved();
       }
@@ -304,6 +318,7 @@ function SettingFormDrawer({
                       >
                         <option value="text">Text</option>
                         <option value="image">Ảnh</option>
+                        <option value="video">Video</option>
                       </select>
                       <input type="hidden" {...form.register("type")} />
                       <p className="text-xs text-muted-foreground">Loại setting được cố định sau khi tạo.</p>
@@ -316,6 +331,7 @@ function SettingFormDrawer({
                     >
                       <option value="text">Text</option>
                       <option value="image">Ảnh</option>
+                      <option value="video">Video</option>
                     </select>
                   )}
                 </FormField>
@@ -364,7 +380,7 @@ function SettingFormDrawer({
                       </FormField>
                     </TabsContent>
                   </Tabs>
-                ) : (
+                ) : watchedType === "image" ? (
                   <FormField label="Ảnh" required error={form.formState.errors.value?.message}>
                     <Controller
                       control={form.control}
@@ -386,6 +402,20 @@ function SettingFormDrawer({
                       )}
                     />
                   </FormField>
+                ) : (
+                  <FormField label="Video" required error={form.formState.errors.value?.message}>
+                    <VideoPickerField
+                      existingUrl={watchedValue}
+                      pending={pendingVideo}
+                      disabled={isPending}
+                      onChange={(nextVideo) => {
+                        if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
+                        setPendingVideo(nextVideo);
+                        setMessage(undefined);
+                      }}
+                      onError={setMessage}
+                    />
+                  </FormField>
                 )}
               </section>
             </div>
@@ -404,9 +434,9 @@ function SettingFormDrawer({
 }
 
 function SettingTypeBadge({ type }: { type: AdminSetting["type"] }) {
-  return type === "image"
-    ? <Badge variant="secondary"><ImageIcon data-icon="inline-start" />Ảnh</Badge>
-    : <Badge variant="outline"><Type data-icon="inline-start" />Text</Badge>;
+  if (type === "image") return <Badge variant="secondary"><ImageIcon data-icon="inline-start" />Ảnh</Badge>;
+  if (type === "video") return <Badge variant="secondary"><Video data-icon="inline-start" />Video</Badge>;
+  return <Badge variant="outline"><Type data-icon="inline-start" />Text</Badge>;
 }
 
 function SettingValuePreview({ setting }: { setting: AdminSetting }) {
@@ -419,7 +449,87 @@ function SettingValuePreview({ setting }: { setting: AdminSetting }) {
     );
   }
 
+  if (setting.type === "video") {
+    return (
+      <div className="flex min-w-56 items-center gap-2 text-sm text-slate-700">
+        <Video className="size-4 shrink-0 text-cyan-800" />
+        <span className="max-w-xs truncate text-xs text-muted-foreground">{setting.value}</span>
+      </div>
+    );
+  }
+
   return <p className="line-clamp-2 max-w-xs text-sm text-slate-700">{stripHtml(setting.translations.vi)}</p>;
+}
+
+function VideoPickerField({
+  existingUrl,
+  pending,
+  disabled,
+  onChange,
+  onError,
+}: {
+  existingUrl: string;
+  pending?: PendingSettingVideo;
+  disabled: boolean;
+  onChange: (video?: PendingSettingVideo) => void;
+  onError: (message?: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrl = pending?.previewUrl || existingUrl;
+
+  return (
+    <div className="space-y-4">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="video/mp4,.mp4"
+        className="sr-only"
+        disabled={disabled}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          if (file.type !== "video/mp4") {
+            onError("Chỉ hỗ trợ video MP4.");
+            return;
+          }
+          if (file.size <= 0 || file.size > 50 * 1024 * 1024) {
+            onError("Dung lượng video phải lớn hơn 0 và không vượt quá 50 MB.");
+            return;
+          }
+          onChange({ file, previewUrl: URL.createObjectURL(file) });
+        }}
+      />
+
+      <div className="rounded-[24px] border border-dashed border-white/70 bg-white/72 p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium">{pending ? pending.file.name : existingUrl ? "Video hiện tại" : "Chưa chọn video"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {pending ? `${formatFileSize(pending.file.size)} · chỉ upload khi lưu setting` : "MP4 · tối đa 50 MB · chỉ upload khi lưu setting"}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {pending && <Button type="button" variant="outline" disabled={disabled} onClick={() => onChange(undefined)}>Bỏ file đã chọn</Button>}
+            <Button type="button" variant="outline" disabled={disabled} onClick={() => inputRef.current?.click()}>
+              <Upload data-icon="inline-start" />{previewUrl ? "Thay video" : "Chọn video"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {previewUrl && (
+        <video
+          src={previewUrl}
+          controls
+          preload="metadata"
+          className="aspect-video w-full rounded-2xl border bg-black object-contain"
+        >
+          Trình duyệt không hỗ trợ phát video.
+        </video>
+      )}
+    </div>
+  );
 }
 
 function FormField({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
@@ -459,4 +569,8 @@ function stripHtml(value: string): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(value));
+}
+
+function formatFileSize(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

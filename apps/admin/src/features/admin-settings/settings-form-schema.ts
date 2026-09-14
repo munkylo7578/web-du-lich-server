@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const settingTypeSchema = z.enum(["text", "image"]);
+export const settingTypeSchema = z.enum(["text", "image", "video"]);
 
 export const settingKeySchema = z.string().trim().min(1, "Key là bắt buộc.");
 
@@ -37,6 +37,14 @@ export const settingFormSchema = z.object({
       message: "Giá trị ảnh phải là URL upload nội bộ hoặc URL tuyệt đối.",
     });
   }
+
+  if (value.type === "video" && value.value && !isVideoUrl(value.value)) {
+    context.addIssue({
+      code: "custom",
+      path: ["value"],
+      message: "Giá trị video phải là URL upload video setting nội bộ.",
+    });
+  }
 });
 
 export type SettingFormValues = z.input<typeof settingFormSchema>;
@@ -48,4 +56,8 @@ function hasTextContent(value: string): boolean {
 
 function isImageUrl(value: string): boolean {
   return value.startsWith("/uploads/") || value.startsWith("http://") || value.startsWith("https://");
+}
+
+function isVideoUrl(value: string): boolean {
+  return value.startsWith("/uploads/settings/videos/");
 }
