@@ -386,7 +386,7 @@ export class ContentService {
     if (term) {
       const escapedTerm = term.replace(/[\\%_]/g, '\\$&');
       const pattern = `%${escapedTerm}%`;
-      const locales = locale === 'vi' ? ['vi'] : [locale, 'vi'];
+      const locales: Locale[] = locale === 'vi' ? ['vi'] : [locale, 'vi'];
       const tourNameMatches = sql<boolean>`exists (
         select 1
         from ${tourTranslations}
