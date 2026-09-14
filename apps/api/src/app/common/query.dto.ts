@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export const LOCALES = ['vi', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -30,6 +38,54 @@ export class PageQueryDto extends LocaleQueryDto {
   @Min(1)
   @Max(100)
   limit = 20;
+}
+
+export class TourListQueryDto extends PageQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'Case-insensitive partial match against tour or destination names in the requested locale and Vietnamese fallback.',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() || undefined : value,
+  )
+  @IsString()
+  @MaxLength(255)
+  search?: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 12 })
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  departureStartMonth?: number;
+}
+
+export class DestinationListQueryDto extends LocaleQueryDto {
+  @ApiPropertyOptional({
+    default: 1,
+    minimum: 1,
+    description: 'Ignored when limit is omitted.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  page = 1;
+
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 100,
+    description: 'When omitted, all destinations are returned.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }
 
 export type LocaleMeta = {

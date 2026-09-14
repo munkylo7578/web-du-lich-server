@@ -5,7 +5,12 @@ import {
   ApiCommonErrorResponses,
   ApiSuccessEnvelope,
 } from '../common/api-response.swagger';
-import { LocaleQueryDto, PageQueryDto } from '../common/query.dto';
+import {
+  DestinationListQueryDto,
+  LocaleQueryDto,
+  PageQueryDto,
+  TourListQueryDto,
+} from '../common/query.dto';
 import {
   DestinationContentDto,
   ServiceContentDto,
@@ -29,8 +34,11 @@ export class ContentController {
     description:
       'Paginated tours. Country and service category keys are independent of locale.',
   })
-  listTours(@Query() query: PageQueryDto) {
-    return this.content.tours(query.locale, query.page, query.limit);
+  listTours(@Query() query: TourListQueryDto) {
+    return this.content.tours(query.locale, query.page, query.limit, {
+      search: query.search,
+      departureStartMonth: query.departureStartMonth,
+    });
   }
   @Get('tours/:id')
   @ApiSuccessEnvelope({
@@ -52,7 +60,7 @@ export class ContentController {
     description:
       'Paginated destinations. Wards include nullable latitude and longitude derived from GIS geometry.',
   })
-  listDestinations(@Query() query: PageQueryDto) {
+  listDestinations(@Query() query: DestinationListQueryDto) {
     return this.content.destinations(query.locale, query.page, query.limit);
   }
   @Get('destinations/:id')

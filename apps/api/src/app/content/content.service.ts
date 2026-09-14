@@ -1,13 +1,16 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { count, inArray, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import type { DestinationCountry } from '@destination-country';
 import type { ServiceCategory } from '@service-category';
 import {
+  destinationTranslations,
   destinations,
   gisWards,
   services,
   siteSettingTranslations,
   siteSettings,
+  tourDestinations,
+  tourTranslations,
   tours,
   type LocalizedText,
 } from '@database';
@@ -76,6 +79,11 @@ type TourRow = {
   updatedAt: Date;
 };
 
+type TourListFilters = {
+  search?: string;
+  departureStartMonth?: number;
+};
+
 @Injectable()
 export class ContentService {
   constructor(
@@ -83,13 +91,21 @@ export class ContentService {
     @Inject(API_ENV) private readonly env: ApiEnvironment,
   ) {}
 
-  async tours(locale: Locale, page: number, requestedLimit: number) {
+  async tours(
+    locale: Locale,
+    page: number,
+    requestedLimit: number,
+    filters: TourListFilters = {},
+  ) {
     const limit = Math.min(requestedLimit, this.env.maxPageSize);
-    const [{ value: total }] = await this.db
-      .select({ value: count() })
-      .from(tours);
+    const where = this.tourListWhere(locale, filters);
+    const countQuery = this.db.select({ value: count() }).from(tours);
+    const [{ value: total }] = where
+      ? await countQuery.where(where)
+      : await countQuery;
     const rows = await this.db.query.tours.findMany({
       columns: { plans: false },
+      where,
       limit,
       offset: (page - 1) * limit,
       orderBy: (table, { desc }) => [desc(table.updatedAt), desc(table.id)],
@@ -172,14 +188,22 @@ export class ContentService {
     return { data: result };
   }
 
-  async destinations(locale: Locale, page: number, requestedLimit: number) {
-    const limit = Math.min(requestedLimit, this.env.maxPageSize);
+  async destinations(
+    locale: Locale,
+    page: number,
+    requestedLimit?: number,
+  ) {
+    const fetchAll = requestedLimit === undefined;
+    const limit = fetchAll
+      ? undefined
+      : Math.min(requestedLimit, this.env.maxPageSize);
     const [{ value: total }] = await this.db
       .select({ value: count() })
       .from(destinations);
     const rows = await this.db.query.destinations.findMany({
-      limit,
-      offset: (page - 1) * limit,
+      ...(limit === undefined
+        ? {}
+        : { limit, offset: (page - 1) * limit }),
       orderBy: (table, { desc }) => [desc(table.updatedAt), desc(table.id)],
       with: {
         translations: true,
@@ -205,7 +229,9 @@ export class ContentService {
       data: rows
         .map((row) => this.mapDestination(row, locale, wardCoordinates))
         .filter(Boolean),
-      meta: pageMeta(page, limit, total),
+      meta: fetchAll
+        ? { page: 1, limit: total, total, totalPages: 1 }
+        : pageMeta(page, limit, total),
     };
   }
 
@@ -346,6 +372,46 @@ export class ContentService {
         fallback: Boolean(translation && translation.locale !== locale),
       },
     };
+  }
+
+  private tourListWhere(
+    locale: Locale,
+    filters: TourListFilters,
+  ): SQL | undefined {
+    const conditions: SQL[] = [];
+    const term = filters.search?.trim();
+
+    if (term) {
+      const escapedTerm = term.replace(/[\\%_]/g, '\\$&');
+      const pattern = `%${escapedTerm}%`;
+      const locales = locale === 'vi' ? ['vi'] : [locale, 'vi'];
+      const tourNameMatches = sql<boolean>`exists (
+        select 1
+        from ${tourTranslations}
+        where ${tourTranslations.tourId} = ${tours.id}
+          and ${inArray(tourTranslations.locale, locales)}
+          and ${tourTranslations.name} ilike ${pattern} escape '\\'
+      )`;
+      const destinationNameMatches = sql<boolean>`exists (
+        select 1
+        from ${tourDestinations}
+        inner join ${destinationTranslations}
+          on ${destinationTranslations.destinationId} = ${tourDestinations.destinationId}
+        where ${tourDestinations.tourId} = ${tours.id}
+          and ${inArray(destinationTranslations.locale, locales)}
+          and ${destinationTranslations.name} ilike ${pattern} escape '\\'
+      )`;
+
+      conditions.push(or(tourNameMatches, destinationNameMatches)!);
+    }
+
+    if (filters.departureStartMonth !== undefined) {
+      conditions.push(
+        eq(tours.departureStartMonth, filters.departureStartMonth),
+      );
+    }
+
+    return conditions.length ? and(...conditions) : undefined;
   }
 
   private mapTour(row: TourRow, locale: Locale) {
