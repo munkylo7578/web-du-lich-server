@@ -40,8 +40,11 @@ export async function saveServiceAction(formData: FormData): Promise<ServiceActi
     ];
     const existing = data.serviceId ? await serviceRepository.findById(data.serviceId) : null;
     if (data.serviceId && !existing) return { success: false, message: "Không tìm thấy dịch vụ." };
-    const aggregate = existing ?? Service.create(translations);
-    if (existing) aggregate.replaceTranslations(translations);
+    const aggregate = existing ?? Service.create(data.category, translations);
+    if (existing) {
+      aggregate.replaceCategory(data.category);
+      aggregate.replaceTranslations(translations);
+    }
     const refs = data.existingImages.map((item, index) => ({ imageId: item.imageId, sortOrder: index }));
     const newImages = [];
     for (let index = 0; index < pendingMeta.length; index += 1) {

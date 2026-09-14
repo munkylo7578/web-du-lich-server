@@ -1,4 +1,5 @@
 import type { ServiceTranslationSnapshot } from "@/domains/service/domain";
+import type { ServiceCategory } from "@service-category";
 
 export type AdminServiceImage = {
   imageId: string;
@@ -9,6 +10,7 @@ export type AdminServiceImage = {
 
 export type AdminService = {
   serviceId: string;
+  category: ServiceCategory;
   translations: ServiceTranslationSnapshot[];
   images: AdminServiceImage[];
   sortOrder: number;

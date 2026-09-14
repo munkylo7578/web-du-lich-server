@@ -17,6 +17,7 @@ import {
 
 import { wards } from "./geo-location";
 import { DESTINATION_COUNTRIES } from "../contracts/destination-country";
+import { SERVICE_CATEGORIES } from "../contracts/service-category";
 
 export const TOUR_LOCALES = ["vi", "en"] as const;
 
@@ -55,6 +56,8 @@ export const tours = pgTable(
 );
 
 export const tourLocale = pgEnum("tour_locale", ["vi", "en"]);
+
+export const serviceCategory = pgEnum("service_category", SERVICE_CATEGORIES);
 
 export const tourPlans = pgTable("tour_plans", {
   id: uuid("id").primaryKey(),
@@ -165,6 +168,7 @@ export const tourDestinations = pgTable(
 
 export const services = pgTable("services", {
   id: uuid("id").primaryKey(),
+  category: serviceCategory("category").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

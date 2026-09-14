@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { serviceFormSchema, type ServiceFormValues } from "@/features/admin-services/service-form-schema";
 import type { AdminService } from "@/features/admin-services/service-types";
+import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@service-category";
 
 const helper = createColumnHelper<AdminService>();
 
@@ -35,6 +36,7 @@ export function ServiceManagement({ services }: { services: AdminService[] }) {
   const [isDeleting, startDelete] = useTransition();
   const columns = useMemo(() => [
     helper.accessor((service) => nameOf(service), { id: "name", header: "Dịch vụ", cell: ({ row, getValue }) => <div className="flex min-w-72 items-center gap-3">{row.original.images[0] ? <img src={row.original.images[0].url} alt={row.original.images[0].altText || getValue()} className="size-14 rounded-xl object-cover" /> : <div className="grid size-14 place-items-center rounded-xl bg-cyan-100 text-cyan-800"><ImageIcon /></div>}<div><p className="font-medium">{getValue()}</p><p className="mt-1 line-clamp-2 max-w-xl text-xs text-muted-foreground">{descriptionOf(row.original)}</p></div></div> }),
+    helper.accessor("category", { header: "Phân loại", cell: ({ getValue }) => <Badge variant="outline">{SERVICE_CATEGORY_LABELS[getValue()]}</Badge> }),
     helper.display({ id: "languages", header: "Ngôn ngữ", cell: ({ row }) => <div className="flex gap-1">{row.original.translations.map((item) => <Badge key={item.locale} variant="secondary"><Languages data-icon="inline-start" />{item.locale.toUpperCase()}</Badge>)}</div> }),
     helper.accessor("images", { header: "Ảnh", cell: ({ getValue }) => `${getValue().length} ảnh` }),
     helper.accessor("tourCount", { header: "Tour", cell: ({ getValue }) => `${getValue()} tour` }),
@@ -59,7 +61,7 @@ function ServiceFormDrawer({ open, service, onSaved, onOpenChange }: { open: boo
   const [isPending, startTransition] = useTransition();
   const values = useMemo<ServiceFormValues>(() => {
     const vi = service?.translations.find((item) => item.locale === "vi"); const en = service?.translations.find((item) => item.locale === "en");
-    return { serviceId: service?.serviceId, translations: { vi: { name: vi?.name || "", description: vi?.description || "" }, en: { name: en?.name || "", description: en?.description || "" } }, existingImages: service?.images ?? [] };
+    return { serviceId: service?.serviceId, category: service?.category ?? "accommodation", translations: { vi: { name: vi?.name || "", description: vi?.description || "" }, en: { name: en?.name || "", description: en?.description || "" } }, existingImages: service?.images ?? [] };
   }, [service]);
   const form = useForm<ServiceFormValues>({ resolver: zodResolver(serviceFormSchema), values });
   const close = () => { pending.forEach((item) => URL.revokeObjectURL(item.previewUrl)); setPending([]); setMessage(undefined); onOpenChange(false); };
