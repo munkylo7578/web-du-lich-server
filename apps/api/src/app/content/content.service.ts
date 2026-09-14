@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { count } from 'drizzle-orm';
 import type { DestinationCountry } from '@destination-country';
+import type { ServiceCategory } from '@service-category';
 import {
   destinations,
   services,
@@ -33,7 +34,7 @@ type DestinationRow = {
   createdAt: Date;
   updatedAt: Date;
 };
-type ServiceRow = { id: string; translations: TranslationRow[]; imageLinks?: ImageLinkRow[]; createdAt: Date; updatedAt: Date };
+type ServiceRow = { id: string; category: ServiceCategory; translations: TranslationRow[]; imageLinks?: ImageLinkRow[]; createdAt: Date; updatedAt: Date };
 type PlanRow = { id: string; name: LocalizedText; description: LocalizedText; sortOrder: number; imageLinks: ImageLinkRow[] };
 type TourRow = {
   id: string;
@@ -276,7 +277,7 @@ export class ContentService {
     const translation = localized(row.translations, locale);
     if (!translation) return null;
     return {
-      id: row.id, name: translation.value.name, description: translation.value.description, locale: translation.locale,
+      id: row.id, category: row.category, name: translation.value.name, description: translation.value.description, locale: translation.locale,
       images: (row.imageLinks ?? []).map((link) => ({ sortOrder: link.sortOrder, ...this.mapImage(link.image) })),
       createdAt: row.createdAt, updatedAt: row.updatedAt,
     };

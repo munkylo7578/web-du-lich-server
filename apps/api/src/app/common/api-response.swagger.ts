@@ -1,13 +1,15 @@
-import { applyDecorators } from '@nestjs/common';
+import { applyDecorators, type Type } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
+  ApiExtraModels,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiProperty,
   ApiPropertyOptional,
   ApiResponse,
   ApiUnauthorizedResponse,
+  getSchemaPath,
 } from '@nestjs/swagger';
 
 class ApiErrorBodyDto {
@@ -34,28 +36,35 @@ export class ApiErrorResponseDto {
 
 type ApiSuccessResponseOptions = {
   description?: string;
+  dataType?: Type<unknown>;
   hasMeta?: boolean;
   isArray?: boolean;
 };
 
 export function ApiSuccessEnvelope(options: ApiSuccessResponseOptions = {}): MethodDecorator {
-  const dataSchema = options.isArray
-    ? { type: 'array' as const, items: { type: 'object' as const } }
+  const itemSchema = options.dataType
+    ? { $ref: getSchemaPath(options.dataType) }
     : { type: 'object' as const };
+  const dataSchema = options.isArray
+    ? { type: 'array' as const, items: itemSchema }
+    : itemSchema;
   const required = options.hasMeta ? ['success', 'data', 'meta'] : ['success', 'data'];
 
-  return ApiOkResponse({
-    description: options.description,
-    schema: {
-      type: 'object',
-      required,
-      properties: {
-        success: { type: 'boolean', enum: [true], example: true },
-        data: dataSchema,
-        ...(options.hasMeta ? { meta: { type: 'object' } } : {}),
+  return applyDecorators(
+    ...(options.dataType ? [ApiExtraModels(options.dataType)] : []),
+    ApiOkResponse({
+      description: options.description,
+      schema: {
+        type: 'object',
+        required,
+        properties: {
+          success: { type: 'boolean', enum: [true], example: true },
+          data: dataSchema,
+          ...(options.hasMeta ? { meta: { type: 'object' } } : {}),
+        },
       },
-    },
-  });
+    }),
+  );
 }
 
 export function ApiCommonErrorResponses(): ClassDecorator & MethodDecorator {
