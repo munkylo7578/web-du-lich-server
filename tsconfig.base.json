@@ -4,7 +4,8 @@
     "paths": {
       "@/*": ["./apps/admin/src/*"],
       "@database": ["./libs/database/src/index.ts"],
-      "@destination-country": ["./libs/database/src/contracts/destination-country.ts"]
+      "@destination-country": ["./libs/database/src/contracts/destination-country.ts"],
+      "@service-category": ["./libs/database/src/contracts/service-category.ts"]
     }
   }
 }

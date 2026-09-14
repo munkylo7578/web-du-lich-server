@@ -37,6 +37,87 @@ describe('ContentService tour departure start month', () => {
   });
 });
 
+describe('ContentService destination tour images', () => {
+  const destinationId = '3db059d1-02af-4a8d-9506-696a691bf3e9';
+  const tourId = 'b2a985d1-2a16-43da-848f-c533aa56ae3c';
+  const destinationRow = {
+    id: destinationId,
+    country: 'VN',
+    translations: [{ locale: 'vi', name: 'Hội An', description: 'Phố cổ Hội An' }],
+    wardLinks: [],
+    tourLinks: [{
+      tour: {
+        id: tourId,
+        imageLinks: [
+          {
+            role: 'cover',
+            sortOrder: 0,
+            image: { id: '8642d66c-30c8-4703-bb17-4ef65e5707ba', url: '/uploads/tours/cover.webp', altText: 'Ảnh bìa' },
+          },
+          {
+            role: 'gallery',
+            sortOrder: 1,
+            image: { id: 'c07ca66f-ac4f-4779-bfc2-25923011d63a', url: 'https://images.example.com/gallery.webp', altText: null },
+          },
+        ],
+      },
+    }],
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+  };
+
+  function createService(row = destinationRow) {
+    const db = {
+      select: jest.fn().mockReturnValue({ from: jest.fn().mockResolvedValue([{ value: 1 }]) }),
+      query: {
+        destinations: {
+          findMany: jest.fn().mockResolvedValue([row]),
+          findFirst: jest.fn().mockResolvedValue(row),
+        },
+      },
+    };
+    const env = { maxPageSize: 100, uploadPublicBaseUrl: 'https://api.example.com' };
+    return new ContentService(db as never, env as never);
+  }
+
+  it('returns linked tours and their ordered images in destination list and detail responses', async () => {
+    const service = createService();
+
+    const list = await service.destinations('vi', 1, 20);
+    const detail = await service.destination(destinationId, 'vi');
+
+    const expectedTours = [{
+      id: tourId,
+      images: [
+        {
+          id: '8642d66c-30c8-4703-bb17-4ef65e5707ba',
+          url: 'https://api.example.com/uploads/tours/cover.webp',
+          altText: 'Ảnh bìa',
+          role: 'cover',
+          sortOrder: 0,
+        },
+        {
+          id: 'c07ca66f-ac4f-4779-bfc2-25923011d63a',
+          url: 'https://images.example.com/gallery.webp',
+          altText: null,
+          role: 'gallery',
+          sortOrder: 1,
+        },
+      ],
+    }];
+    expect(list.data[0]).toHaveProperty('tours', expectedTours);
+    expect(detail.data).toHaveProperty('tours', expectedTours);
+  });
+
+  it('returns an empty tours array when a destination has no linked tours', async () => {
+    const service = createService({ ...destinationRow, tourLinks: [] });
+
+    const detail = await service.destination(destinationId, 'vi');
+
+    expect(detail.data.tours).toEqual([]);
+  });
+});
+
 describe('ContentService setting localization', () => {
   const env = {
     publicSettingKeys: ['site.footer'],

@@ -1,5 +1,6 @@
 import { ServiceId } from "./service-id";
 import { DEFAULT_TOUR_LOCALE, isTourLocale, type TourLocale } from "@/domains/tour/domain";
+import { isServiceCategory, type ServiceCategory } from "@service-category";
 
 export type ServiceTranslationSnapshot = {
   locale: TourLocale;
@@ -14,6 +15,7 @@ export type ServiceImageRefSnapshot = {
 
 export type ServiceSnapshot = {
   id: string;
+  category: ServiceCategory;
   translations: ServiceTranslationSnapshot[];
   images: ServiceImageRefSnapshot[];
   createdAt: Date;
@@ -23,20 +25,22 @@ export type ServiceSnapshot = {
 export class Service {
   private constructor(
     private readonly id: ServiceId,
+    private category: ServiceCategory,
     private translations: ServiceTranslationSnapshot[],
     private images: ServiceImageRefSnapshot[],
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {}
 
-  static create(translations: ServiceTranslationSnapshot[]): Service {
+  static create(category: ServiceCategory, translations: ServiceTranslationSnapshot[]): Service {
     const now = new Date();
-    return new Service(ServiceId.create(), Service.validateTranslations(translations), [], now, now);
+    return new Service(ServiceId.create(), Service.validateCategory(category), Service.validateTranslations(translations), [], now, now);
   }
 
   static rehydrate(snapshot: ServiceSnapshot): Service {
     return new Service(
       ServiceId.create(snapshot.id),
+      Service.validateCategory(snapshot.category),
       Service.validateTranslations(snapshot.translations),
       Service.validateImages(snapshot.images),
       snapshot.createdAt,
@@ -46,6 +50,11 @@ export class Service {
 
   getId(): ServiceId {
     return this.id;
+  }
+
+  replaceCategory(category: ServiceCategory): void {
+    this.category = Service.validateCategory(category);
+    this.touch();
   }
 
   replaceTranslations(translations: ServiceTranslationSnapshot[]): void {
@@ -61,6 +70,7 @@ export class Service {
   toSnapshot(): ServiceSnapshot {
     return {
       id: this.id.value,
+      category: this.category,
       translations: this.translations.map((translation) => ({ ...translation })),
       images: this.images.map((image) => ({ ...image })),
       createdAt: new Date(this.createdAt),
@@ -70,6 +80,13 @@ export class Service {
 
   private touch(): void {
     this.updatedAt = new Date();
+  }
+
+  private static validateCategory(category: ServiceCategory): ServiceCategory {
+    if (!isServiceCategory(category)) {
+      throw new Error("Service category must be accommodation, transportation, or tourguide.");
+    }
+    return category;
   }
 
   private static validateTranslations(translations: ServiceTranslationSnapshot[]) {

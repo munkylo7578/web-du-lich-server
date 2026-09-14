@@ -56,6 +56,7 @@ export async function hydrateServices(ids: string[]): Promise<AdminService[]> {
     if (!row) return [];
     return [{
       serviceId: id,
+      category: row.category,
       translations: translationRows.filter((item) => item.serviceId === id).map((item) => ({
         locale: item.locale,
         name: item.name,
@@ -83,6 +84,7 @@ class DrizzleServiceRepository implements ServiceRepository {
     const imageLinks = await db.select().from(serviceImages).where(eq(serviceImages.serviceId, id));
     return Service.rehydrate({
       id,
+      category: rows[0].category,
       translations: translations.map((item) => ({ locale: item.locale, name: item.name, description: item.description ?? undefined })),
       images: imageLinks.map((item) => ({ imageId: item.imageId, sortOrder: item.sortOrder })),
       createdAt: rows[0].createdAt,
@@ -94,8 +96,8 @@ class DrizzleServiceRepository implements ServiceRepository {
     const snapshot = service.toSnapshot();
     const existing = await db.select({ id: services.id }).from(services).where(eq(services.id, snapshot.id)).limit(1);
     await db.transaction(async (tx) => {
-      if (existing.length) await tx.update(services).set({ updatedAt: snapshot.updatedAt }).where(eq(services.id, snapshot.id));
-      else await tx.insert(services).values({ id: snapshot.id, createdAt: snapshot.createdAt, updatedAt: snapshot.updatedAt });
+      if (existing.length) await tx.update(services).set({ category: snapshot.category, updatedAt: snapshot.updatedAt }).where(eq(services.id, snapshot.id));
+      else await tx.insert(services).values({ id: snapshot.id, category: snapshot.category, createdAt: snapshot.createdAt, updatedAt: snapshot.updatedAt });
 
       await tx.delete(serviceTranslations).where(eq(serviceTranslations.serviceId, snapshot.id));
       await tx.insert(serviceTranslations).values(snapshot.translations.map((item) => ({
