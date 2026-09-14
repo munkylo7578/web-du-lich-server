@@ -36,7 +36,8 @@ async function main() {
 
   try {
     await inspect('connection', `select current_setting('transaction_read_only') as read_only,
-      current_setting('statement_timeout') as statement_timeout, current_schema() as current_schema`);
+      current_setting('statement_timeout') as statement_timeout, current_schema() as current_schema,
+      current_setting('server_version') as server_version, current_user as current_user`);
     const history = await inspect('migration history', `select id, hash, created_at
       from drizzle.__drizzle_migrations order by created_at desc limit 20`);
     const folder = path.resolve(__dirname, '../drizzle');
@@ -55,6 +56,23 @@ async function main() {
         matchesRecentHistoryHash: history.some((row) => row.hash === hash),
       };
     }), null, 2));
+    await inspect('site setting enum values', `select e.enumsortorder, e.enumlabel
+      from pg_type t
+      join pg_namespace n on n.oid = t.typnamespace
+      join pg_enum e on e.enumtypid = t.oid
+      where n.nspname = 'public' and t.typname = 'site_setting_type'
+      order by e.enumsortorder`);
+    await inspect('site setting constraints', `select conname, pg_get_constraintdef(oid) as definition
+      from pg_constraint where conrelid = to_regclass('public.site_settings')
+      order by conname`);
+    await inspect('site setting ownership and permissions', `select
+      pg_has_role(current_user, c.relowner, 'MEMBER') as member_of_owner_role,
+      has_table_privilege(current_user, c.oid, 'ALTER') as can_alter_table,
+      pg_has_role(current_user, t.typowner, 'MEMBER') as member_of_enum_owner_role
+      from pg_class c
+      join pg_type t on t.typname = 'site_setting_type'
+      join pg_namespace n on n.oid = t.typnamespace and n.nspname = 'public'
+      where c.oid = to_regclass('public.site_settings')`);
     await inspect('destination columns', `select table_schema, column_name, data_type, is_nullable, column_default
       from information_schema.columns where table_name = 'destinations' order by table_schema, ordinal_position`);
     await inspect('destination has existing rows', `select exists(select 1 from public.destinations limit 1) as has_rows`);
