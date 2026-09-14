@@ -8,8 +8,8 @@ export const SERVICE_CATEGORIES = [
 export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
 
 export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
-  accommodation: 'Lưu trú',
-  transportation: 'Vận chuyển',
+  accommodation: 'Nơi lưu trú',
+  transportation: 'Phương tiện di chuyển',
   tourguide: 'Hướng dẫn viên',
 };
 
