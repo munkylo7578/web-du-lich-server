@@ -75,7 +75,7 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
         uploadedPaths.push(stored.physicalPath);
         value = stored.url;
       } else if (existing) {
-        value = existing.toSnapshot().value;
+        value = existing.toSnapshot().value as string;
       } else {
         throw new Error("Vui lòng chọn video MP4 cho setting loại Video.");
       }
