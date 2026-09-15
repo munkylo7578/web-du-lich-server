@@ -60,6 +60,7 @@ export async function saveServiceAction(
     };
 
   const paths: string[] = [];
+  let committed = false;
   try {
     const data = parsed.data;
     const translations: ServiceTranslationSnapshot[] = [
@@ -113,6 +114,7 @@ export async function saveServiceAction(
       refs.map((item, index) => ({ ...item, sortOrder: index })),
     );
     await serviceRepository.save(aggregate, newImages);
+    committed = true;
     revalidatePath('/admin/services');
     revalidatePath('/admin/tours');
     return {
@@ -120,6 +122,10 @@ export async function saveServiceAction(
       message: data.serviceId ? 'Đã cập nhật dịch vụ.' : 'Đã tạo dịch vụ.',
     };
   } catch (error) {
+    if (committed) {
+      console.error('[ServiceUpload] Post-commit refresh failed', { error });
+      return { success: true, message: 'Đã lưu dịch vụ. Vui lòng tải lại trang để xem dữ liệu mới nhất.' };
+    }
     await removeUploadedFiles(paths, 'ServiceUpload');
     return {
       success: false,

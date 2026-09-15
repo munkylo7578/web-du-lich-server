@@ -213,7 +213,6 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
       </div>
 
       {uploadError && <p role="alert" className="text-sm text-destructive">{uploadError}</p>}
-      <p className="text-xs text-muted-foreground">{IMAGE_OPTIMIZATION_HELP}</p>
 
       {!existing.length && !pending.length ? (
         <div className="flex items-center gap-2 rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground"><ImagePlus className="size-4" /> {emptyText}</div>

@@ -54,6 +54,7 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
   }
 
   const uploadedPaths: string[] = [];
+  let committed = false;
   try {
     let value = data.value;
 
@@ -99,10 +100,15 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
     }
 
     await settingRepository.save(setting);
+    committed = true;
     revalidatePath("/admin/settings");
 
     return { success: true, message: isUpdate ? "Đã cập nhật setting." : "Đã tạo setting." };
   } catch (error) {
+    if (committed) {
+      console.error("[SettingUpload] Post-commit refresh failed", { error });
+      return { success: true, message: "Đã lưu setting. Vui lòng tải lại trang để xem dữ liệu mới nhất." };
+    }
     await removeUploadedSettingFiles(uploadedPaths);
     return {
       success: false,

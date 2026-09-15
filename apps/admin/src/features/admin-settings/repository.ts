@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 
 import { Setting, type SettingLocale, type SettingRepository, type SettingSnapshot } from "@/domains/setting/domain";
 import type { AdminSetting } from "./settings-types";
+import { removeUnreferencedMediaFiles } from "@/features/shared/media-cleanup";
 
 type SettingRow = typeof siteSettings.$inferSelect & {
   translations: Array<typeof siteSettingTranslations.$inferSelect>;
@@ -65,7 +66,9 @@ export class DrizzleSettingRepository implements SettingRepository {
   async save(setting: Setting): Promise<void> {
     const snapshot = setting.toSnapshot();
 
-    await db.transaction(async (tx) => {
+    const removedMedia = await db.transaction(async (tx) => {
+      const [previous] = await tx.select().from(siteSettings)
+        .where(eq(siteSettings.key, snapshot.key)).for("update");
       await tx
         .insert(siteSettings)
         .values({
@@ -100,14 +103,23 @@ export class DrizzleSettingRepository implements SettingRepository {
           }));
         await tx.insert(siteSettingTranslations).values(rows);
       }
+      return previous && (previous.type === "image" || previous.type === "video")
+        && previous.value && previous.value !== snapshot.value ? [{ url: previous.value }] : [];
     });
+    await removeUnreferencedMediaFiles(removedMedia);
   }
 
   async delete(key: string): Promise<void> {
-    const setting = await this.findByKey(key);
-    if (!setting) return;
-    setting.assertCanDelete();
-    await db.delete(siteSettings).where(eq(siteSettings.key, key));
+    const removedMedia = await db.transaction(async (tx) => {
+      const [row] = await tx.select().from(siteSettings).where(eq(siteSettings.key, key)).for("update");
+      if (!row) return [];
+      const translations = await tx.select().from(siteSettingTranslations)
+        .where(eq(siteSettingTranslations.settingKey, key));
+      toDomain({ ...row, translations }).assertCanDelete();
+      await tx.delete(siteSettings).where(eq(siteSettings.key, key));
+      return (row.type === "image" || row.type === "video") && row.value ? [{ url: row.value }] : [];
+    });
+    await removeUnreferencedMediaFiles(removedMedia);
   }
 }
 

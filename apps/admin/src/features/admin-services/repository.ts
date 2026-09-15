@@ -16,6 +16,7 @@ import {
   type ServiceSaveImage,
 } from '@/domains/service/domain';
 import type { AdminService } from './service-types';
+import { deleteUnreferencedImages, removeUnreferencedMediaFiles } from '@/features/shared/media-cleanup';
 
 const SERVICE_SEARCH_LIMIT = 20;
 
@@ -142,12 +143,9 @@ class DrizzleServiceRepository implements ServiceRepository {
     newImages: ServiceSaveImage[] = [],
   ): Promise<void> {
     const snapshot = service.toSnapshot();
-    const existing = await db
-      .select({ id: services.id })
-      .from(services)
-      .where(eq(services.id, snapshot.id))
-      .limit(1);
-    await db.transaction(async (tx) => {
+    const removedImages = await db.transaction(async (tx) => {
+      const existing = await tx.select({ id: services.id }).from(services)
+        .where(eq(services.id, snapshot.id)).for('update');
       if (existing.length)
         await tx
           .update(services)
@@ -188,8 +186,6 @@ class DrizzleServiceRepository implements ServiceRepository {
       await tx
         .delete(serviceImages)
         .where(eq(serviceImages.serviceId, snapshot.id));
-      if (removedIds.length)
-        await tx.delete(images).where(inArray(images.id, removedIds));
       if (newImages.length)
         await tx.insert(images).values(
           newImages.map(({ image }) => {
@@ -216,33 +212,31 @@ class DrizzleServiceRepository implements ServiceRepository {
               sortOrder: item.sortOrder,
             })),
           );
+      return deleteUnreferencedImages(tx, removedIds);
     });
+    await removeUnreferencedMediaFiles(removedImages);
   }
 
   async delete(id: string): Promise<void> {
-    const links = await db
-      .select({ tourId: tourServices.tourId })
-      .from(tourServices)
-      .where(eq(tourServices.serviceId, id))
-      .limit(1);
-    if (links.length)
-      throw new Error(
-        'Dịch vụ đang được gắn với tour. Vui lòng gỡ khỏi tour trước khi xóa.',
-      );
-    const imageLinks = await db
-      .select({ imageId: serviceImages.imageId })
-      .from(serviceImages)
-      .where(eq(serviceImages.serviceId, id));
-    await db.transaction(async (tx) => {
-      await tx.delete(services).where(eq(services.id, id));
-      if (imageLinks.length)
-        await tx.delete(images).where(
-          inArray(
-            images.id,
-            imageLinks.map((item) => item.imageId),
-          ),
+    const removedImages = await db.transaction(async (tx) => {
+      await tx.select({ id: services.id }).from(services).where(eq(services.id, id)).for('update');
+      const links = await tx
+        .select({ tourId: tourServices.tourId })
+        .from(tourServices)
+        .where(eq(tourServices.serviceId, id))
+        .limit(1);
+      if (links.length)
+        throw new Error(
+          'Dịch vụ đang được gắn với tour. Vui lòng gỡ khỏi tour trước khi xóa.',
         );
+      const imageLinks = await tx
+        .select({ imageId: serviceImages.imageId })
+        .from(serviceImages)
+        .where(eq(serviceImages.serviceId, id));
+      await tx.delete(services).where(eq(services.id, id));
+      return deleteUnreferencedImages(tx, imageLinks.map((item) => item.imageId));
     });
+    await removeUnreferencedMediaFiles(removedImages);
   }
 }
 

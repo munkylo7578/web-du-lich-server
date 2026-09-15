@@ -122,6 +122,7 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
   }
 
   const uploadedPaths: string[] = [];
+  let committed = false;
   try {
     const data = parsed.data;
     const translations: TourTranslationSnapshot[] = [
@@ -230,6 +231,7 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     await tourRepository.save(aggregate, newImages, undefined,
       data.existingImages.map(({ imageId, altText }) => ({ imageId, altText })),
     );
+    committed = true;
     console.info("[TourUpload] saveTourAction:success", {
       requestId,
       tourId: aggregate.getId().toString(),
@@ -247,6 +249,9 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
       errorMessage: error instanceof Error ? error.message : String(error),
       errorStack: error instanceof Error ? error.stack : undefined,
     });
+    if (committed) {
+      return { success: true, message: "Đã lưu tour. Vui lòng tải lại trang để xem dữ liệu mới nhất." };
+    }
     await removeUploadedFiles(uploadedPaths);
     return {
       success: false,

@@ -12,13 +12,12 @@ import {
   tourImages,
   tourPlans,
   tourPlanImages,
-  serviceImages,
   tourServices,
   tours,
   tourTranslations,
   wards,
 } from "@database";
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 
 import type { TourRepository, TourSaveDestination, TourSaveImage } from "@/domains/tour/domain";
 import type { TourImageMetadataUpdate } from "@/domains/tour/domain/tour-repository";
@@ -26,6 +25,7 @@ import { Image } from "@/domains/image/domain";
 import { TourMapper } from "./tour-mapper";
 import type { AdminDestination, AdminTour, AdminTourPlan, AdminWard } from "./tour-types";
 import { hydrateServices } from "@/features/admin-services/repository";
+import { deleteUnreferencedImages, removeUnreferencedMediaFiles } from "@/features/shared/media-cleanup";
 
 const WARD_SEARCH_LIMIT = 20;
 const DESTINATION_SEARCH_LIMIT = 20;
@@ -352,12 +352,13 @@ function normalizeOptionalText(value?: string): string | null {
 }
 
 export async function deleteTourRecord(id: string) {
-  await db.transaction(async (tx) => {
+  const removedImages = await db.transaction(async (tx) => {
     await tx.select({ id: tours.id }).from(tours).where(eq(tours.id, id)).for("update");
     const linkedIds = await existingImageIds(tx, id);
     await tx.delete(tours).where(eq(tours.id, id));
-    await deleteUnreferencedImages(tx, [...linkedIds]);
+    return deleteUnreferencedImages(tx, [...linkedIds]);
   });
+  await removeUnreferencedMediaFiles(removedImages);
 }
 
 async function existingImageIds(tx: Transaction, tourId: string): Promise<Set<string>> {
@@ -365,16 +366,6 @@ async function existingImageIds(tx: Transaction, tourId: string): Promise<Set<st
   const plans = await tx.select({ imageId: tourPlanImages.imageId }).from(tourPlanImages)
     .innerJoin(tourPlans, eq(tourPlanImages.planId, tourPlans.id)).where(eq(tourPlans.tourId, tourId));
   return new Set([...gallery, ...plans].map((link) => link.imageId));
-}
-
-async function deleteUnreferencedImages(tx: Transaction, ids: string[]) {
-  if (!ids.length) return;
-  // FK RESTRICT is the final guard against concurrent references. No filesystem IO here.
-  await tx.delete(images).where(and(inArray(images.id, ids),
-    sql`not exists (select 1 from ${tourImages} where ${tourImages.imageId} = ${images.id})`,
-    sql`not exists (select 1 from ${tourPlanImages} where ${tourPlanImages.imageId} = ${images.id})`,
-    sql`not exists (select 1 from ${serviceImages} where ${serviceImages.imageId} = ${images.id})`,
-  ));
 }
 
 export class DrizzleTourRepository implements TourRepository {
@@ -435,7 +426,7 @@ export class DrizzleTourRepository implements TourRepository {
     void _saveDestinations;
     const snapshot = TourMapper.toPersistence(tour);
 
-    await db.transaction(async (tx) => {
+    const removedImages = await db.transaction(async (tx) => {
       const existing = await tx.select({ id: tours.id }).from(tours).where(eq(tours.id, snapshot.id)).for("update");
       // Check membership against persisted links, before replacing any links.
       const oldIds = await existingImageIds(tx, snapshot.id);
@@ -573,8 +564,9 @@ export class DrizzleTourRepository implements TourRepository {
         planId: plan.planId, imageId: image.imageId, sortOrder: image.sortOrder,
       })));
       if (planImageLinks.length) await tx.insert(tourPlanImages).values(planImageLinks);
-      await deleteUnreferencedImages(tx, removedIds);
+      return deleteUnreferencedImages(tx, removedIds);
     });
+    await removeUnreferencedMediaFiles(removedImages);
   }
 
   async delete(id: string) {
