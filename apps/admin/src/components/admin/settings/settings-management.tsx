@@ -542,7 +542,7 @@ function toFormValues(setting: AdminSetting | null): SettingFormValues {
       key: "",
       description: "",
       type: "text",
-      canDelete: true,
+      canDelete: false,
       value: "",
       translations: { vi: "", en: "" },
     };
