@@ -25,6 +25,7 @@
     "@nestjs/platform-express": "^11.2.1",
     "@nestjs/swagger": "^11.4.7",
     "@nestjs/throttler": "^6.5.0",
+    "@next/env": "16.2.11",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/extension-link": "^3.29.2",
     "@tiptap/extension-placeholder": "^3.29.2",

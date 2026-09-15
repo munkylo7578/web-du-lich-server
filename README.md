@@ -37,7 +37,7 @@ Use this flow when deploying the admin Next.js app behind Nginx on an Ubuntu ser
 
 ### 1. Install dependencies and build
 
-Run these commands from the repository root:
+Use Node.js 22 LTS (Node.js 16 is not supported). Configure the root [.env](.env) as described below **before building**, then run these commands from the repository root:
 
 ```bash
 npm ci
@@ -55,10 +55,28 @@ AUTH_LOGIN_USERNAME=your_admin_username
 AUTH_LOGIN_PASSWORD=your_admin_password
 AUTH_SESSION_SECRET=change_this_to_a_random_secret_with_at_least_32_characters
 DATABASE_URL=postgres://user:password@host:5432/database
-NODE_ENV=production
+MAX_UPLOAD_IMAGE_MB=50
 ```
 
-Because PM2 starts the app with `--cwd apps/admin`, put production variables in `apps/admin/.env.production`, or pass them directly when starting PM2.
+Store these values in the repository-root [.env](.env), not [apps/admin/.env.production](apps/admin/.env.production). The admin [configuration](apps/admin/next.config.js) explicitly loads environment files from the repository root for development, build, and production startup, even when PM2 starts inside [apps/admin](apps/admin).
+
+The standard Next.js environment precedence is preserved: explicit process/PM2 environment variables come first, followed by root environment-specific local files, the root local file, the root environment-specific file, and finally the root [.env](.env). For a single-file setup, keep your application variables only in the root [.env](.env) and remove conflicting overrides. Let Next.js set the mode for development versus production rather than setting it permanently in the shared file. Secrets are not exposed through the client configuration.
+
+**Migrating an existing server:**
+
+1. Securely back up [apps/admin/.env.production](apps/admin/.env.production) outside the repository and public directories. Merge its required production values into the root [.env](.env); do not overwrite production credentials with development values. Set the image upload limit to 50.
+2. Remove [apps/admin/.env.production](apps/admin/.env.production) on the server, along with any other conflicting app-level environment files. These server-only files are not removed by a Git deployment.
+3. Remove or update stale PM2/shell overrides, especially the previous 20 MB image-upload setting. Restarting with environment refresh does not necessarily remove variables retained in a saved PM2 process; recreate that process from a clean environment if needed, preserving its port and other launch options.
+4. Install dependencies and rebuild without the Nx cache, then restart the existing admin process and save the PM2 process list. Use the process's actual name (for example, travel-admin) instead of the example name below.
+
+```bash
+npm ci
+npx nx build admin --skip-nx-cache
+pm2 restart web-server-du-lich-admin --update-env
+pm2 save
+```
+
+Keep the root [.env](.env) out of Git and restrict its permissions to the deployment user. Ensure it is present at both build time and runtime. Changing public build-time variables requires a rebuild; changing server-only variables requires a process restart. Relative upload paths still resolve from [apps/admin](apps/admin), so preserve the existing upload directory or use an absolute path.
 
 ### 3. Start the admin app with PM2
 
@@ -85,14 +103,17 @@ pm2 save
 
 ### 5. Troubleshooting login server errors
 
-If the login screen loads but pressing **Đăng nhập** shows a generic server error, first verify that PM2 has the required environment variables:
+If the login screen loads but pressing **Đăng nhập** shows a generic server error, first verify the required values in the root [.env](.env) and check for stale PM2 overrides. Inspect PM2's environment locally; do not share its output because it may contain secrets. Use the numeric process ID shown by PM2:
 
 ```bash
-pm2 env web-server-du-lich-admin
+pm2 status
+# Replace 2 with the admin process ID from pm2 status.
+pm2 env 2
 ```
 
 Common causes:
 
+- The root [.env](.env) is missing from the deployed repository, or a PM2/root environment-specific override still contains old values. PM2's environment listing shows inherited variables, not necessarily values loaded later by Next.js.
 - `AUTH_LOGIN_USERNAME` or `AUTH_LOGIN_PASSWORD` is missing.
 - `AUTH_SESSION_SECRET` is missing or shorter than 32 characters.
 - `DATABASE_URL` is missing or cannot connect after login redirects to the admin pages.
