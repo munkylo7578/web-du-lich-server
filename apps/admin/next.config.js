@@ -15,6 +15,7 @@ const nextConfig = {
   },
 };
 
+/** @param {string} phase */
 module.exports = (phase) => {
   // Next.js has already loaded apps/admin/.env* by this point. Force a reload
   // from the repository root instead of reusing that cached environment.
