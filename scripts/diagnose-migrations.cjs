@@ -7,6 +7,18 @@ const postgres = require('postgres');
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured.');
+  // This connection does not force read-only mode, but it only runs SELECTs. It
+  // lets us distinguish a server/role default from the guarded session below.
+  const defaultsSql = postgres(process.env.DATABASE_URL, {
+    max: 1,
+    prepare: false,
+    connect_timeout: 10,
+    connection: {
+      application_name: 'migration-defaults-diagnostics',
+      statement_timeout: 8000,
+      lock_timeout: 3000,
+    },
+  });
   const sql = postgres(process.env.DATABASE_URL, {
     max: 1,
     prepare: false,
@@ -35,6 +47,18 @@ async function main() {
   }
 
   try {
+    console.log('\n[database write routing defaults] starting');
+    try {
+      const rows = await defaultsSql`select
+        current_setting('default_transaction_read_only') as default_transaction_read_only,
+        current_setting('transaction_read_only') as transaction_read_only,
+        pg_is_in_recovery() as server_is_in_recovery,
+        current_user as current_user`;
+      console.log(JSON.stringify(rows, null, 2));
+    } catch (error) {
+      console.error('[database write routing defaults]', JSON.stringify({ code: error.code, message: error.message }));
+      process.exitCode = 1;
+    }
     await inspect('connection', `select current_setting('transaction_read_only') as read_only,
       current_setting('statement_timeout') as statement_timeout, current_schema() as current_schema,
       current_setting('server_version') as server_version, current_user as current_user`);
@@ -77,6 +101,11 @@ async function main() {
     await inspect('destination columns', `select table_schema, column_name, data_type, is_nullable, column_default
       from information_schema.columns where table_name = 'destinations' order by table_schema, ordinal_position`);
     await inspect('destination has existing rows', `select exists(select 1 from public.destinations limit 1) as has_rows`);
+    await inspect('destination country counts and 0014 violations', `select country, count(*)::integer as row_count,
+      (country not in ('LA', 'CB', 'VN')) as violates_0014
+      from public.destinations
+      group by country
+      order by country`);
     await inspect('destination constraints', `select conname, pg_get_constraintdef(oid) as definition
       from pg_constraint where conrelid = to_regclass('public.destinations')`);
     await inspect('destination table permissions', `select
@@ -90,6 +119,7 @@ async function main() {
       order by query_start limit 30`);
     console.log('\n[done] No schema or data changes were made. Session visibility depends on database permissions.');
   } finally {
+    await defaultsSql.end({ timeout: 2 });
     await sql.end({ timeout: 2 });
   }
 }
