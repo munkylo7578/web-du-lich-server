@@ -539,6 +539,7 @@ function ServiceFormDrawer({
                   name="existingImages"
                   render={({ field }) => (
                     <ImagePickerField
+                      active={open} disabled={isPending}
                       mode="multiple"
                       existing={field.value.map((item) => ({
                         id: item.imageId,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { ImagePlus, Star, Trash2, Upload } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { getImageFileError, MAX_IMAGE_SIZE_MB } from "@/features/shared/upload-validation";
+import { IMAGE_OPTIMIZATION_HELP, optimizeImage } from "@/features/shared/image-optimization";
+import { blockImageProcessingSubmit } from "@/features/shared/image-processing-submit-blocker";
 
 export type ImagePickerMode = "single" | "multiple";
 
@@ -34,6 +36,8 @@ type ImagePickerItem<TMeta> =
   | { source: "pending"; image: ImagePickerPendingImage<TMeta> };
 
 export type ImagePickerFieldProps<TMeta = Record<string, unknown>> = {
+  active?: boolean;
+  disabled?: boolean;
   mode: ImagePickerMode;
   existing: ImagePickerExistingImage<TMeta>[];
   pending: ImagePickerPendingImage<TMeta>[];
@@ -57,6 +61,8 @@ export type ImagePickerFieldProps<TMeta = Record<string, unknown>> = {
 };
 
 export function ImagePickerField<TMeta = Record<string, unknown>>({
+  active = true,
+  disabled = false,
   mode,
   existing,
   pending,
@@ -79,37 +85,80 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
   primaryInactiveLabel = "Đặt làm ảnh chính",
 }: ImagePickerFieldProps<TMeta>) {
   const [uploadError, setUploadError] = useState<string>();
+  const [processingLabel, setProcessingLabel] = useState<string>();
+  const root = useRef<HTMLDivElement>(null);
+  const releaseSubmitBlocker = useRef<(() => void) | null>(null);
+  const operation = useRef<AbortController | null>(null);
+  const latest = useRef({ existing, pending, onExistingChange, onPendingChange, createPendingMeta, active, disabled });
+  useLayoutEffect(() => {
+    latest.current = { existing, pending, onExistingChange, onPendingChange, createPendingMeta, active, disabled };
+  });
+  const cancelProcessing = useCallback(() => {
+    operation.current?.abort();
+    operation.current = null;
+    releaseSubmitBlocker.current?.();
+    releaseSubmitBlocker.current = null;
+    setProcessingLabel(undefined);
+  }, []);
+  useEffect(() => {
+    if (!active) cancelProcessing();
+    return cancelProcessing;
+  }, [active, cancelProcessing]);
   const fileLimit = mode === "single" ? 1 : maxFiles;
   const addFiles = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
+      if (!latest.current.active || latest.current.disabled || operation.current) return;
       const error = files.map((file) => getImageFileError(file, maxSizeMb)).find(Boolean);
       setUploadError(error);
       if (error) return;
-      const totalBefore = existing.length + pending.length;
+      const totalBefore = latest.current.existing.length + latest.current.pending.length;
       const remainingSlots = fileLimit ? Math.max(fileLimit - totalBefore, 0) : files.length;
       const acceptedFiles = mode === "single" ? files.slice(0, 1) : files.slice(0, remainingSlots);
 
       if (!acceptedFiles.length) return;
 
-      const additions = acceptedFiles.map((file, index) => ({
-        clientId: crypto.randomUUID(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-        altText: "",
-        sortOrder: mode === "single" ? 0 : totalBefore + index,
-        meta: createPendingMeta?.({ index, totalBefore }),
-      }));
-
-      if (mode === "single") {
-        pending.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-        onExistingChange([]);
-        onPendingChange(additions);
-        return;
+      const controller = new AbortController();
+      operation.current = controller;
+      releaseSubmitBlocker.current = blockImageProcessingSubmit(root.current?.closest("form") ?? null, () => {
+        setUploadError("Ảnh đang được tối ưu. Vui lòng chờ hoàn tất hoặc hủy tối ưu trước khi lưu.");
+      });
+      const additions: ImagePickerPendingImage<TMeta>[] = [];
+      let committed = false;
+      try {
+        const optimized: File[] = [];
+        for (const [index, file] of acceptedFiles.entries()) {
+          setProcessingLabel(`Đang tối ưu ảnh ${index + 1}/${acceptedFiles.length}: ${file.name}`);
+          optimized.push(await optimizeImage(file, controller.signal, maxSizeMb));
+        }
+        controller.signal.throwIfAborted();
+        const current = latest.current;
+        if (!current.active || current.disabled) return;
+        const currentTotal = current.existing.length + current.pending.length;
+        for (const [index, file] of optimized.entries()) {
+          additions.push({
+            clientId: crypto.randomUUID(), file,
+            previewUrl: URL.createObjectURL(file), altText: "",
+            sortOrder: mode === "single" ? 0 : currentTotal + index,
+            meta: current.createPendingMeta?.({ index, totalBefore: currentTotal }),
+          });
+        }
+        if (mode === "single") {
+          current.onExistingChange([]);
+          current.onPendingChange(additions);
+          current.pending.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+        } else {
+          current.onPendingChange([...current.pending, ...additions]);
+        }
+        committed = true;
+        setUploadError(undefined);
+      } catch (error) {
+        if (!controller.signal.aborted) setUploadError(error instanceof Error ? error.message : "Không thể tối ưu ảnh. Vui lòng chọn lại ảnh.");
+      } finally {
+        if (!committed) additions.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+        if (operation.current === controller) cancelProcessing();
       }
-
-      onPendingChange([...pending, ...additions]);
     },
-    [createPendingMeta, existing.length, fileLimit, maxSizeMb, mode, onExistingChange, onPendingChange, pending],
+    [cancelProcessing, fileLimit, maxSizeMb, mode],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -117,6 +166,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
     maxSize: maxSizeMb * 1024 * 1024,
     multiple: mode === "multiple",
     maxFiles: fileLimit,
+    disabled: disabled || !active || Boolean(processingLabel),
     onDrop: addFiles,
     onDropRejected: (rejections) => {
       const oversized = rejections.some(({ errors }) => errors.some(({ code }) => code === "file-too-large"));
@@ -132,7 +182,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
 
     const onPaste = (event: ClipboardEvent) => {
       const files = Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith("image/"));
-      if (files.length) addFiles(files);
+      if (files.length) void addFiles(files);
     };
 
     window.addEventListener("paste", onPaste);
@@ -140,7 +190,13 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
   }, [addFiles, allowPaste]);
 
   return (
-    <div className="space-y-4">
+    <div ref={root} className="space-y-4">
+      {processingLabel && <div role="status" aria-live="polite" className="flex items-center gap-3 text-sm text-muted-foreground">
+        <span>{processingLabel}</span>
+        <Button type="button" variant="outline" size="sm" onClick={cancelProcessing}>Hủy tối ưu</Button>
+      </div>}
+      <fieldset disabled={disabled || !active || Boolean(processingLabel)} aria-busy={Boolean(processingLabel)} className="min-w-0 space-y-4">
+      <legend className="sr-only">Chọn và tối ưu ảnh</legend>
       <div
         {...getRootProps()}
         className={cn(
@@ -157,6 +213,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
       </div>
 
       {uploadError && <p role="alert" className="text-sm text-destructive">{uploadError}</p>}
+      <p className="text-xs text-muted-foreground">{IMAGE_OPTIMIZATION_HELP}</p>
 
       {!existing.length && !pending.length ? (
         <div className="flex items-center gap-2 rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground"><ImagePlus className="size-4" /> {emptyText}</div>
@@ -213,6 +270,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
           })}
         </div>
       )}
+      </fieldset>
     </div>
   );
 }

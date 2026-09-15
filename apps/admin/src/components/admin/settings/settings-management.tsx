@@ -388,6 +388,7 @@ function SettingFormDrawer({
                       name="value"
                       render={({ field }) => (
                         <ImagePickerField
+                          active={open} disabled={isPending}
                           mode="single"
                           existing={imageExisting}
                           pending={pendingImages}

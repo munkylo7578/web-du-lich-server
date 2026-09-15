@@ -13,12 +13,16 @@ type TourImageMeta = Pick<PendingImageMeta, "role">;
 export type PendingImage = PendingImageMeta & { file: File; previewUrl: string };
 
 export function ImageUploadField({
+  active,
+  disabled,
   existing,
   pending,
   onExistingChange,
   onPendingChange,
   errors = {},
 }: {
+  active?: boolean;
+  disabled?: boolean;
   existing: AdminTourImage[];
   pending: PendingImage[];
   onExistingChange: (images: AdminTourImage[]) => void;
@@ -43,6 +47,8 @@ export function ImageUploadField({
 
   return (
     <ImagePickerField<TourImageMeta>
+      active={active}
+      disabled={disabled}
       mode="multiple"
       altTextLabel="Tên ảnh"
       altTextPlaceholder="Ví dụ: hà giang"

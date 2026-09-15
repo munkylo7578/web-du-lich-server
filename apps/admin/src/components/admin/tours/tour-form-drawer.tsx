@@ -303,6 +303,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
                 <legend className="sr-only">Hình ảnh tour</legend>
                 <Controller control={form.control} name="existingImages" render={({ field }) => (
                   <ImageUploadField existing={field.value as AdminTour["images"]} pending={pendingImages}
+                    active={open} disabled={isPending}
                     errors={{
                       ...imageErrors,
                       ...Object.fromEntries(field.value.flatMap((_, index) => {
