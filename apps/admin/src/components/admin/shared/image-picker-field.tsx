@@ -65,7 +65,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
   getIsPrimary,
   onPrimaryChange,
   maxFiles,
-  maxSizeMb = 8,
+  maxSizeMb = 50,
   allowPaste = true,
   allowAltText = true,
   altTextLabel,

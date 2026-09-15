@@ -50,9 +50,8 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
       <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-800">Cấu hình hệ thống</p>
-            <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Settings</h1>
-            <p className="mt-2 max-w-2xl font-medium text-slate-700">Quản lý key cấu hình dùng chung cho website. Key không thể đổi sau khi tạo.</p>
+            <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách cấu hình hệ thống</h1>
+        
           </div>
           <Button
             size="lg"
@@ -392,7 +391,7 @@ function SettingFormDrawer({
                           existing={imageExisting}
                           pending={pendingImages}
                           allowAltText={false}
-                          helperText="JPEG, PNG, WebP, AVIF · tối đa 8MB · chỉ upload khi lưu setting"
+                          helperText="JPEG, PNG, WebP, AVIF · tối đa 50MB · chỉ upload khi lưu setting"
                           emptyText="Chưa chọn ảnh setting."
                           onExistingChange={(images) => field.onChange(images[0]?.url ?? "")}
                           onPendingChange={(images) => {

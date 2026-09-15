@@ -60,7 +60,7 @@ export function TourManagement({ tours }: { tours: AdminTour[] }) {
     <>
       <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-800">Nội dung</p><h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách tour</h1><p className="mt-2 max-w-2xl font-medium text-slate-700">Quản lý nội dung đa ngôn ngữ, lịch trình và hình ảnh tour ở một nơi.</p></div>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách tour</h1>
           <Button size="lg" className="solid-accent-button h-11 rounded-2xl px-5" onClick={() => { setEditingTour(null); setDrawerOpen(true); }}><Plus data-icon="inline-start" />Tạo tour mới</Button>
         </div>
 

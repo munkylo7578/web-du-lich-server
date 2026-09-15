@@ -69,7 +69,7 @@ export function ImageUploadField({
       }}
       primaryActiveLabel="Ảnh bìa"
       primaryInactiveLabel="Đặt làm bìa"
-      helperText="JPEG, PNG, WebP, AVIF · tối đa 8MB · chỉ upload khi lưu tour"
+      helperText="JPEG, PNG, WebP, AVIF · tối đa 50MB · chỉ upload khi lưu tour"
       emptyText="Chưa có ảnh nào."
       onExistingChange={(images) => onExistingChange(images.map((image, index) => ({
         imageId: image.id,

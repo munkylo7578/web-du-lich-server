@@ -165,9 +165,8 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
       <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-800">Dữ liệu dùng chung</p>
             <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách điểm đến</h1>
-            <p className="mt-2 max-w-2xl font-medium text-slate-700">Quản lý điểm đến một lần, sau đó tìm và gắn vào nhiều tour khác nhau.</p>
+      
           </div>
           <Button
             size="lg"

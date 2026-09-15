@@ -13,7 +13,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
 function getUploadConfig() {
   const uploadDir = process.env.UPLOAD_DIR || "public/uploads";
   const publicBaseUrl = (process.env.UPLOAD_PUBLIC_BASE_URL || "/uploads").replace(/\/$/, "");
-  const maxMb = Number(process.env.MAX_UPLOAD_IMAGE_MB || "8");
+  const maxMb = Number(process.env.MAX_UPLOAD_IMAGE_MB || "50");
 
   return { uploadDir, publicBaseUrl, maxBytes: maxMb * 1024 * 1024 };
 }

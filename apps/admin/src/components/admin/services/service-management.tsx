@@ -197,15 +197,11 @@ export function ServiceManagement({ services }: { services: AdminService[] }) {
       <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-800">
-              Dữ liệu dùng chung
-            </p>
+            
             <h1 className="font-heading text-4xl font-semibold tracking-tight">
               Danh sách dịch vụ
             </h1>
-            <p className="mt-2 max-w-2xl font-medium text-slate-700">
-              Quản lý dịch vụ một lần và gắn vào nhiều tour theo thứ tự.
-            </p>
+            
           </div>
           <Button
             size="lg"
