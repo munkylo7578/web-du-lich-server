@@ -23,8 +23,7 @@ export async function deleteUnreferencedImages(tx: Transaction, ids: string[]) {
 }
 
 function managedUpload(url: string) {
-  const base = (process.env.UPLOAD_PUBLIC_BASE_URL || "/uploads").replace(/\/$/, "");
-  // Match the exact configured origin/prefix, not arbitrary URLs with the same pathname.
+  const base = "/uploads";
   if (!url.startsWith(`${base}/`)) return null;
   const key = url.slice(base.length + 1);
   // Only names produced by our upload writers are eligible. No decoding, traversal,
@@ -32,8 +31,7 @@ function managedUpload(url: string) {
   if (!IMAGE_KEY.test(key) && !VIDEO_KEY.test(key)) return null;
   const root = resolve(process.env.UPLOAD_DIR || "public/uploads");
   const path = resolve(root, key);
-  const pathname = new URL(`${base}/${key}`, "http://upload.local").pathname;
-  return { root, path, aliases: [...new Set([url, pathname])] };
+  return { root, path, aliases: [url] };
 }
 
 function isWithin(root: string, path: string) {

@@ -94,10 +94,9 @@ Admins can select image files from their machine or paste an image copied from a
 ### Server storage model
 
 - Physical file path on Ubuntu: configured by `UPLOAD_DIR`.
-- Public URL prefix stored in database: configured by `UPLOAD_PUBLIC_BASE_URL`.
+- Public URL prefix stored in database: fixed at `/uploads`.
 - Recommended production values:
   - `UPLOAD_DIR=/var/www/uploads`
-  - `UPLOAD_PUBLIC_BASE_URL=/uploads`
 
 ### Why `/uploads` exists
 

@@ -76,7 +76,7 @@ export class ServiceContentDto {
 
 export class DestinationContentDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ enum: ['LA', 'KH', 'VN'], example: 'VN' })
+  @ApiProperty({ enum: ['LA', 'CB', 'VN'], example: 'VN' })
   country!: DestinationCountry;
   @ApiProperty({ example: 'Thành phố Hồ Chí Minh' }) name!: string;
   @ApiPropertyOptional({ nullable: true }) description!: string | null;

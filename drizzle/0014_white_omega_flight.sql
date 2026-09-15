@@ -1,0 +1,2 @@
+ALTER TABLE "destinations" DROP CONSTRAINT "destinations_country_check";--> statement-breakpoint
+ALTER TABLE "destinations" ADD CONSTRAINT "destinations_country_check" CHECK ("destinations"."country" in ('LA', 'CB', 'VN'));

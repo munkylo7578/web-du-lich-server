@@ -157,7 +157,7 @@ export const destinations = pgTable(
   (table) => [
     check(
       'destinations_country_check',
-      sql`${table.country} in ('LA', 'KH', 'VN')`,
+      sql`${table.country} in ('LA', 'CB', 'VN')`,
     ),
   ],
 );

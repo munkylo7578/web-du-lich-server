@@ -12,10 +12,9 @@ const MIME_EXTENSIONS: Record<string, string> = {
 
 function getUploadConfig() {
   const uploadDir = process.env.UPLOAD_DIR || "public/uploads";
-  const publicBaseUrl = (process.env.UPLOAD_PUBLIC_BASE_URL || "/uploads").replace(/\/$/, "");
   const maxMb = Number(process.env.MAX_UPLOAD_IMAGE_MB || "50");
 
-  return { uploadDir, publicBaseUrl, maxBytes: maxMb * 1024 * 1024 };
+  return { uploadDir, maxBytes: maxMb * 1024 * 1024 };
 }
 
 function logUploadInfo(scope: string, message: string, context?: Record<string, unknown>) {
@@ -36,7 +35,6 @@ export async function saveImageFile(
 
   logUploadInfo(logScope, "saveImageFile:start", {
     uploadDir: config.uploadDir,
-    publicBaseUrl: config.publicBaseUrl,
     maxBytes: config.maxBytes,
     fileName: file.name,
     fileType: file.type,
@@ -65,7 +63,7 @@ export async function saveImageFile(
   const fileName = `${Date.now()}-${randomUUID()}${extension}`;
   const directory = `${config.uploadDir.replace(/[\\/]+$/, "")}/${options.subdirectory}`;
   const physicalPath = `${directory}/${fileName}`;
-  const url = `${config.publicBaseUrl}/${options.subdirectory}/${fileName}`;
+  const url = `/uploads/${options.subdirectory}/${fileName}`;
 
   try {
     logUploadInfo(logScope, "saveImageFile:mkdir", { directory });

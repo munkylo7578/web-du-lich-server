@@ -11,7 +11,6 @@ export async function saveSettingImage(file: File) {
 
 export async function saveSettingVideo(file: File) {
   const uploadDir = (process.env.UPLOAD_DIR || "public/uploads").replace(/[\\/]+$/, "");
-  const publicBaseUrl = (process.env.UPLOAD_PUBLIC_BASE_URL || "/uploads").replace(/\/$/, "");
   const maxMb = Number(process.env.MAX_UPLOAD_VIDEO_MB || "50");
   const maxBytes = maxMb * 1024 * 1024;
 
@@ -25,7 +24,7 @@ export async function saveSettingVideo(file: File) {
   const fileName = `${Date.now()}-${randomUUID()}.mp4`;
   const directory = `${uploadDir}/settings/videos`;
   const physicalPath = `${directory}/${fileName}`;
-  const url = `${publicBaseUrl}/settings/videos/${fileName}`;
+  const url = `/uploads/settings/videos/${fileName}`;
 
   await mkdir(directory, { recursive: true });
   await writeFile(physicalPath, Buffer.from(await file.arrayBuffer()));

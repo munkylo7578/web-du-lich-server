@@ -9,7 +9,6 @@ export type ApiEnvironment = {
   trustProxy: boolean;
   publicSettingKeys: string[];
   docsEnabled: boolean;
-  uploadPublicBaseUrl: string;
 };
 
 function integer(name: string, value: string | undefined, fallback: number, min: number, max: number) {
@@ -44,7 +43,6 @@ export function loadEnvironment(env: NodeJS.ProcessEnv = process.env): ApiEnviro
     trustProxy: env['API_TRUST_PROXY'] === '1',
     publicSettingKeys: csv(env['API_PUBLIC_SETTING_KEYS']),
     docsEnabled: env['API_DOCS_ENABLED'] !== 'false',
-    uploadPublicBaseUrl: (env['UPLOAD_PUBLIC_BASE_URL'] ?? '/uploads').replace(/\/$/, ''),
   };
 }
 

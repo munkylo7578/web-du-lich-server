@@ -506,10 +506,7 @@ export class ContentService {
   }
 
   private mapImage(image: { id: string; url: string; altText: string | null }) {
-    const url = /^https?:\/\//.test(image.url)
-      ? image.url
-      : `${this.env.uploadPublicBaseUrl}/${image.url.replace(/^\//, '')}`;
-    return { id: image.id, url, altText: image.altText };
+    return { id: image.id, url: image.url, altText: image.altText };
   }
 
   private async destinationWardCoordinates(

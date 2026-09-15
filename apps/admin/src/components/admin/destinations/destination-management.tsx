@@ -382,7 +382,7 @@ function DestinationFormDrawer({
                   </select>
                   {form.formState.errors.country && <p id="destination-country-error" role="alert" className="text-xs text-destructive">{form.formState.errors.country.message}</p>}
                 </div>
-                {country !== "VN" && <p className="text-sm text-muted-foreground">Liên kết phường/xã chỉ áp dụng cho Việt Nam. Khi lưu quốc gia Lào hoặc Campuchia, các liên kết phường/xã trước đó sẽ được xóa.</p>}
+                {country !== "VN" && <p className="text-sm text-muted-foreground">Liên kết phường/xã chỉ áp dụng cho Việt Nam. Khi lưu quốc gia Lào hoặc Cambodia, các liên kết phường/xã trước đó sẽ được xóa.</p>}
               </section>
 
               <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">

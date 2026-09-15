@@ -77,7 +77,7 @@ describe('ContentService tour list filters', () => {
     return {
       service: new ContentService(
         db as never,
-        { maxPageSize: 100, uploadPublicBaseUrl: 'https://api.example.com' } as never,
+        { maxPageSize: 100 } as never,
       ),
       countWhere,
       findMany,
@@ -227,7 +227,6 @@ describe('ContentService destination tour images', () => {
     };
     const env = {
       maxPageSize: 100,
-      uploadPublicBaseUrl: 'https://api.example.com',
     };
     return new ContentService(db as never, env as never);
   }
@@ -244,7 +243,7 @@ describe('ContentService destination tour images', () => {
         images: [
           {
             id: '8642d66c-30c8-4703-bb17-4ef65e5707ba',
-            url: 'https://api.example.com/uploads/tours/cover.webp',
+            url: '/uploads/tours/cover.webp',
             altText: 'Ảnh bìa',
             role: 'cover',
             sortOrder: 0,
@@ -340,7 +339,7 @@ describe('ContentService destination list pagination', () => {
     return {
       service: new ContentService(
         db as never,
-        { maxPageSize: 100, uploadPublicBaseUrl: 'https://api.example.com' } as never,
+        { maxPageSize: 100 } as never,
       ),
       findMany,
     };
