@@ -8,6 +8,7 @@ import { Edit3, ImageIcon, MoreHorizontal, Plus, Search, Settings2, Trash2, Type
 
 import { deleteSettingAction, saveSettingAction } from "@/app/admin/settings/actions";
 import { ImagePickerField, type ImagePickerPendingImage } from "@/components/admin/shared/image-picker-field";
+import { SettingVideoPreview } from "@/components/admin/settings/setting-video-preview";
 import { RichTextEditor } from "@/components/admin/tours/rich-text-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -442,19 +443,13 @@ function SettingTypeBadge({ type }: { type: AdminSetting["type"] }) {
 function SettingValuePreview({ setting }: { setting: AdminSetting }) {
   if (setting.type === "image") {
     return (
-      <div className="flex min-w-56 items-center gap-3">
-        <img src={setting.value} alt={setting.description || setting.key} className="size-14 rounded-xl border object-cover" />
-        <span className="max-w-xs truncate text-xs text-muted-foreground">{setting.value}</span>
-      </div>
+      <img src={setting.value} alt={setting.description || setting.key} className="size-14 rounded-xl border object-cover" />
     );
   }
 
   if (setting.type === "video") {
     return (
-      <div className="flex min-w-56 items-center gap-2 text-sm text-slate-700">
-        <Video className="size-4 shrink-0 text-cyan-800" />
-        <span className="max-w-xs truncate text-xs text-muted-foreground">{setting.value}</span>
-      </div>
+      <SettingVideoPreview key={setting.value} src={setting.value || ""} label={setting.description || setting.key} />
     );
   }
 
