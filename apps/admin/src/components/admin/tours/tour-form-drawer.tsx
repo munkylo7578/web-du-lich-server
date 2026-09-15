@@ -6,6 +6,7 @@ import { Controller, type FieldError, type FieldErrors, useFieldArray, useForm }
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 
 import { saveTourAction } from "@/app/admin/tours/actions";
+import { submitUpload } from "@/features/shared/upload-validation";
 import { DestinationManager } from "./destination-manager";
 import { ServiceManager } from "./service-manager";
 import { ImageUploadField, type PendingImage } from "./image-upload-field";
@@ -149,7 +150,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
       body.set("payload", JSON.stringify(payload));
       body.set("pendingImages", JSON.stringify(normalizedPending.map(({ clientId, altText, role, sortOrder }) => ({ clientId, altText, role, sortOrder }))));
       normalizedPending.forEach((image) => body.set(`file:${image.clientId}`, image.file));
-      const result = await saveTourAction(body);
+      const result = await submitUpload(body, saveTourAction);
       setMessage(result.message);
       if (result.fieldErrors) {
         setImageErrors(result.fieldErrors);

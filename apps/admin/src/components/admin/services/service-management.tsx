@@ -26,6 +26,7 @@ import {
   saveServiceAction,
 } from '@/app/admin/services/actions';
 import { RichTextEditor } from '@/components/admin/tours/rich-text-editor';
+import { submitUpload } from '@/features/shared/upload-validation';
 import {
   ImagePickerField,
   type ImagePickerPendingImage,
@@ -413,7 +414,7 @@ function ServiceFormDrawer({
       normalizedPending.forEach((item) =>
         body.set(`file:${item.clientId}`, item.file),
       );
-      const result = await saveServiceAction(body);
+      const result = await submitUpload(body, saveServiceAction);
       setMessage(result.message);
       if (result.success) {
         close();

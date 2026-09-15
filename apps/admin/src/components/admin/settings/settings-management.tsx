@@ -7,6 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { Edit3, ImageIcon, MoreHorizontal, Plus, Search, Settings2, Trash2, Type, Upload, Video } from "lucide-react";
 
 import { deleteSettingAction, saveSettingAction } from "@/app/admin/settings/actions";
+import { submitUpload } from "@/features/shared/upload-validation";
 import { ImagePickerField, type ImagePickerPendingImage } from "@/components/admin/shared/image-picker-field";
 import { SettingVideoPreview } from "@/components/admin/settings/setting-video-preview";
 import { RichTextEditor } from "@/components/admin/tours/rich-text-editor";
@@ -258,7 +259,7 @@ function SettingFormDrawer({
       }
       if (pendingVideo) body.set("videoFile", pendingVideo.file);
 
-      const result = await saveSettingAction(body);
+      const result = await submitUpload(body, saveSettingAction);
       setMessage(result.message);
       if (result.success) {
         pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));

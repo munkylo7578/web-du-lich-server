@@ -59,7 +59,7 @@ export async function saveImageFile(
       fileSize: file.size,
       maxBytes: config.maxBytes,
     });
-    throw new Error("Dung lượng ảnh không hợp lệ hoặc vượt quá giới hạn.");
+    throw new Error(file.size <= 0 ? "Ảnh không hợp lệ." : `Mỗi ảnh không được vượt quá ${config.maxBytes / (1024 * 1024)} MB.`);
   }
 
   const fileName = `${Date.now()}-${randomUUID()}${extension}`;

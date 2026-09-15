@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { ImagePlus, Star, Trash2, Upload } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { getImageFileError, MAX_IMAGE_SIZE_MB } from "@/features/shared/upload-validation";
 
 export type ImagePickerMode = "single" | "multiple";
 
@@ -65,7 +66,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
   getIsPrimary,
   onPrimaryChange,
   maxFiles,
-  maxSizeMb = 50,
+  maxSizeMb = MAX_IMAGE_SIZE_MB,
   allowPaste = true,
   allowAltText = true,
   altTextLabel,
@@ -77,9 +78,13 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
   primaryActiveLabel = "Ảnh chính",
   primaryInactiveLabel = "Đặt làm ảnh chính",
 }: ImagePickerFieldProps<TMeta>) {
+  const [uploadError, setUploadError] = useState<string>();
   const fileLimit = mode === "single" ? 1 : maxFiles;
   const addFiles = useCallback(
     (files: File[]) => {
+      const error = files.map((file) => getImageFileError(file, maxSizeMb)).find(Boolean);
+      setUploadError(error);
+      if (error) return;
       const totalBefore = existing.length + pending.length;
       const remainingSlots = fileLimit ? Math.max(fileLimit - totalBefore, 0) : files.length;
       const acceptedFiles = mode === "single" ? files.slice(0, 1) : files.slice(0, remainingSlots);
@@ -104,7 +109,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
 
       onPendingChange([...pending, ...additions]);
     },
-    [createPendingMeta, existing.length, fileLimit, mode, onExistingChange, onPendingChange, pending],
+    [createPendingMeta, existing.length, fileLimit, maxSizeMb, mode, onExistingChange, onPendingChange, pending],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -113,6 +118,13 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
     multiple: mode === "multiple",
     maxFiles: fileLimit,
     onDrop: addFiles,
+    onDropRejected: (rejections) => {
+      const oversized = rejections.some(({ errors }) => errors.some(({ code }) => code === "file-too-large"));
+      const tooMany = rejections.some(({ errors }) => errors.some(({ code }) => code === "too-many-files"));
+      setUploadError(oversized
+        ? `Mỗi ảnh không được vượt quá ${maxSizeMb} MB.`
+        : tooMany ? "Bạn đã chọn quá nhiều ảnh." : "Chỉ hỗ trợ ảnh JPEG, PNG, WebP, AVIF.");
+    },
   });
 
   useEffect(() => {
@@ -143,6 +155,8 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
           {helperText ?? `JPEG, PNG, WebP, AVIF · tối đa ${maxSizeMb}MB · ${mode === "single" ? "1 ảnh" : "nhiều ảnh"}`}
         </p>
       </div>
+
+      {uploadError && <p role="alert" className="text-sm text-destructive">{uploadError}</p>}
 
       {!existing.length && !pending.length ? (
         <div className="flex items-center gap-2 rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground"><ImagePlus className="size-4" /> {emptyText}</div>
