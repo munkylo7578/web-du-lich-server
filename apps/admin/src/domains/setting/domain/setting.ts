@@ -1,3 +1,5 @@
+import { isSettingCategory, type SettingCategory } from "@setting-category";
+
 export const SETTING_TYPES = ["text", "image", "video"] as const;
 export const SETTING_LOCALES = ["vi", "en"] as const;
 
@@ -7,6 +9,7 @@ export type SettingTranslations = { vi: string; en?: string };
 
 export type SettingSnapshot = {
   key: string;
+  category: SettingCategory;
   description?: string;
   value?: string;
   translations: SettingTranslations;
@@ -18,6 +21,7 @@ export type SettingSnapshot = {
 
 export type CreateSettingProps = {
   key: string;
+  category: SettingCategory;
   description?: string;
   value?: string;
   translations?: SettingTranslations;
@@ -34,6 +38,7 @@ export type UpdateSettingProps = {
 export class Setting {
   private constructor(
     private readonly key: string,
+    private readonly category: SettingCategory,
     private description: string | undefined,
     private value: string | undefined,
     private translations: SettingTranslations,
@@ -50,6 +55,7 @@ export class Setting {
 
     return new Setting(
       Setting.validateKey(props.key),
+      Setting.validateCategory(props.category),
       Setting.validateDescription(props.description),
       content.value,
       content.translations,
@@ -66,6 +72,7 @@ export class Setting {
 
     return new Setting(
       Setting.validateKey(snapshot.key),
+      Setting.validateCategory(snapshot.category),
       Setting.validateDescription(snapshot.description),
       content.value,
       content.translations,
@@ -97,6 +104,7 @@ export class Setting {
   toSnapshot(): SettingSnapshot {
     return {
       key: this.key,
+      category: this.category,
       description: this.description,
       value: this.value,
       translations: { ...this.translations },
@@ -120,6 +128,11 @@ export class Setting {
   private static validateDescription(description?: string): string | undefined {
     const value = description?.trim();
     return value || undefined;
+  }
+
+  private static validateCategory(category: SettingCategory): SettingCategory {
+    if (!isSettingCategory(category)) throw new Error("Nhóm setting không hợp lệ.");
+    return category;
   }
 
   private static validateType(type: SettingType): SettingType {

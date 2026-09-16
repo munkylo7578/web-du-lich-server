@@ -2,6 +2,7 @@ import "server-only";
 
 import { db, siteSettings, siteSettingTranslations } from "@database";
 import { eq } from "drizzle-orm";
+import { isSettingCategory, type SettingCategory } from "@setting-category";
 
 import { Setting, type SettingLocale, type SettingRepository, type SettingSnapshot } from "@/domains/setting/domain";
 import type { AdminSetting } from "./settings-types";
@@ -11,8 +12,10 @@ type SettingRow = typeof siteSettings.$inferSelect & {
   translations: Array<typeof siteSettingTranslations.$inferSelect>;
 };
 
-export async function listAdminSettings(): Promise<AdminSetting[]> {
+export async function listAdminSettings(category: SettingCategory): Promise<AdminSetting[]> {
+  if (!isSettingCategory(category)) throw new Error("Nhóm setting không hợp lệ.");
   const rows = await db.query.siteSettings.findMany({
+    where: (table, { eq: equals }) => equals(table.category, category),
     orderBy: (table, { asc: ascending }) => [ascending(table.key)],
     with: { translations: true },
   });
@@ -32,6 +35,7 @@ function toSnapshot(row: SettingRow): SettingSnapshot {
   const translations = Object.fromEntries(row.translations.map((translation) => [translation.locale, translation.value])) as Partial<Record<SettingLocale, string>>;
   return {
     key: row.key,
+    category: row.category,
     description: row.description ?? undefined,
     value: row.value ?? undefined,
     translations: { vi: translations.vi ?? "", ...(translations.en ? { en: translations.en } : {}) },
@@ -47,8 +51,10 @@ function toDomain(row: SettingRow): Setting {
 }
 
 export class DrizzleSettingRepository implements SettingRepository {
-  async list(): Promise<Setting[]> {
+  async list(category: SettingCategory): Promise<Setting[]> {
+    if (!isSettingCategory(category)) throw new Error("Nhóm setting không hợp lệ.");
     const rows = await db.query.siteSettings.findMany({
+      where: (table, { eq: equals }) => equals(table.category, category),
       orderBy: (table, { asc: ascending }) => [ascending(table.key)],
       with: { translations: true },
     });
@@ -73,6 +79,7 @@ export class DrizzleSettingRepository implements SettingRepository {
         .insert(siteSettings)
         .values({
           key: snapshot.key,
+          category: snapshot.category,
           description: snapshot.description ?? null,
           value: snapshot.value ?? null,
           type: snapshot.type,

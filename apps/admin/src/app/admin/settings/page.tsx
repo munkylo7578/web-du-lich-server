@@ -1,8 +1,5 @@
-import { SettingsManagement } from "@/components/admin/settings/settings-management";
-import { listAdminSettings } from "@/features/admin-settings/repository";
+import { redirect } from "next/navigation";
 
-export default async function AdminSettingsPage() {
-  const settings = await listAdminSettings();
-
-  return <SettingsManagement settings={settings} />;
+export default function AdminSettingsPage() {
+  redirect("/admin/settings/general");
 }

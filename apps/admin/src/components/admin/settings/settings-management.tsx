@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { SETTING_CATEGORY_LABELS, type SettingCategory } from "@setting-category";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { Edit3, ImageIcon, MoreHorizontal, Plus, Search, Settings2, Trash2, Type, Upload, Video } from "lucide-react";
@@ -28,7 +29,8 @@ import type { AdminSetting } from "@/features/admin-settings/settings-types";
 type PendingSettingImage = ImagePickerPendingImage;
 type PendingSettingVideo = { file: File; previewUrl: string };
 
-export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
+export function SettingsManagement({ settings, category }: { settings: AdminSetting[]; category: SettingCategory }) {
+  const categoryLabel = SETTING_CATEGORY_LABELS[category];
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -51,8 +53,9 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
       <section>
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Danh sách cấu hình hệ thống</h1>
-        
+            <p className="mb-2 text-sm font-medium text-slate-600">Settings / {categoryLabel}</p>
+            <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Cấu hình {categoryLabel.toLowerCase()}</h1>
+            <p className="mt-2 text-sm text-slate-600">{category === "home" ? "Quản lý nội dung và hình ảnh trên trang chủ." : "Quản lý các cấu hình dùng chung cho website."}</p>
           </div>
           <Button
             size="lg"
@@ -71,7 +74,7 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
           <div className="flex flex-col gap-3 border-b border-cyan-900/15 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} />
-              <Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo key, mô tả, giá trị..." />
+              <Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" aria-label={`Tìm cấu hình ${categoryLabel.toLowerCase()}`} placeholder="Tìm theo key, mô tả, giá trị trong nhóm..." />
             </div>
             <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{filteredSettings.length} settings</p>
           </div>
@@ -128,8 +131,8 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
                       <TableCell colSpan={6} className="h-52 text-center">
                         <div className="mx-auto flex max-w-sm flex-col items-center">
                           <div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div>
-                          <p className="font-medium">Chưa tìm thấy setting</p>
-                          <p className="mt-1 text-sm text-muted-foreground">Tạo setting mới hoặc thử từ khóa khác.</p>
+                          <p className="font-medium">{query.trim() ? "Không tìm thấy setting phù hợp" : `Chưa có cấu hình ${categoryLabel.toLowerCase()}`}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{query.trim() ? "Thử từ khóa khác trong nhóm đang xem." : `Tạo setting mới để thêm vào nhóm ${categoryLabel}.`}</p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -142,7 +145,8 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
       </section>
 
       <SettingFormDrawer
-        key={editingSetting?.key || "new"}
+        key={`${category}:${editingSetting?.key || "new"}`}
+        category={category}
         open={drawerOpen}
         setting={editingSetting}
         onSaved={() => router.refresh()}
@@ -164,7 +168,7 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
                 event.preventDefault();
                 if (!deletingSetting) return;
                 startDelete(async () => {
-                  const result = await deleteSettingAction(deletingSetting.key);
+                  const result = await deleteSettingAction(deletingSetting.key, category);
                   setDeleteMessage(result.message);
                   if (result.success) {
                     setDeletingSetting(null);
@@ -185,15 +189,17 @@ export function SettingsManagement({ settings }: { settings: AdminSetting[] }) {
 function SettingFormDrawer({
   open,
   setting,
+  category,
   onSaved,
   onOpenChange,
 }: {
   open: boolean;
   setting: AdminSetting | null;
+  category: SettingCategory;
   onSaved: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
-  const values = useMemo(() => toFormValues(setting), [setting]);
+  const values = useMemo(() => toFormValues(setting, category), [setting, category]);
   const previousTypeRef = useRef(values.type);
   const [pendingImages, setPendingImages] = useState<PendingSettingImage[]>([]);
   const [pendingVideo, setPendingVideo] = useState<PendingSettingVideo>();
@@ -280,7 +286,7 @@ function SettingFormDrawer({
       <SheetContent fullscreen className="tour-drawer-surface gap-0 text-slate-950" showCloseButton={!isPending}>
         <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
           <div className="mx-auto w-full max-w-[980px] pr-12">
-            <SheetTitle className="text-xl sm:text-2xl">{setting ? "Chỉnh sửa setting" : "Tạo setting"}</SheetTitle>
+            <SheetTitle className="text-xl sm:text-2xl">{setting ? "Chỉnh sửa setting" : "Tạo setting"} · {SETTING_CATEGORY_LABELS[category]}</SheetTitle>
             <SheetDescription className="mt-1">Key và loại không thể đổi sau khi tạo.</SheetDescription>
           </div>
         </SheetHeader>
@@ -296,6 +302,7 @@ function SettingFormDrawer({
                   <p className="mt-1 text-sm text-muted-foreground">Định nghĩa key, mô tả, loại dữ liệu và giá trị cấu hình.</p>
                 </div>
                 <input type="hidden" {...form.register("originalKey")} />
+                <input type="hidden" {...form.register("category")} />
                 <FormField label="Key" required error={form.formState.errors.key?.message}>
                   <Input
                     aria-invalid={Boolean(form.formState.errors.key)}
@@ -536,10 +543,11 @@ function RequiredMark() {
   return <span className="ml-0.5 text-destructive" aria-label="required">*</span>;
 }
 
-function toFormValues(setting: AdminSetting | null): SettingFormValues {
+function toFormValues(setting: AdminSetting | null, category: SettingCategory): SettingFormValues {
   if (!setting) {
     return {
       key: "",
+      category,
       description: "",
       type: "text",
       canDelete: false,
@@ -551,6 +559,7 @@ function toFormValues(setting: AdminSetting | null): SettingFormValues {
   return {
     originalKey: setting.key,
     key: setting.key,
+    category: setting.category,
     description: setting.description ?? "",
     type: setting.type,
     canDelete: setting.canDelete,

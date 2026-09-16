@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { SETTING_CATEGORIES } from "@setting-category";
+
+export const settingCategorySchema = z.enum(SETTING_CATEGORIES);
 
 export const settingTypeSchema = z.enum(["text", "image", "video"]);
 
@@ -12,6 +15,7 @@ const localizedValueSchema = z.object({
 export const settingFormSchema = z.object({
   originalKey: z.string().trim().optional().default(""),
   key: settingKeySchema,
+  category: settingCategorySchema,
   description: z.string().trim().optional().default(""),
   type: settingTypeSchema,
   canDelete: z.boolean().default(true),

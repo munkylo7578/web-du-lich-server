@@ -2,17 +2,20 @@ import { relations, sql } from "drizzle-orm";
 import { boolean, check, pgEnum, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 import { tourLocale } from "./tour-media";
+import { SETTING_CATEGORIES } from "../contracts/setting-category";
 
 export const SITE_SETTING_TYPES = ["text", "image", "video"] as const;
 
 export type SiteSettingType = (typeof SITE_SETTING_TYPES)[number];
 
 export const siteSettingType = pgEnum("site_setting_type", SITE_SETTING_TYPES);
+export const siteSettingCategory = pgEnum("site_setting_category", SETTING_CATEGORIES);
 
 export const siteSettings = pgTable(
   "site_settings",
   {
     key: text("key").primaryKey(),
+    category: siteSettingCategory("category").default("general").notNull(),
     description: text("description"),
     value: text("value"),
     type: siteSettingType("type").default("text").notNull(),

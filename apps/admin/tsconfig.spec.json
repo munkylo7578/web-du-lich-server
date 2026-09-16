@@ -8,8 +8,10 @@
     "types": ["jest", "node"],
     "paths": {
       "@/*": ["./src/*"],
+      "@database": ["../../libs/database/src/index.ts"],
       "@destination-country": ["../../libs/database/src/contracts/destination-country.ts"],
-      "@service-category": ["../../libs/database/src/contracts/service-category.ts"]
+      "@service-category": ["../../libs/database/src/contracts/service-category.ts"],
+      "@setting-category": ["../../libs/database/src/contracts/setting-category.ts"]
     }
   },
   "include": ["jest.config.cts", "src/**/*.spec.ts", "src/**/*.test.ts", "src/**/*.d.ts"]
