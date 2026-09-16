@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SETTING_CATEGORY_LABELS } from "@setting-category";
 import {
   BarChart3,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   House,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sheet,
   SheetContent,
@@ -113,11 +115,19 @@ function BrandMark({ collapsed = false }: { collapsed?: boolean }) {
 function AdminNavigation({
   collapsed = false,
   onNavigate,
+  onExpand,
 }: {
   collapsed?: boolean;
   onNavigate?: () => void;
+  onExpand?: () => void;
 }) {
   const pathname = usePathname();
+  const settingsActive = isNavItemActive(pathname, "/admin/settings");
+  const [settingsOpen, setSettingsOpen] = useState(settingsActive);
+
+  useEffect(() => {
+    if (settingsActive) setSettingsOpen(true);
+  }, [settingsActive]);
 
   return (
     <nav className="space-y-1.5" aria-label="Admin navigation">
@@ -155,42 +165,58 @@ function AdminNavigation({
 
         if (item.children) {
           return (
-            <div key={item.href} className="space-y-1.5">
-              <Link
-                href={item.href}
-                className={className}
-                title={collapsed ? item.title : undefined}
-                aria-label={collapsed ? item.title : undefined}
-                onClick={onNavigate}
+            <Collapsible
+              key={item.href}
+              open={!collapsed && settingsOpen}
+              onOpenChange={setSettingsOpen}
+              className="space-y-1.5"
+            >
+              <CollapsibleTrigger
+                className={cn(className, "w-full text-left")}
+                title={collapsed ? `Mở ${item.title}` : undefined}
+                aria-label={collapsed ? `Mở rộng sidebar và hiển thị ${item.title}` : undefined}
+                onClick={() => {
+                  if (collapsed) {
+                    setSettingsOpen(true);
+                    onExpand?.();
+                  }
+                }}
               >
                 {content}
-              </Link>
-              <ul aria-label="Nhóm cấu hình" className={cn("space-y-1", !collapsed && "ml-5 border-l border-cyan-900/15 pl-3")}>
-                {item.children.map((child) => {
-                  const childActive = isNavItemActive(pathname, child.href);
-                  const ChildIcon = child.icon;
-                  return (
-                    <li key={child.href}>
-                      <Link
-                        href={child.href}
-                        onClick={onNavigate}
-                        aria-current={childActive ? "page" : undefined}
-                        aria-label={collapsed ? `Settings: ${child.title}` : undefined}
-                        title={collapsed ? child.title : undefined}
-                        className={cn(
-                          "flex h-11 items-center gap-3 rounded-xl px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700",
-                          collapsed && "justify-center px-0",
-                          childActive ? "bg-cyan-100 font-semibold text-cyan-950" : "text-slate-700 hover:bg-cyan-50 hover:text-cyan-950",
-                        )}
-                      >
-                        <ChildIcon className="size-4 shrink-0" aria-hidden="true" />
-                        {!collapsed && child.title}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+                {!collapsed && (
+                  <ChevronDown
+                    className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[panel-open]:rotate-180 motion-reduce:transition-none"
+                    aria-hidden="true"
+                  />
+                )}
+              </CollapsibleTrigger>
+              {!collapsed && (
+                <CollapsibleContent>
+                  <ul aria-label="Nhóm cấu hình" className="ml-5 space-y-1 border-l border-cyan-900/15 pl-3 pt-0.5">
+                    {item.children.map((child) => {
+                      const childActive = isNavItemActive(pathname, child.href);
+                      const ChildIcon = child.icon;
+                      return (
+                        <li key={child.href}>
+                          <Link
+                            href={child.href}
+                            onClick={onNavigate}
+                            aria-current={childActive ? "page" : undefined}
+                            className={cn(
+                              "flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700",
+                              childActive ? "bg-cyan-100 font-semibold text-cyan-950" : "text-slate-700 hover:bg-cyan-50 hover:text-cyan-950",
+                            )}
+                          >
+                            <ChildIcon className="size-4 shrink-0" aria-hidden="true" />
+                            <span className="truncate">{child.title}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </CollapsibleContent>
+              )}
+            </Collapsible>
           );
         }
 
@@ -253,7 +279,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
           </Button>
         )}
 
-        <AdminNavigation collapsed={collapsed} />
+        <AdminNavigation collapsed={collapsed} onExpand={() => setCollapsed(false)} />
 
      
       </aside>
