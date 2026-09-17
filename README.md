@@ -170,7 +170,7 @@ Content routes require both `x-api-key` and an explicit `locale=vi|en` query par
 
 Service responses include a stable `category` key: `accommodation`, `transportation`, or `tourguide`. Destination responses include `latitude` and `longitude` on each Vietnamese ward. These coordinates are derived from `ST_PointOnSurface(gis_wards.geom)` and are `null` when GIS geometry is unavailable. Swagger documents the concrete response fields for list and detail endpoints.
 
-If an entity lacks the requested translation, the API falls back to Vietnamese and reports `requested`, `effective`, and `fallback` in its locale metadata. Site settings are only returned when their keys are explicitly listed in `API_PUBLIC_SETTING_KEYS`. Swagger is available at `/api/v1/docs` when `API_DOCS_ENABLED=true`; disable it or protect it at Nginx in production.
+If an entity lacks the requested translation, the API falls back to Vietnamese and reports `requested`, `effective`, and `fallback` in its locale metadata. The settings endpoints return every row in the site settings table; do not store private or secret values there. Swagger is available at `/api/v1/docs` when `API_DOCS_ENABLED=true`; disable it or protect it at Nginx in production.
 
 ### Nuxt/Nitro integration
 

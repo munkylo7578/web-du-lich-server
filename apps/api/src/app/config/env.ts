@@ -7,7 +7,6 @@ export type ApiEnvironment = {
   rateLimitLimit: number;
   corsOrigins: string[];
   trustProxy: boolean;
-  publicSettingKeys: string[];
   docsEnabled: boolean;
 };
 
@@ -41,7 +40,6 @@ export function loadEnvironment(env: NodeJS.ProcessEnv = process.env): ApiEnviro
     rateLimitLimit: integer('API_RATE_LIMIT_LIMIT', env['API_RATE_LIMIT_LIMIT'], 120, 1, 100_000),
     corsOrigins: csv(env['API_CORS_ORIGINS']),
     trustProxy: env['API_TRUST_PROXY'] === '1',
-    publicSettingKeys: csv(env['API_PUBLIC_SETTING_KEYS']),
     docsEnabled: env['API_DOCS_ENABLED'] !== 'false',
   };
 }

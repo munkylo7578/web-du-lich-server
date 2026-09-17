@@ -309,16 +309,7 @@ export class ContentService {
   }
 
   async settings(locale: Locale) {
-    if (this.env.publicSettingKeys.length === 0)
-      return {
-        data: [],
-        meta: {
-          locale: { requested: locale, effective: locale, fallback: false },
-        },
-      };
     const rows = await this.db.query.siteSettings.findMany({
-      where: (table, { inArray: includedIn }) =>
-        includedIn(table.key, this.env.publicSettingKeys),
       orderBy: (table, { asc }) => [asc(table.key)],
       with: { translations: true },
     });
@@ -329,8 +320,6 @@ export class ContentService {
   }
 
   async setting(key: string, locale: Locale) {
-    if (!this.env.publicSettingKeys.includes(key))
-      throw new NotFoundException('Setting not found');
     const row = await this.db.query.siteSettings.findFirst({
       where: (table, { eq: equals }) => equals(table.key, key),
       with: { translations: true },

@@ -428,21 +428,23 @@ describe('ContentService service category', () => {
 });
 
 describe('ContentService setting localization', () => {
-  const env = {
-    publicSettingKeys: ['site.footer'],
-  };
-
   function createService(rows: unknown[]) {
+    const findMany = jest.fn().mockResolvedValue(rows);
+    const findFirst = jest.fn().mockResolvedValue(rows[0]);
     const db = {
       query: {
         siteSettings: {
-          findMany: jest.fn().mockResolvedValue(rows),
-          findFirst: jest.fn().mockResolvedValue(rows[0]),
+          findMany,
+          findFirst,
         },
       },
     };
 
-    return new ContentService(db as never, env as never);
+    return {
+      service: new ContentService(db as never, {} as never),
+      findMany,
+      findFirst,
+    };
   }
 
   const base = {
@@ -453,8 +455,42 @@ describe('ContentService setting localization', () => {
     updatedAt: new Date('2026-01-02T00:00:00.000Z'),
   };
 
+  it('returns all settings without an environment allowlist', async () => {
+    const rows = [
+      {
+        ...base,
+        type: 'text',
+        value: null,
+        translations: [
+          { settingKey: base.key, locale: 'vi', value: '<p>Chân trang</p>' },
+        ],
+      },
+      {
+        ...base,
+        key: 'site.name',
+        type: 'text',
+        value: null,
+        translations: [
+          { settingKey: 'site.name', locale: 'vi', value: 'Travel' },
+        ],
+      },
+    ];
+    const { service, findMany } = createService(rows);
+
+    const result = await service.settings('vi');
+
+    expect(result.data.map((setting) => setting.key)).toEqual([
+      'site.footer',
+      'site.name',
+    ]);
+    expect(findMany).toHaveBeenCalledWith({
+      orderBy: expect.any(Function),
+      with: { translations: true },
+    });
+  });
+
   it('returns the requested English text translation', async () => {
-    const service = createService([
+    const { service } = createService([
       {
         ...base,
         type: 'text',
@@ -477,7 +513,7 @@ describe('ContentService setting localization', () => {
   });
 
   it('falls back from English to Vietnamese when English is missing', async () => {
-    const service = createService([
+    const { service } = createService([
       {
         ...base,
         type: 'text',
@@ -499,7 +535,7 @@ describe('ContentService setting localization', () => {
   });
 
   it('keeps image values independent from locale', async () => {
-    const service = createService([
+    const { service } = createService([
       {
         ...base,
         type: 'image',
