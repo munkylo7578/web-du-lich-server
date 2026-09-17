@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { DestinationCountry } from '@destination-country';
 import { SERVICE_CATEGORIES, type ServiceCategory } from '@service-category';
+import { SETTING_CATEGORIES, type SettingCategory } from '@setting-category';
 
 class ContentLocaleMetaDto {
   @ApiProperty({ enum: ['vi', 'en'] }) requested!: 'vi' | 'en';
@@ -121,8 +122,15 @@ export class TourContentDto {
 
 export class SettingContentDto {
   @ApiProperty() key!: string;
+  @ApiProperty({
+    enum: SETTING_CATEGORIES,
+    description: 'Stable setting category, independent of locale.',
+    example: 'general',
+  })
+  category!: SettingCategory;
   @ApiProperty() value!: string;
-  @ApiProperty({ enum: ['text', 'image'] }) type!: 'text' | 'image';
+  @ApiProperty({ enum: ['text', 'image', 'video'] })
+  type!: 'text' | 'image' | 'video';
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
 }

@@ -449,6 +449,7 @@ describe('ContentService setting localization', () => {
 
   const base = {
     key: 'site.footer',
+    category: 'general',
     description: null,
     canDelete: true,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -483,6 +484,9 @@ describe('ContentService setting localization', () => {
       'site.footer',
       'site.name',
     ]);
+    expect(result.data.every((setting) => setting.category === 'general')).toBe(
+      true,
+    );
     expect(findMany).toHaveBeenCalledWith({
       orderBy: expect.any(Function),
       with: { translations: true },
@@ -505,6 +509,7 @@ describe('ContentService setting localization', () => {
     const result = await service.setting(base.key, 'en');
 
     expect(result.data.value).toBe('<p>English</p>');
+    expect(result.data.category).toBe('general');
     expect(result.meta.locale).toEqual({
       requested: 'en',
       effective: 'en',

@@ -338,6 +338,7 @@ export class ContentService {
     if (row.type === 'image' || row.type === 'video') {
       return {
         key: row.key,
+        category: row.category,
         value: row.value,
         type: row.type,
         updatedAt: row.updatedAt,
@@ -354,6 +355,7 @@ export class ContentService {
     const translation = requested ?? vietnamese;
     return {
       key: row.key,
+      category: row.category,
       value: translation?.value ?? '',
       type: row.type,
       updatedAt: row.updatedAt,
