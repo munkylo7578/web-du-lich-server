@@ -12,7 +12,7 @@ export default async function AdminSettingsCategoryPage({
   const { category } = await params;
   if (!isSettingCategory(category)) notFound();
 
-  const settings = await listAdminSettings(category);
+  const settings = await listAdminSettings(category, { page: 1, pageSize: 10 });
   // Remount when switching sections so search, dialogs and draft files don't leak.
-  return <SettingsManagement key={category} category={category} settings={settings} />;
+  return <SettingsManagement key={category} category={category} initialResult={settings} />;
 }

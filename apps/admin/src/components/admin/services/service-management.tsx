@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -8,8 +8,6 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 import {
@@ -23,6 +21,7 @@ import {
 
 import {
   deleteServiceAction,
+  listAdminServicesAction,
   saveServiceAction,
 } from '@/app/admin/services/actions';
 import { RichTextEditor } from '@/components/admin/tours/rich-text-editor';
@@ -69,13 +68,17 @@ import {
   type ServiceFormValues,
 } from '@/features/admin-services/service-form-schema';
 import type { AdminService } from '@/features/admin-services/service-types';
+import type { AdminListQuery, AdminListResult } from '@/features/shared/admin-list';
+import { ServerPagination } from '@/components/admin/shared/server-pagination';
+import { useServerPagination } from '@/hooks/use-server-pagination';
 import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from '@service-category';
 
 const helper = createColumnHelper<AdminService>();
 
-export function ServiceManagement({ services }: { services: AdminService[] }) {
+export function ServiceManagement({ initialResult }: { initialResult: AdminListResult<AdminService> }) {
   const router = useRouter();
-  const [query, setQuery] = useState('');
+  const loadPage = useCallback((input: AdminListQuery) => listAdminServicesAction(input), []);
+  const list = useServerPagination({ initialResult, loadPage });
   const [editing, setEditing] = useState<AdminService | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleting, setDeleting] = useState<AdminService | null>(null);
@@ -183,14 +186,9 @@ export function ServiceManagement({ services }: { services: AdminService[] }) {
     [],
   );
   const table = useReactTable({
-    data: services,
+    data: list.items,
     columns,
-    state: { globalFilter: query },
-    onGlobalFilterChange: setQuery,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
   });
 
   return (
@@ -221,14 +219,14 @@ export function ServiceManagement({ services }: { services: AdminService[] }) {
             <div className="relative w-full sm:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
               <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                value={list.query}
+                onChange={(event) => list.setQuery(event.target.value)}
                 className="pl-9"
                 placeholder="Tìm theo tên, mô tả dịch vụ..."
               />
             </div>
             <p className="text-sm">
-              {table.getFilteredRowModel().rows.length} dịch vụ
+              {list.total} dịch vụ
             </p>
           </div>
           <CardContent className="p-0">
@@ -277,24 +275,7 @@ export function ServiceManagement({ services }: { services: AdminService[] }) {
                 </TableBody>
               </Table>
             </div>
-            {table.getPageCount() > 1 && (
-              <div className="flex justify-end gap-2 border-t p-4">
-                <Button
-                  variant="outline"
-                  disabled={!table.getCanPreviousPage()}
-                  onClick={() => table.previousPage()}
-                >
-                  Trước
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={!table.getCanNextPage()}
-                  onClick={() => table.nextPage()}
-                >
-                  Sau
-                </Button>
-              </div>
-            )}
+            <ServerPagination {...list} onPageChange={list.setPage} onPageSizeChange={list.setPageSize} />
           </CardContent>
         </Card>
       </section>
@@ -303,7 +284,7 @@ export function ServiceManagement({ services }: { services: AdminService[] }) {
         open={drawerOpen}
         service={editing}
         onOpenChange={setDrawerOpen}
-        onSaved={() => router.refresh()}
+        onSaved={() => { list.reload(); router.refresh(); }}
       />
       <AlertDialog
         open={Boolean(deleting)}
@@ -334,6 +315,7 @@ export function ServiceManagement({ services }: { services: AdminService[] }) {
                   setDeleteMessage(result.message);
                   if (result.success) {
                     setDeleting(null);
+                    list.reload();
                     router.refresh();
                   }
                 });

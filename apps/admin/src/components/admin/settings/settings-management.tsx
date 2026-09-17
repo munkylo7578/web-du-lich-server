@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { SETTING_CATEGORY_LABELS, type SettingCategory } from "@setting-category";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { Edit3, ImageIcon, MoreHorizontal, Plus, Search, Settings2, Trash2, Type, Upload, Video } from "lucide-react";
 
-import { deleteSettingAction, saveSettingAction } from "@/app/admin/settings/actions";
+import { deleteSettingAction, listAdminSettingsAction, saveSettingAction } from "@/app/admin/settings/actions";
+import { ServerPagination } from "@/components/admin/shared/server-pagination";
 import { submitUpload } from "@/features/shared/upload-validation";
 import { ImagePickerField, type ImagePickerPendingImage } from "@/components/admin/shared/image-picker-field";
 import { SettingVideoPreview } from "@/components/admin/settings/setting-video-preview";
@@ -25,28 +26,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { settingFormSchema, type SettingFormValues } from "@/features/admin-settings/settings-form-schema";
 import type { AdminSetting } from "@/features/admin-settings/settings-types";
+import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
+import { useServerPagination } from "@/hooks/use-server-pagination";
 
 type PendingSettingImage = ImagePickerPendingImage;
 type PendingSettingVideo = { file: File; previewUrl: string };
 
-export function SettingsManagement({ settings, category }: { settings: AdminSetting[]; category: SettingCategory }) {
+export function SettingsManagement({ initialResult, category }: { initialResult: AdminListResult<AdminSetting>; category: SettingCategory }) {
   const categoryLabel = SETTING_CATEGORY_LABELS[category];
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const loadPage = useCallback((input: AdminListQuery) => listAdminSettingsAction(category, input), [category]);
+  const list = useServerPagination({ initialResult, loadPage });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingSetting, setEditingSetting] = useState<AdminSetting | null>(null);
   const [deletingSetting, setDeletingSetting] = useState<AdminSetting | null>(null);
   const [deleteMessage, setDeleteMessage] = useState<string>();
   const [isDeleting, startDelete] = useTransition();
-  const filteredSettings = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return settings;
-
-    return settings.filter((setting) =>
-      [setting.key, setting.description ?? "", setting.value ?? "", setting.translations.vi, setting.translations.en ?? "", setting.type]
-        .some((value) => value.toLowerCase().includes(term)),
-    );
-  }, [query, settings]);
 
   return (
     <>
@@ -74,9 +69,9 @@ export function SettingsManagement({ settings, category }: { settings: AdminSett
           <div className="flex flex-col gap-3 border-b border-cyan-900/15 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} />
-              <Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" aria-label={`Tìm cấu hình ${categoryLabel.toLowerCase()}`} placeholder="Tìm theo key, mô tả, giá trị trong nhóm..." />
+              <Input value={list.query} onChange={(event) => list.setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" aria-label={`Tìm cấu hình ${categoryLabel.toLowerCase()}`} placeholder="Tìm theo key, mô tả, giá trị trong nhóm..." />
             </div>
-            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{filteredSettings.length} settings</p>
+            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{list.total} settings</p>
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -92,7 +87,7 @@ export function SettingsManagement({ settings, category }: { settings: AdminSett
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSettings.length ? filteredSettings.map((setting) => (
+                  {list.items.length ? list.items.map((setting) => (
                     <TableRow key={setting.key}>
                       <TableCell>
                         <div className="flex min-w-52 items-center gap-3">
@@ -131,8 +126,8 @@ export function SettingsManagement({ settings, category }: { settings: AdminSett
                       <TableCell colSpan={6} className="h-52 text-center">
                         <div className="mx-auto flex max-w-sm flex-col items-center">
                           <div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div>
-                          <p className="font-medium">{query.trim() ? "Không tìm thấy setting phù hợp" : `Chưa có cấu hình ${categoryLabel.toLowerCase()}`}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">{query.trim() ? "Thử từ khóa khác trong nhóm đang xem." : `Tạo setting mới để thêm vào nhóm ${categoryLabel}.`}</p>
+                          <p className="font-medium">{list.query.trim() ? "Không tìm thấy setting phù hợp" : `Chưa có cấu hình ${categoryLabel.toLowerCase()}`}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{list.query.trim() ? "Thử từ khóa khác trong nhóm đang xem." : `Tạo setting mới để thêm vào nhóm ${categoryLabel}.`}</p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -140,6 +135,7 @@ export function SettingsManagement({ settings, category }: { settings: AdminSett
                 </TableBody>
               </Table>
             </div>
+            <ServerPagination {...list} onPageChange={list.setPage} onPageSizeChange={list.setPageSize} />
           </CardContent>
         </Card>
       </section>
@@ -149,7 +145,7 @@ export function SettingsManagement({ settings, category }: { settings: AdminSett
         category={category}
         open={drawerOpen}
         setting={editingSetting}
-        onSaved={() => router.refresh()}
+        onSaved={() => { list.reload(); router.refresh(); }}
         onOpenChange={setDrawerOpen}
       />
 
@@ -172,6 +168,7 @@ export function SettingsManagement({ settings, category }: { settings: AdminSett
                   setDeleteMessage(result.message);
                   if (result.success) {
                     setDeletingSetting(null);
+                    list.reload();
                     router.refresh();
                   }
                 });

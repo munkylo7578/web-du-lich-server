@@ -13,16 +13,22 @@ import {
   type TourTranslationSnapshot,
 } from "@/domains/tour/domain";
 import { requireSession } from "@/lib/auth/session";
-import { saveDestinationRecord, searchDestinations, searchWards, tourRepository } from "@/features/admin-tours/repository";
+import { listAdminTours, saveDestinationRecord, searchDestinations, searchWards, tourRepository } from "@/features/admin-tours/repository";
 import { destinationEditorSchema, imageFieldErrors, pendingImagesSchema, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
-import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
+import type { AdminDestination, AdminTour, AdminWard } from "@/features/admin-tours/tour-types";
 import { removeUploadedFiles, saveTourImage } from "@/features/admin-tours/upload";
+import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
 
 export type TourActionState = {
   success: boolean;
   message: string;
   fieldErrors?: Record<string, string[]>;
 };
+
+export async function listAdminToursAction(input: AdminListQuery): Promise<AdminListResult<AdminTour>> {
+  await requireSession();
+  return listAdminTours(input);
+}
 
 export async function searchWardsAction(query: string): Promise<AdminWard[]> {
   await requireSession();

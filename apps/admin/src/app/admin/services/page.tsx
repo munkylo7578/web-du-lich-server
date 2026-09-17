@@ -2,6 +2,6 @@ import { ServiceManagement } from "@/components/admin/services/service-managemen
 import { listAdminServices } from "@/features/admin-services/repository";
 
 export default async function AdminServicesPage() {
-  const services = await listAdminServices();
-  return <ServiceManagement services={services} />;
+  const services = await listAdminServices({ page: 1, pageSize: 10 });
+  return <ServiceManagement initialResult={services} />;
 }

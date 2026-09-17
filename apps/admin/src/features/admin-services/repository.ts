@@ -8,7 +8,7 @@ import {
   serviceTranslations,
   tourServices,
 } from '@database';
-import { asc, desc, eq, ilike, inArray, or } from 'drizzle-orm';
+import { asc, countDistinct, desc, eq, ilike, inArray, or } from 'drizzle-orm';
 
 import {
   Service,
@@ -17,15 +17,45 @@ import {
 } from '@/domains/service/domain';
 import type { AdminService } from './service-types';
 import { deleteUnreferencedImages, removeUnreferencedMediaFiles } from '@/features/shared/media-cleanup';
+import {
+  createAdminListResult,
+  normalizeAdminListQuery,
+  resolveAdminListPage,
+  type AdminListQuery,
+  type AdminListResult,
+} from '@/features/shared/admin-list';
 
 const SERVICE_SEARCH_LIMIT = 20;
 
-export async function listAdminServices(): Promise<AdminService[]> {
+export async function listAdminServices(input: AdminListQuery = {}): Promise<AdminListResult<AdminService>> {
+  const normalized = normalizeAdminListQuery(input);
+  const pattern = `%${normalized.query}%`;
+  const searchCondition = normalized.query
+    ? or(
+        ilike(serviceTranslations.name, pattern),
+        ilike(serviceTranslations.description, pattern),
+      )
+    : undefined;
+  const [{ total }] = await db
+    .select({ total: countDistinct(services.id) })
+    .from(services)
+    .leftJoin(serviceTranslations, eq(serviceTranslations.serviceId, services.id))
+    .where(searchCondition);
+  const resolved = resolveAdminListPage(Number(total), normalized);
   const rows = await db
     .select({ id: services.id })
     .from(services)
-    .orderBy(desc(services.updatedAt));
-  return hydrateServices(rows.map((row) => row.id));
+    .leftJoin(serviceTranslations, eq(serviceTranslations.serviceId, services.id))
+    .where(searchCondition)
+    .groupBy(services.id, services.updatedAt)
+    .orderBy(desc(services.updatedAt), asc(services.id))
+    .limit(resolved.pageSize)
+    .offset(resolved.offset);
+  return createAdminListResult(
+    await hydrateServices(rows.map((row) => row.id)),
+    Number(total),
+    resolved,
+  );
 }
 
 export async function searchServices(query: string): Promise<AdminService[]> {

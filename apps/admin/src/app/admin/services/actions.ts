@@ -13,6 +13,7 @@ import {
   type PendingServiceImageMeta,
 } from '@/features/admin-services/service-form-schema';
 import {
+  listAdminServices,
   searchServices,
   serviceRepository,
 } from '@/features/admin-services/repository';
@@ -22,12 +23,18 @@ import {
   saveServiceImage,
 } from '@/features/admin-services/upload';
 import { requireSession } from '@/lib/auth/session';
+import type { AdminListQuery, AdminListResult } from '@/features/shared/admin-list';
 
 export type ServiceActionState = {
   success: boolean;
   message: string;
   fieldErrors?: Record<string, string[]>;
 };
+
+export async function listAdminServicesAction(input: AdminListQuery): Promise<AdminListResult<AdminService>> {
+  await requireSession();
+  return listAdminServices(input);
+}
 
 export async function searchServicesAction(
   query: string,

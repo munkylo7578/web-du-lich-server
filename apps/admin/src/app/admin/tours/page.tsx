@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminToursPage() {
-  const tours = await listAdminTours();
+  const tours = await listAdminTours({ page: 1, pageSize: 10 });
 
-  return <TourManagement tours={tours} />;
+  return <TourManagement initialResult={tours} />;
 }

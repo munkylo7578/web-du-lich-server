@@ -2,7 +2,7 @@ import { DestinationManagement } from "@/components/admin/destinations/destinati
 import { listAdminDestinations } from "@/features/admin-tours/repository";
 
 export default async function AdminDestinationsPage() {
-  const destinations = await listAdminDestinations();
+  const destinations = await listAdminDestinations({ page: 1, pageSize: 10 });
 
-  return <DestinationManagement destinations={destinations} />;
+  return <DestinationManagement initialResult={destinations} />;
 }
