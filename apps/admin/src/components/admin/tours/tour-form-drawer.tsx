@@ -419,7 +419,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
 }
 
 function SectionHeading({ title, description }: { title: string; description: string }) {
-  return <div><h3 className="font-heading text-base font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{description}</p></div>;
+  return <div><h3 className="font-heading text-base font-semibold">{title}</h3></div>;
 }
 
 function FormField({ fieldPath, label, required, error, children }: { fieldPath: string; label: string; required?: boolean; error?: string; children: React.ReactNode }) {
