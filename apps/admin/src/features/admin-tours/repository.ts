@@ -213,6 +213,10 @@ export async function findAdminTour(id: string): Promise<AdminTour | null> {
 
 const tourColumns = {
   id: tours.id, departureStartMonth: tours.departureStartMonth,
+  serviceDescription: tours.serviceDescription,
+  accommodationDescription: tours.accommodationDescription,
+  transportationDescription: tours.transportationDescription,
+  tourguideDescription: tours.tourguideDescription,
   createdAt: tours.createdAt, updatedAt: tours.updatedAt,
 };
 
@@ -271,6 +275,10 @@ async function hydrateAdminTours(rows: Array<Omit<typeof tours.$inferSelect, "pl
   return rows.map((row) => ({
     id: row.id,
     departureStartMonth: row.departureStartMonth ?? undefined,
+    serviceDescription: row.serviceDescription ?? undefined,
+    accommodationDescription: row.accommodationDescription ?? undefined,
+    transportationDescription: row.transportationDescription ?? undefined,
+    tourguideDescription: row.tourguideDescription ?? undefined,
     translations: translationRows
       .filter((translation) => translation.tourId === row.id)
       .map((translation) => ({
@@ -438,6 +446,10 @@ export class DrizzleTourRepository implements TourRepository {
     return TourMapper.toDomain({
       id: row[0].id,
       departureStartMonth: row[0].departureStartMonth ?? undefined,
+      serviceDescription: row[0].serviceDescription ?? undefined,
+      accommodationDescription: row[0].accommodationDescription ?? undefined,
+      transportationDescription: row[0].transportationDescription ?? undefined,
+      tourguideDescription: row[0].tourguideDescription ?? undefined,
       translations: translations.map((translation) => ({
         locale: translation.locale,
         name: translation.name,
@@ -520,12 +532,20 @@ export class DrizzleTourRepository implements TourRepository {
       if (existing.length) {
         await tx.update(tours).set({
           departureStartMonth: snapshot.departureStartMonth ?? null,
+          serviceDescription: snapshot.serviceDescription ?? null,
+          accommodationDescription: snapshot.accommodationDescription ?? null,
+          transportationDescription: snapshot.transportationDescription ?? null,
+          tourguideDescription: snapshot.tourguideDescription ?? null,
           updatedAt: snapshot.updatedAt,
         }).where(eq(tours.id, snapshot.id));
       } else {
         await tx.insert(tours).values({
           id: snapshot.id,
           departureStartMonth: snapshot.departureStartMonth ?? null,
+          serviceDescription: snapshot.serviceDescription ?? null,
+          accommodationDescription: snapshot.accommodationDescription ?? null,
+          transportationDescription: snapshot.transportationDescription ?? null,
+          tourguideDescription: snapshot.tourguideDescription ?? null,
           createdAt: snapshot.createdAt,
           updatedAt: snapshot.updatedAt,
         });

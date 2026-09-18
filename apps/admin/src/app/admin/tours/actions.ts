@@ -198,6 +198,12 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     }
 
     const departureStartMonth = data.departureStartMonth ?? undefined;
+    const serviceDescriptions = {
+      serviceDescription: data.serviceDescription || undefined,
+      accommodationDescription: data.serviceDescriptions.accommodation || undefined,
+      transportationDescription: data.serviceDescriptions.transportation || undefined,
+      tourguideDescription: data.serviceDescriptions.tourguide || undefined,
+    };
     const existingRefs = data.existingImages.map((image, index) =>
       TourImageRef.fromSnapshot({
         imageId: image.imageId,
@@ -280,9 +286,10 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
       ],
     }));
 
-    const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth });
+    const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth, ...serviceDescriptions });
     if (tour) {
       aggregate.updateDepartureStartMonth(departureStartMonth);
+      aggregate.updateServiceDescriptions(serviceDescriptions);
       aggregate.replaceTranslations(translations);
       aggregate.replaceDestinations(destinations);
       aggregate.replaceServices(services);

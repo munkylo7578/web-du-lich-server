@@ -76,6 +76,12 @@ export const tourFormSchema = z.object({
     .min(1, "Tháng khởi hành phải từ 1 đến 12.")
     .max(12, "Tháng khởi hành phải từ 1 đến 12.")
     .nullish(),
+  serviceDescription: optionalVietnameseTourHtml("Mô tả dịch vụ chung cần ít nhất 10 ký tự."),
+  serviceDescriptions: z.object({
+    accommodation: optionalVietnameseTourHtml("Mô tả nơi lưu trú cần ít nhất 10 ký tự."),
+    transportation: optionalVietnameseTourHtml("Mô tả phương tiện di chuyển cần ít nhất 10 ký tự."),
+    tourguide: optionalVietnameseTourHtml("Mô tả hướng dẫn viên cần ít nhất 10 ký tự."),
+  }),
   translations: z.object({
     vi: z.object({
       name: z.string().trim().min(2, "Tên tour cần ít nhất 2 ký tự."),

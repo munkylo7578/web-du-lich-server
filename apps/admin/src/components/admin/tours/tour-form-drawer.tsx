@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { imageFieldErrors, pendingImagesSchema, pendingPlanImagesSchema, tourFormSchema, type TourFormValues } from "@/features/admin-tours/tour-form-schema";
 import type { AdminTour } from "@/features/admin-tours/tour-types";
+import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@service-category";
 
 type Locale = "vi" | "en";
 type FormTab = "information" | "plan" | "services";
@@ -34,6 +35,8 @@ const FORM_TABS: { value: FormTab; label: string }[] = [
 function createEmptyValues(): TourFormValues {
   return {
     departureStartMonth: null,
+    serviceDescription: "",
+    serviceDescriptions: { accommodation: "", transportation: "", tourguide: "" },
     translations: {
       vi: { name: "", description: "", inclusions: "", exclusions: "" },
       en: { name: "", description: "", inclusions: "", exclusions: "" },
@@ -52,6 +55,12 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
   return {
     id: tour.id,
     departureStartMonth: tour.departureStartMonth ?? null,
+    serviceDescription: tour.serviceDescription || "",
+    serviceDescriptions: {
+      accommodation: tour.accommodationDescription || "",
+      transportation: tour.transportationDescription || "",
+      tourguide: tour.tourguideDescription || "",
+    },
     translations: {
       vi: {
         name: vi?.name || "",
@@ -134,7 +143,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
     const parts = path.split(".");
     if (parts[0] === "plans") {
       setActiveTab("plan");
-    } else if (parts[0] === "services") {
+    } else if (parts[0] === "services" || parts[0] === "serviceDescription" || parts[0] === "serviceDescriptions") {
       setActiveTab("services");
     } else {
       setActiveTab("information");
@@ -463,10 +472,24 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                 </div>
 
                 <div id="tour-form-panel-services" role="tabpanel" aria-labelledby="tour-form-tab-services" hidden={activeTab !== "services"} className="w-full min-w-0 space-y-7">
-                  <section className="tour-drawer-panel relative z-20 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
-                    <SectionHeading title="Dịch vụ" description="Tìm và gắn các dịch vụ dùng chung vào tour theo thứ tự." />
-                    <Controller control={form.control} name="services" render={({ field }) => <ServiceManager value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
+                  <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+                    <SectionHeading title="Mô tả dịch vụ" description="Giới thiệu tổng quan về hệ thống dịch vụ sử dụng trong tour." />
+                    <FormField fieldPath="serviceDescription" label="Mô tả dịch vụ chung" error={form.formState.errors.serviceDescription?.message}>
+                      <Controller control={form.control} name="serviceDescription" render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Thông tin tổng quan về dịch vụ của tour..." invalid={Boolean(form.formState.errors.serviceDescription)} />} />
+                    </FormField>
                   </section>
+
+                  {SERVICE_CATEGORIES.map((category) => (
+                    <section key={category} className="tour-drawer-panel relative space-y-5 overflow-visible rounded-[28px] p-5 sm:p-7">
+                      <SectionHeading title={SERVICE_CATEGORY_LABELS[category]} description="Bổ sung mô tả riêng và chọn các dịch vụ thuộc đúng nhóm này." />
+                      <FormField fieldPath={`serviceDescriptions.${category}`} label={`Mô tả ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}`} error={form.formState.errors.serviceDescriptions?.[category]?.message}>
+                        <Controller control={form.control} name={`serviceDescriptions.${category}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder={`Thông tin về ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}...`} invalid={Boolean(form.formState.errors.serviceDescriptions?.[category])} />} />
+                      </FormField>
+                      <div className="border-t border-cyan-900/10 pt-5">
+                        <Controller control={form.control} name="services" render={({ field }) => <ServiceManager category={category} value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
+                      </div>
+                    </section>
+                  ))}
                 </div>
               </div>
             </div>

@@ -8,15 +8,17 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { AdminService } from '@/features/admin-services/service-types';
 import type { TourFormValues } from '@/features/admin-tours/tour-form-schema';
-import { SERVICE_CATEGORY_LABELS } from '@service-category';
+import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@service-category';
 
 export function ServiceManager({
   value,
   existingServices,
+  category,
   onChange,
 }: {
   value: TourFormValues['services'];
   existingServices: AdminService[];
+  category: ServiceCategory;
   onChange: (value: TourFormValues['services']) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -37,7 +39,7 @@ export function ServiceManager({
   const search = (term: string) => {
     setQuery(term);
     if (term.trim().length < 2) return setResults([]);
-    startTransition(async () => setResults(await searchServicesAction(term)));
+    startTransition(async () => setResults((await searchServicesAction(term)).filter((service) => service.category === category)));
   };
   const add = (service: AdminService) => {
     if (value.some((item) => item.serviceId === service.serviceId)) return;
@@ -63,6 +65,9 @@ export function ServiceManager({
         .map((candidate, order) => ({ ...candidate, sortOrder: order })),
     );
   };
+  const selectedForCategory = value.filter(
+    (item) => known.get(item.serviceId)?.category === category,
+  );
   return (
     <div className="space-y-3">
       <div className="relative">
@@ -102,7 +107,12 @@ export function ServiceManager({
         </div>
       )}
       <div className="space-y-2">
-        {value.map((item) => {
+        {!selectedForCategory.length && (
+          <p className="rounded-2xl border border-dashed border-cyan-900/20 bg-cyan-50/40 p-4 text-center text-sm text-muted-foreground">
+            Chưa chọn dịch vụ nào cho nhóm này.
+          </p>
+        )}
+        {selectedForCategory.map((item) => {
           const service = known.get(item.serviceId);
           return (
             <div
@@ -115,11 +125,7 @@ export function ServiceManager({
                   (translation) => translation.locale === 'vi',
                 )?.name || item.serviceId}
               </span>
-              {service && (
-                <Badge variant="outline">
-                  {SERVICE_CATEGORY_LABELS[service.category]}
-                </Badge>
-              )}
+              {service && <Badge variant="outline">Đã chọn</Badge>}
               <Button
                 type="button"
                 variant="destructive"

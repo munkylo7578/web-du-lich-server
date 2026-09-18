@@ -38,6 +38,10 @@ export const tours = pgTable(
   {
     id: uuid('id').primaryKey(),
     departureStartMonth: integer('departure_start_month'),
+    serviceDescription: text('service_description'),
+    accommodationDescription: text('accommodation_description'),
+    transportationDescription: text('transportation_description'),
+    tourguideDescription: text('tourguide_description'),
     plans: jsonb('plans')
       .$type<TourPlanSnapshot[]>()
       .default(sql`'[]'::jsonb`)

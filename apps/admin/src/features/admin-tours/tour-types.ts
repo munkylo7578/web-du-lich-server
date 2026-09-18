@@ -38,6 +38,10 @@ export type AdminTourImage = {
 export type AdminTour = {
   id: string;
   departureStartMonth?: number;
+  serviceDescription?: string;
+  accommodationDescription?: string;
+  transportationDescription?: string;
+  tourguideDescription?: string;
   translations: TourTranslationSnapshot[];
   destinations: AdminDestination[];
   services: AdminService[];

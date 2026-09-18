@@ -54,4 +54,33 @@ describe('Tour departure start month', () => {
       expect(tour.toSnapshot().departureStartMonth).toBe(6);
     },
   );
+
+  it('round-trips and updates service descriptions', () => {
+    const tour = Tour.create({
+      translations,
+      serviceDescription: '<p>Dịch vụ chất lượng cao</p>',
+      accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+      transportationDescription: '<p>Di chuyển an toàn</p>',
+      tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
+    });
+
+    expect(Tour.rehydrate(tour.toSnapshot()).toSnapshot()).toMatchObject({
+      serviceDescription: '<p>Dịch vụ chất lượng cao</p>',
+      accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+      transportationDescription: '<p>Di chuyển an toàn</p>',
+      tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
+    });
+
+    tour.updateServiceDescriptions({});
+    expect(tour.toSnapshot()).toMatchObject({
+      serviceDescription: undefined,
+      accommodationDescription: undefined,
+      transportationDescription: undefined,
+      tourguideDescription: undefined,
+    });
+  });
+
+  it('rejects service descriptions shorter than ten characters', () => {
+    expect(() => Tour.create({ translations, serviceDescription: 'ngắn' })).toThrow(/service description/);
+  });
 });

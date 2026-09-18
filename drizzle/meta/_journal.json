@@ -113,6 +113,13 @@
       "when": 1789530553846,
       "tag": "0015_setting_category",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789744171207,
+      "tag": "0016_tour_service_descriptions",
+      "breakpoints": true
     }
   ]
 }
