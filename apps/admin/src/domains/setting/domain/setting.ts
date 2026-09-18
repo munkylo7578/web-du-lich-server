@@ -1,6 +1,6 @@
 import { isSettingCategory, type SettingCategory } from "@setting-category";
 
-export const SETTING_TYPES = ["text", "image", "video"] as const;
+export const SETTING_TYPES = ["text", "image", "video", "plain_text"] as const;
 export const SETTING_LOCALES = ["vi", "en"] as const;
 
 export type SettingType = (typeof SETTING_TYPES)[number];
@@ -147,6 +147,13 @@ export class Setting {
       if (type === "image" && !isImageUrl(normalized)) throw new Error("Image setting value must be a local upload path or an absolute URL.");
       if (type === "video" && !isVideoUrl(normalized)) throw new Error("Video setting value must be a local settings video upload path.");
       return { value: normalized, translations: { vi: "" } as SettingTranslations };
+    }
+
+    if (type === "plain_text") {
+      const vi = translations?.vi.trim() ?? "";
+      const en = translations?.en?.trim() ?? "";
+      if (!vi) throw new Error("Giá trị tiếng Việt là bắt buộc.");
+      return { value: undefined, translations: { vi, ...(en ? { en } : {}) } };
     }
 
     const vi = normalizeRichText(translations?.vi);

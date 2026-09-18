@@ -3,6 +3,15 @@ import { settingFormSchema } from './settings-form-schema';
 const payload = { key: 'site.title', category: 'home', type: 'text', translations: { vi: 'Trang chủ' } };
 
 describe('settingFormSchema', () => {
+  it('accepts plain text without adding or interpreting markup', () => {
+    expect(settingFormSchema.parse({ ...payload, type: 'plain_text', translations: { vi: ' Sales@kindtraveldmc.com ' } }).translations.vi).toBe('Sales@kindtraveldmc.com');
+    expect(settingFormSchema.parse({ ...payload, type: 'plain_text', translations: { vi: '<literal>' } }).translations.vi).toBe('<literal>');
+  });
+
+  it.each([undefined, { vi: '' }, { vi: '   ', en: 'Email' }])('requires Vietnamese plain text', (translations) => {
+    expect(settingFormSchema.safeParse({ ...payload, type: 'plain_text', translations }).success).toBe(false);
+  });
+
   it.each(['home', 'general'])('accepts %s from the current section', (category) => {
     expect(settingFormSchema.parse({ ...payload, category }).category).toBe(category);
   });

@@ -16,7 +16,7 @@ const environment = {
 
 function createService(
   translations: Array<{ locale: 'vi' | 'en'; value: string }>,
-  type: 'text' | 'image' | 'video' = 'text',
+  type: 'text' | 'plain_text' | 'image' | 'video' = 'text',
 ) {
   const findFirst = jest.fn().mockResolvedValue({
     key: 'contact_email',
@@ -66,6 +66,14 @@ describe('ContactService', () => {
     expect(options.headers['api-key']).toBe('secret-key');
   });
 
+  it('uses a plain-text recipient without HTML wrapping', async () => {
+    const { service } = createService([{ locale: 'vi', value: ' Sales@kindtraveldmc.com ' }], 'plain_text');
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 201 });
+    global.fetch = fetchMock as typeof fetch;
+    await expect(service.send({})).resolves.toEqual({ data: { sent: true } });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).to).toEqual([{ email: 'Sales@kindtraveldmc.com' }]);
+  });
+
   it('falls back to the first nonblank translation and supports an empty submission', async () => {
     const { service } = createService([
       { locale: 'en', value: 'fallback@example.com' },
@@ -86,6 +94,9 @@ describe('ContactService', () => {
   it.each([
     [[], 'text'],
     [[{ locale: 'vi', value: 'not-an-email' }], 'text'],
+    [[{ locale: 'vi', value: '<p>Sales@kindtraveldmc.com</p>' }], 'text'],
+    [[{ locale: 'vi', value: '<p>Sales@kindtraveldmc.com</p>' }], 'plain_text'],
+    [[{ locale: 'vi', value: 'one@example.com,two@example.com' }], 'plain_text'],
     [[{ locale: 'vi', value: 'recipient@example.com' }], 'image'],
   ] as const)(
     'fails safely for invalid recipient configuration',

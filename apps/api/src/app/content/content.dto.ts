@@ -146,8 +146,8 @@ export class SettingContentDto {
   })
   category!: SettingCategory;
   @ApiProperty() value!: string;
-  @ApiProperty({ enum: ['text', 'image', 'video'] })
-  type!: 'text' | 'image' | 'video';
+  @ApiProperty({ enum: ['text', 'image', 'video', 'plain_text'] })
+  type!: 'text' | 'image' | 'video' | 'plain_text';
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
 }

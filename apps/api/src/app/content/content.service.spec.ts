@@ -534,11 +534,11 @@ describe('ContentService setting localization', () => {
     });
   });
 
-  it('returns the requested English text translation', async () => {
+  it.each(['text', 'plain_text'] as const)('returns the requested English %s translation', async (type) => {
     const { service } = createService([
       {
         ...base,
-        type: 'text',
+        type,
         value: null,
         translations: [
           { settingKey: base.key, locale: 'vi', value: '<p>Tiếng Việt</p>' },
@@ -550,6 +550,7 @@ describe('ContentService setting localization', () => {
     const result = await service.setting(base.key, 'en');
 
     expect(result.data.value).toBe('<p>English</p>');
+    expect(result.data.type).toBe(type);
     expect(result.data.category).toBe('general');
     expect(result.meta.locale).toEqual({
       requested: 'en',
@@ -558,11 +559,11 @@ describe('ContentService setting localization', () => {
     });
   });
 
-  it('falls back from English to Vietnamese when English is missing', async () => {
+  it.each(['text', 'plain_text'] as const)('falls back from English to Vietnamese for %s when English is missing', async (type) => {
     const { service } = createService([
       {
         ...base,
-        type: 'text',
+        type,
         value: null,
         translations: [
           { settingKey: base.key, locale: 'vi', value: '<p>Tiếng Việt</p>' },

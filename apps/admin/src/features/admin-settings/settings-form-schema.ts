@@ -3,7 +3,7 @@ import { SETTING_CATEGORIES } from "@setting-category";
 
 export const settingCategorySchema = z.enum(SETTING_CATEGORIES);
 
-export const settingTypeSchema = z.enum(["text", "image", "video"]);
+export const settingTypeSchema = z.enum(["text", "image", "video", "plain_text"]);
 
 export const settingKeySchema = z.string().trim().min(1, "Key là bắt buộc.");
 
@@ -26,7 +26,8 @@ export const settingFormSchema = z.object({
     context.addIssue({ code: "custom", path: ["key"], message: "Key không thể thay đổi sau khi tạo." });
   }
 
-  if (value.type === "text" && !hasTextContent(value.translations.vi)) {
+  if ((value.type === "text" && !hasTextContent(value.translations.vi)) ||
+      (value.type === "plain_text" && !value.translations.vi.trim())) {
     context.addIssue({
       code: "custom",
       path: ["translations", "vi"],

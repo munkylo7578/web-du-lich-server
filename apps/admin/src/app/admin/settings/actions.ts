@@ -105,7 +105,7 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
       description: data.description,
       type: data.type,
       value: data.type === "image" || data.type === "video" ? value : undefined,
-      translations: data.type === "text" ? data.translations : undefined,
+      translations: data.type === "text" || data.type === "plain_text" ? data.translations : undefined,
       canDelete: data.canDelete,
     });
 
@@ -113,7 +113,7 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
       setting.update({
         description: data.description,
         value: data.type === "image" || data.type === "video" ? value : undefined,
-        translations: data.type === "text" ? data.translations : undefined,
+        translations: data.type === "text" || data.type === "plain_text" ? data.translations : undefined,
       });
     }
 

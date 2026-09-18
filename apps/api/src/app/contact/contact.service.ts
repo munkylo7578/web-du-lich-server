@@ -5,6 +5,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { isEmail } from 'class-validator';
 
 import { API_ENV, type ApiEnvironment } from '../config/env';
 import { DATABASE, type Database } from '../database/database.module';
@@ -12,7 +13,6 @@ import type { ContactRequestDto } from './contact.dto';
 import { renderContactEmail } from './contact-email.template';
 
 const BREVO_SEND_EMAIL_URL = 'https://api.brevo.com/v3/smtp/email';
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type BrevoPayload = {
   sender: { email: string; name: string };
@@ -112,8 +112,8 @@ export class ContactService {
       },
     });
 
-    if (!setting || setting.type !== 'text') {
-      this.logger.error('Contact recipient setting is missing or is not text');
+    if (!setting || (setting.type !== 'text' && setting.type !== 'plain_text')) {
+      this.logger.error('Contact recipient setting is missing or is not text/plain_text');
       throw new InternalServerErrorException(
         'Contact recipient is not configured',
       );
@@ -129,7 +129,7 @@ export class ContactService {
       translations.find((translation) => translation.locale === 'vi')?.email ??
       translations[0]?.email;
 
-    if (!recipient || !EMAIL_PATTERN.test(recipient)) {
+    if (!recipient || /[<>]/.test(recipient) || !isEmail(recipient)) {
       this.logger.error('Contact recipient setting does not contain a valid email');
       throw new InternalServerErrorException(
         'Contact recipient is not configured',

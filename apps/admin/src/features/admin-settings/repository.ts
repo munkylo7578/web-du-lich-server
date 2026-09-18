@@ -143,7 +143,7 @@ export class DrizzleSettingRepository implements SettingRepository {
         });
 
       await tx.delete(siteSettingTranslations).where(eq(siteSettingTranslations.settingKey, snapshot.key));
-      if (snapshot.type === "text") {
+      if (snapshot.type === "text" || snapshot.type === "plain_text") {
         const rows = (["vi", "en"] as const)
           .filter((locale) => Boolean(snapshot.translations[locale]))
           .map((locale) => ({

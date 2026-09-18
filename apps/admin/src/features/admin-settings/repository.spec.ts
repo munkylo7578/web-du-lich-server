@@ -39,7 +39,7 @@ describe('settings repository category', () => {
     expect(findMany).not.toHaveBeenCalled();
   });
 
-  it('persists category on insert without overwriting it on conflict', async () => {
+  it.each(['text', 'plain_text'] as const)('persists %s translations and category without overwriting category on conflict', async (type) => {
     const onConflictDoUpdate = jest.fn().mockResolvedValue(undefined);
     const values = jest.fn().mockReturnValue({ onConflictDoUpdate });
     const tx = {
@@ -48,10 +48,11 @@ describe('settings repository category', () => {
       delete: jest.fn(() => ({ where: jest.fn().mockResolvedValue(undefined) })),
     };
     jest.mocked(db.transaction).mockImplementation(async (callback) => callback(tx as never));
-    const setting = Setting.create({ key: row.key, category: 'home', type: 'text', translations: { vi: 'Trang chủ' }, canDelete: true });
+    const setting = Setting.create({ key: row.key, category: 'home', type, translations: { vi: 'Trang chủ' }, canDelete: true });
     await new DrizzleSettingRepository().save(setting);
     expect(values.mock.calls[0][0]).toMatchObject({ category: 'home', key: row.key });
     expect(onConflictDoUpdate.mock.calls[0][0].target).toBe(siteSettings.key);
     expect(onConflictDoUpdate.mock.calls[0][0].set).not.toHaveProperty('category');
+    expect(values.mock.calls[1][0]).toEqual([expect.objectContaining({ settingKey: row.key, locale: 'vi', value: 'Trang chủ' })]);
   });
 });

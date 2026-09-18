@@ -239,7 +239,7 @@ function SettingFormDrawer({
       key: data.key,
       originalKey: data.originalKey,
       type: data.type,
-      hasValue: data.type === "text" ? Boolean(data.translations?.vi) : Boolean(data.value),
+      hasValue: data.type === "text" || data.type === "plain_text" ? Boolean(data.translations?.vi) : Boolean(data.value),
       pendingImages: pendingImages.length,
       pendingVideo: Boolean(pendingVideo),
     });
@@ -321,7 +321,8 @@ function SettingFormDrawer({
                         disabled
                         value={setting.type}
                       >
-                        <option value="text">Text</option>
+                        <option value="text">Text (trình soạn thảo)</option>
+                        <option value="plain_text">Văn bản thuần (input)</option>
                         <option value="image">Ảnh</option>
                         <option value="video">Video</option>
                       </select>
@@ -334,7 +335,8 @@ function SettingFormDrawer({
                       aria-invalid={Boolean(form.formState.errors.type)}
                       {...form.register("type")}
                     >
-                      <option value="text">Text</option>
+                      <option value="text">Text (trình soạn thảo)</option>
+                      <option value="plain_text">Văn bản thuần (input)</option>
                       <option value="image">Ảnh</option>
                       <option value="video">Video</option>
                     </select>
@@ -356,11 +358,12 @@ function SettingFormDrawer({
                     </label>
                   </div>
                 )}
-                {watchedType === "text" ? (
+                {watchedType === "text" || watchedType === "plain_text" ? (
                   <Tabs defaultValue="vi" className="gap-4">
                     <div>
                       <Label className="mb-2 gap-0">Giá trị<RequiredMark /></Label>
                       <p className="mb-3 text-xs text-muted-foreground">Soạn nội dung riêng cho từng ngôn ngữ. Tiếng Anh sẽ fallback sang tiếng Việt khi để trống.</p>
+                      {watchedType === "plain_text" && <p className="mb-3 text-xs text-muted-foreground">Nhập văn bản một dòng, không thêm định dạng HTML. Phù hợp cho email, số điện thoại hoặc URL.</p>}
                       <TabsList className="h-10 rounded-xl p-1">
                         <TabsTrigger value="vi" className="px-4">Tiếng Việt</TabsTrigger>
                         <TabsTrigger value="en" className="px-4">English</TabsTrigger>
@@ -371,7 +374,9 @@ function SettingFormDrawer({
                         <Controller
                           control={form.control}
                           name="translations.vi"
-                          render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nhập giá trị cấu hình bằng tiếng Việt..." invalid={Boolean(form.formState.errors.translations?.vi)} />}
+                          render={({ field }) => watchedType === "plain_text" ? (
+                            <Input {...field} value={field.value || ""} aria-label="Giá trị tiếng Việt" aria-required="true" aria-invalid={Boolean(form.formState.errors.translations?.vi)} placeholder="Ví dụ: Sales@kindtraveldmc.com" />
+                          ) : <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nhập giá trị cấu hình bằng tiếng Việt..." invalid={Boolean(form.formState.errors.translations?.vi)} />}
                         />
                       </FormField>
                     </TabsContent>
@@ -380,7 +385,9 @@ function SettingFormDrawer({
                         <Controller
                           control={form.control}
                           name="translations.en"
-                          render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Enter the setting value in English..." invalid={Boolean(form.formState.errors.translations?.en)} />}
+                          render={({ field }) => watchedType === "plain_text" ? (
+                            <Input {...field} value={field.value || ""} aria-label="English value" aria-invalid={Boolean(form.formState.errors.translations?.en)} placeholder="Leave blank to use the Vietnamese value" />
+                          ) : <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Enter the setting value in English..." invalid={Boolean(form.formState.errors.translations?.en)} />}
                         />
                       </FormField>
                     </TabsContent>
@@ -442,6 +449,7 @@ function SettingFormDrawer({
 function SettingTypeBadge({ type }: { type: AdminSetting["type"] }) {
   if (type === "image") return <Badge variant="secondary"><ImageIcon data-icon="inline-start" />Ảnh</Badge>;
   if (type === "video") return <Badge variant="secondary"><Video data-icon="inline-start" />Video</Badge>;
+  if (type === "plain_text") return <Badge variant="outline"><Type data-icon="inline-start" />Văn bản thuần</Badge>;
   return <Badge variant="outline"><Type data-icon="inline-start" />Text</Badge>;
 }
 
@@ -458,7 +466,7 @@ function SettingValuePreview({ setting }: { setting: AdminSetting }) {
     );
   }
 
-  return <p className="line-clamp-2 max-w-xs text-sm text-slate-700">{stripHtml(setting.translations.vi)}</p>;
+  return <p className="line-clamp-2 max-w-xs text-sm text-slate-700">{setting.type === "plain_text" ? setting.translations.vi : stripHtml(setting.translations.vi)}</p>;
 }
 
 function VideoPickerField({

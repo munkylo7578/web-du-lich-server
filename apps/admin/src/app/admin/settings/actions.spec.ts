@@ -35,6 +35,16 @@ beforeEach(() => {
 });
 
 describe('settings actions category scope', () => {
+  it('creates and updates plain-text translations without markup', async () => {
+    const overrides = { type: 'plain_text', translations: { vi: ' Sales@kindtraveldmc.com ', en: '' } };
+    expect((await saveSettingAction(body(overrides))).success).toBe(true);
+    const created = save.mock.calls[0][0];
+    expect(created.toSnapshot()).toMatchObject({ type: 'plain_text', value: undefined, translations: { vi: 'Sales@kindtraveldmc.com' } });
+    findByKey.mockResolvedValue(created);
+    expect((await saveSettingAction(body({ ...overrides, originalKey: payload.key, translations: { vi: 'support@example.com' } }))).success).toBe(true);
+    expect(save.mock.calls[1][0].toSnapshot().translations).toEqual({ vi: 'support@example.com' });
+  });
+
   it.each(['home', 'general'])('creates in %s and refreshes only that page', async (category) => {
     const result = await saveSettingAction(body({ category }));
     expect(result.success).toBe(true);

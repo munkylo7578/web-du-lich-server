@@ -7,6 +7,20 @@ const props: CreateSettingProps = {
 };
 
 describe('Setting category', () => {
+  it('creates, rehydrates and updates plain text without HTML processing', () => {
+    const setting = Setting.create({ ...props, type: 'plain_text', translations: { vi: ' Sales@kindtraveldmc.com ', en: ' ' } });
+    expect(setting.toSnapshot()).toMatchObject({ type: 'plain_text', value: undefined, translations: { vi: 'Sales@kindtraveldmc.com' } });
+    expect(setting.toSnapshot().translations.en).toBeUndefined();
+    const restored = Setting.rehydrate(setting.toSnapshot());
+    restored.update({ translations: { vi: ' <literal> & text ', en: ' English ' } });
+    expect(restored.toSnapshot().translations).toEqual({ vi: '<literal> & text', en: 'English' });
+  });
+
+  it('rejects blank plain text and preserves existing rich text', () => {
+    expect(() => Setting.create({ ...props, type: 'plain_text', translations: { vi: ' ' } })).toThrow('bắt buộc');
+    expect(Setting.create({ ...props, translations: { vi: '<p>Rich text</p>' } }).toSnapshot().translations.vi).toBe('<p>Rich text</p>');
+  });
+
   it.each(SETTING_CATEGORIES)('creates and rehydrates %s', (category) => {
     const setting = Setting.create({ ...props, category });
     expect(setting.toSnapshot().category).toBe(category);

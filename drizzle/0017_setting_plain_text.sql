@@ -1,0 +1,3 @@
+ALTER TYPE "public"."site_setting_type" ADD VALUE 'plain_text';--> statement-breakpoint
+ALTER TABLE "site_settings" DROP CONSTRAINT "site_settings_value_by_type_check";--> statement-breakpoint
+ALTER TABLE "site_settings" ADD CONSTRAINT "site_settings_value_by_type_check" CHECK (("site_settings"."type" in ('image', 'video') and "site_settings"."value" is not null and char_length(trim("site_settings"."value")) > 0) or ("site_settings"."type"::text in ('text', 'plain_text') and "site_settings"."value" is null));
