@@ -75,6 +75,10 @@ type PlanRow = {
 type TourRow = {
   id: string;
   departureStartMonth: number | null;
+  serviceDescription: string | null;
+  accommodationDescription: string | null;
+  transportationDescription: string | null;
+  tourguideDescription: string | null;
   translations: TranslationRow[];
   planRows: PlanRow[];
   imageLinks: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
@@ -188,7 +192,7 @@ export class ContentService {
         },
       },
     });
-    const result = row && this.mapTour(row, locale);
+    const result = row && this.mapTourDetail(row, locale);
     if (!result) throw new NotFoundException('Tour or translation not found');
     return { data: result };
   }
@@ -455,6 +459,19 @@ export class ContentService {
         .filter(Boolean),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+    };
+  }
+
+  private mapTourDetail(row: TourRow, locale: Locale) {
+    const tour = this.mapTour(row, locale);
+    if (!tour) return null;
+
+    return {
+      ...tour,
+      serviceDescription: row.serviceDescription ?? null,
+      accommodationDescription: row.accommodationDescription ?? null,
+      transportationDescription: row.transportationDescription ?? null,
+      tourguideDescription: row.tourguideDescription ?? null,
     };
   }
 

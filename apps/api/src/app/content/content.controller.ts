@@ -16,6 +16,7 @@ import {
   ServiceContentDto,
   SettingContentDto,
   TourContentDto,
+  TourDetailContentDto,
 } from './content.dto';
 import { ContentService } from './content.service';
 
@@ -28,7 +29,7 @@ export class ContentController {
 
   @Get('tours')
   @ApiSuccessEnvelope({
-    dataType: TourContentDto,
+    dataType: TourDetailContentDto,
     isArray: true,
     hasMeta: true,
     description:

@@ -256,7 +256,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
             <div className="min-h-full w-full min-w-0">
               <div className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-x-0 border-t-0 px-5 py-3 sm:px-8">
                 <div className="mx-auto w-full max-w-[1480px]">
-                  <div role="tablist" aria-label="Các bước thiết lập tour" className="mx-auto grid w-full grid-cols-3 rounded-2xl border border-cyan-900/15 bg-cyan-50/80 p-1 shadow-inner">
+                  <div role="tablist" aria-label="Các bước thiết lập tour" className="mx-auto grid w-full grid-cols-3 gap-1 border-b border-cyan-900/20">
                     {FORM_TABS.map((tab) => {
                       const isActive = activeTab === tab.value;
                       return (
@@ -271,7 +271,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                           disabled={isPending}
                           onClick={() => setActiveTab(tab.value)}
                           onKeyDown={(event) => handleFormTabKeyDown(event, tab.value)}
-                          className={`h-10 min-w-0 rounded-xl px-2 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/50 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:px-4 sm:text-sm ${isActive ? "bg-white text-cyan-950 shadow-sm" : "text-slate-600 hover:bg-white/60 hover:text-slate-950"}`}
+                          className={`relative h-11 min-w-0 px-2 text-center text-xs font-semibold transition-colors after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/50 focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:px-4 sm:text-sm ${isActive ? "bg-cyan-900 text-white after:bg-cyan-300" : "text-slate-600 after:bg-transparent hover:bg-cyan-900/5 hover:text-cyan-950"}`}
                         >
                           {tab.label}
                         </button>
@@ -471,24 +471,29 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                   </section>
                 </div>
 
-                <div id="tour-form-panel-services" role="tabpanel" aria-labelledby="tour-form-tab-services" hidden={activeTab !== "services"} className="w-full min-w-0 space-y-7">
-                  <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-                    <SectionHeading title="Mô tả dịch vụ" description="Giới thiệu tổng quan về hệ thống dịch vụ sử dụng trong tour." />
+                <div id="tour-form-panel-services" role="tabpanel" aria-labelledby="tour-form-tab-services" hidden={activeTab !== "services"} className="w-full min-w-0">
+                  <section className="space-y-5 py-2 sm:py-4">
+                    <SectionHeading title="Dịch vụ tour" description="Giới thiệu tổng quan và cấu hình dịch vụ theo từng nhóm." />
                     <FormField fieldPath="serviceDescription" label="Mô tả dịch vụ chung" error={form.formState.errors.serviceDescription?.message}>
                       <Controller control={form.control} name="serviceDescription" render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Thông tin tổng quan về dịch vụ của tour..." invalid={Boolean(form.formState.errors.serviceDescription)} />} />
                     </FormField>
                   </section>
 
                   {SERVICE_CATEGORIES.map((category) => (
-                    <section key={category} className="tour-drawer-panel relative space-y-5 overflow-visible rounded-[28px] p-5 sm:p-7">
-                      <SectionHeading title={SERVICE_CATEGORY_LABELS[category]} description="Bổ sung mô tả riêng và chọn các dịch vụ thuộc đúng nhóm này." />
-                      <FormField fieldPath={`serviceDescriptions.${category}`} label={`Mô tả ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}`} error={form.formState.errors.serviceDescriptions?.[category]?.message}>
-                        <Controller control={form.control} name={`serviceDescriptions.${category}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder={`Thông tin về ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}...`} invalid={Boolean(form.formState.errors.serviceDescriptions?.[category])} />} />
-                      </FormField>
-                      <div className="border-t border-cyan-900/10 pt-5">
+                    <div key={category}>
+                      <Separator className="my-7 bg-cyan-900/15" />
+                      <section className="space-y-5 py-2 sm:py-4">
+                        <SectionHeading title={SERVICE_CATEGORY_LABELS[category]} description="Bổ sung mô tả riêng và chọn các dịch vụ thuộc đúng nhóm này." />
+                        <div className="grid min-w-0 gap-6 xl:grid-cols-2 xl:items-start">
+                          <FormField fieldPath={`serviceDescriptions.${category}`} label={`Mô tả ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}`} error={form.formState.errors.serviceDescriptions?.[category]?.message}>
+                            <Controller control={form.control} name={`serviceDescriptions.${category}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder={`Thông tin về ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}...`} invalid={Boolean(form.formState.errors.serviceDescriptions?.[category])} />} />
+                          </FormField>
+                          <div className="min-w-0">
                         <Controller control={form.control} name="services" render={({ field }) => <ServiceManager category={category} value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
-                      </div>
-                    </section>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
                   ))}
                 </div>
               </div>

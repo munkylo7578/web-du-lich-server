@@ -6,6 +6,10 @@ describe('ContentService tour departure start month', () => {
     const row = {
       id: 'b2a985d1-2a16-43da-848f-c533aa56ae3c',
       departureStartMonth,
+      serviceDescription: '<p>Dịch vụ chung</p>',
+      accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+      transportationDescription: '<p>Di chuyển an toàn</p>',
+      tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
       translations: [
         { locale: 'vi', name: 'Tour thử nghiệm', description: null },
       ],
@@ -42,6 +46,13 @@ describe('ContentService tour departure start month', () => {
         const detail = await service.tour(id, locale);
         expect(list.data[0]).toHaveProperty('departureStartMonth', month);
         expect(detail.data).toHaveProperty('departureStartMonth', month);
+        expect(list.data[0]).not.toHaveProperty('serviceDescription');
+        expect(detail.data).toMatchObject({
+          serviceDescription: '<p>Dịch vụ chung</p>',
+          accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+          transportationDescription: '<p>Di chuyển an toàn</p>',
+          tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
+        });
         expect(JSON.parse(JSON.stringify(detail.data))).toHaveProperty(
           'departureStartMonth',
           month,

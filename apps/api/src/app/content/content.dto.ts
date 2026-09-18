@@ -126,6 +126,17 @@ export class TourContentDto {
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
 }
 
+export class TourDetailContentDto extends TourContentDto {
+  @ApiPropertyOptional({ nullable: true })
+  serviceDescription!: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  accommodationDescription!: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  transportationDescription!: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  tourguideDescription!: string | null;
+}
+
 export class SettingContentDto {
   @ApiProperty() key!: string;
   @ApiProperty({
