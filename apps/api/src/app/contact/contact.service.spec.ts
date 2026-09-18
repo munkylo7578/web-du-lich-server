@@ -1,5 +1,6 @@
 import {
   InternalServerErrorException,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 
@@ -102,12 +103,83 @@ describe('ContactService', () => {
     const { service } = createService([
       { locale: 'vi', value: 'recipient@example.com' },
     ]);
+    const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     global.fetch = jest
       .fn()
-      .mockResolvedValue({ ok: false, status: 401 }) as typeof fetch;
+      .mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: jest.fn().mockResolvedValue({
+          code: 'invalid_parameter',
+          message: 'Sender verified@example.com is not authorized',
+        }),
+      }) as typeof fetch;
 
-    await expect(service.send({})).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
+    await expect(service.send({})).rejects.toThrow('Email service unavailable');
+    expect(log).toHaveBeenCalledWith(
+      'Brevo rejected contact email with status 400: {"code":"invalid_parameter","message":"Sender [redacted-email] is not authorized"}',
+    );
+  });
+
+  it('redacts sensitive values and ignores extra provider response fields', async () => {
+    const { service } = createService([
+      { locale: 'vi', value: 'recipient@example.com' },
+    ]);
+    const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const request = {
+      email: 'visitor@example.com',
+      name: 'Visitor Name',
+      mobile: '+84912345678',
+      message: 'Private travel plans',
+    };
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: jest.fn().mockResolvedValue({
+        code: 'invalid_parameter',
+        message: `${environment.brevoApiKey}\n${Object.values(request).join(' ')}`,
+        payload: request,
+      }),
+    }) as typeof fetch;
+
+    await expect(service.send(request)).rejects.toBeInstanceOf(ServiceUnavailableException);
+    const logged = String(log.mock.calls[0][0]);
+    for (const sensitive of [environment.brevoApiKey, ...Object.values(request)]) {
+      expect(logged).not.toContain(sensitive);
+    }
+    expect(logged).not.toContain('\n');
+    expect(logged).not.toContain('payload');
+    expect(logged).toContain('invalid_parameter');
+  });
+
+  it.each([null, 'not an object', { message: 123 }, { message: 'x'.repeat(2000) }])(
+    'handles unexpected provider error details safely',
+    async (body) => {
+      const { service } = createService([{ locale: 'vi', value: 'recipient@example.com' }]);
+      const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: jest.fn().mockResolvedValue(body),
+      }) as typeof fetch;
+
+      await expect(service.send({})).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(String(log.mock.calls[0][0]).length).toBeLessThan(1200);
+    },
+  );
+
+  it('preserves the service error when the provider body cannot be read as JSON', async () => {
+    const { service } = createService([{ locale: 'vi', value: 'recipient@example.com' }]);
+    const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: jest.fn().mockRejectedValue(new Error('Invalid JSON')),
+    }) as typeof fetch;
+
+    await expect(service.send({})).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(log).toHaveBeenCalledWith(
+      'Brevo rejected contact email with status 400: Error response unavailable or not JSON',
     );
   });
 });

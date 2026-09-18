@@ -57,11 +57,47 @@ export class ContactService {
     }
 
     if (!response.ok) {
-      this.logger.error(`Brevo rejected contact email with status ${response.status}`);
+      const details = await this.brevoErrorDetails(response, request);
+      this.logger.error(
+        `Brevo rejected contact email with status ${response.status}: ${details}`,
+      );
       throw new ServiceUnavailableException('Email service unavailable');
     }
 
     return { data: { sent: true } };
+  }
+
+  private async brevoErrorDetails(response: Response, request: ContactRequestDto) {
+    try {
+      const body: unknown = await response.json();
+      if (!body || typeof body !== 'object') return 'No structured error details';
+
+      const error = body as Record<string, unknown>;
+      const redact = (value: unknown) => {
+        if (typeof value !== 'string') return 'unknown';
+        let safe = value;
+        const sensitiveValues = [
+          this.env.brevoApiKey,
+          this.env.brevoSenderName,
+          request.email,
+          request.name,
+          request.mobile,
+          request.message,
+        ].filter((item): item is string => Boolean(item));
+        for (const sensitive of sensitiveValues.sort((a, b) => b.length - a.length)) {
+          safe = safe.split(sensitive).join('[redacted]');
+        }
+        return safe
+          .replace(/[^\s<>"'@]+@[^\s<>"'@]+/g, '[redacted-email]')
+          .replace(/[\r\n\t]/g, ' ')
+          .slice(0, 1000);
+      };
+
+      return JSON.stringify({ code: redact(error.code), message: redact(error.message) });
+    } catch {
+      // An unreadable provider response must not mask the public service error.
+      return 'Error response unavailable or not JSON';
+    }
   }
 
   private async recipientEmail() {
