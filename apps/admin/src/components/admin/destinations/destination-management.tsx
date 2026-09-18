@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { DESTINATION_COUNTRIES, DESTINATION_COUNTRY_LABELS, isDestinationCountry } from "@destination-country";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,14 +9,13 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Edit3, Languages, Loader2, MapPin, MoreHorizontal, Plus, Search, Trash2, X } from "lucide-react";
 
 import {
   deleteAdminDestinationAction,
+  listAdminDestinationsAction,
   saveAdminDestinationAction,
   searchDestinationWardsAction,
 } from "@/app/admin/destinations/actions";
@@ -37,14 +36,18 @@ import {
   type DestinationEditorValues,
 } from "@/features/admin-tours/tour-form-schema";
 import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
+import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
+import { ServerPagination } from "@/components/admin/shared/server-pagination";
+import { useServerPagination } from "@/hooks/use-server-pagination";
 
 type Locale = "vi" | "en";
 
 const helper = createColumnHelper<AdminDestination>();
 
-export function DestinationManagement({ destinations }: { destinations: AdminDestination[] }) {
+export function DestinationManagement({ initialResult }: { initialResult: AdminListResult<AdminDestination> }) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const loadPage = useCallback((input: AdminListQuery) => listAdminDestinationsAction(input), []);
+  const list = useServerPagination({ initialResult, loadPage });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingDestination, setEditingDestination] = useState<AdminDestination | null>(null);
   const [deletingDestination, setDeletingDestination] = useState<AdminDestination | null>(null);
@@ -150,14 +153,9 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
   ], []);
 
   const table = useReactTable({
-    data: destinations,
+    data: list.items,
     columns,
-    state: { globalFilter: query },
-    onGlobalFilterChange: setQuery,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
   });
 
   return (
@@ -184,9 +182,9 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
           <div className="flex flex-col gap-3 border-b border-cyan-900/15 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} />
-              <Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên, mô tả điểm đến..." />
+              <Input value={list.query} onChange={(event) => list.setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên, mô tả điểm đến..." />
             </div>
-            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{table.getFilteredRowModel().rows.length} điểm đến</p>
+            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{list.total} điểm đến</p>
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -195,7 +193,7 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
                 <TableBody>{table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => <TableRow key={row.id}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={columns.length} className="h-52 text-center"><div className="mx-auto flex max-w-sm flex-col items-center"><div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div><p className="font-medium">Chưa tìm thấy điểm đến</p><p className="mt-1 text-sm text-muted-foreground">Tạo điểm đến mới hoặc thử từ khóa khác.</p></div></TableCell></TableRow>}</TableBody>
               </Table>
             </div>
-            {table.getPageCount() > 1 && <div className="flex items-center justify-end gap-2 border-t p-4"><Button variant="outline" disabled={!table.getCanPreviousPage()} onClick={() => table.previousPage()}>Trước</Button><span className="px-2 text-sm text-muted-foreground">{table.getState().pagination.pageIndex + 1} / {table.getPageCount()}</span><Button variant="outline" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>Sau</Button></div>}
+            <ServerPagination {...list} onPageChange={list.setPage} onPageSizeChange={list.setPageSize} />
           </CardContent>
         </Card>
       </section>
@@ -204,8 +202,8 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
         key={editingDestination?.destinationId || "new"}
         open={drawerOpen}
         destination={editingDestination}
-        initialWards={destinations.flatMap((destination) => destination.wards)}
-        onSaved={() => router.refresh()}
+        initialWards={list.items.flatMap((destination) => destination.wards)}
+        onSaved={() => { list.reload(); router.refresh(); }}
         onOpenChange={setDrawerOpen}
       />
       <AlertDialog open={Boolean(deletingDestination)} onOpenChange={(open) => !open && setDeletingDestination(null)}>
@@ -225,9 +223,10 @@ export function DestinationManagement({ destinations }: { destinations: AdminDes
                 startDelete(async () => {
                   const result = await deleteAdminDestinationAction(deletingDestination.destinationId);
                   setDeleteMessage(result.message);
-                  if (result.success) {
-                    setDeletingDestination(null);
-                    router.refresh();
+                    if (result.success) {
+                      setDeletingDestination(null);
+                      list.reload();
+                      router.refresh();
                   }
                 });
               }}

@@ -7,6 +7,7 @@ import { destinationWardCodes } from "@destination-country";
 import { requireSession } from "@/lib/auth/session";
 import {
   deleteDestinationRecord,
+  listAdminDestinations,
   saveDestinationRecord,
   searchWards,
 } from "@/features/admin-tours/repository";
@@ -14,6 +15,7 @@ import {
   destinationEditorSchema,
 } from "@/features/admin-tours/tour-form-schema";
 import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
+import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
 
 export type DestinationActionState = {
   success: boolean;
@@ -22,6 +24,11 @@ export type DestinationActionState = {
 };
 
 const destinationIdSchema = z.string().uuid();
+
+export async function listAdminDestinationsAction(input: AdminListQuery): Promise<AdminListResult<AdminDestination>> {
+  await requireSession();
+  return listAdminDestinations(input);
+}
 
 export async function searchDestinationWardsAction(query: string): Promise<AdminWard[]> {
   await requireSession();

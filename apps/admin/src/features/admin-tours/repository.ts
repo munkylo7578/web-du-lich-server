@@ -17,7 +17,7 @@ import {
   tourTranslations,
   wards,
 } from "@database";
-import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, ilike, inArray, or } from "drizzle-orm";
 
 import type { TourRepository, TourSaveDestination, TourSaveImage } from "@/domains/tour/domain";
 import type { TourImageMetadataUpdate } from "@/domains/tour/domain/tour-repository";
@@ -26,22 +26,70 @@ import { TourMapper } from "./tour-mapper";
 import type { AdminDestination, AdminTour, AdminTourPlan, AdminWard } from "./tour-types";
 import { hydrateServices } from "@/features/admin-services/repository";
 import { deleteUnreferencedImages, removeUnreferencedMediaFiles } from "@/features/shared/media-cleanup";
+import {
+  createAdminListResult,
+  normalizeAdminListQuery,
+  resolveAdminListPage,
+  type AdminListQuery,
+  type AdminListResult,
+} from "@/features/shared/admin-list";
 
 const WARD_SEARCH_LIMIT = 20;
 const DESTINATION_SEARCH_LIMIT = 20;
 
-export async function listAdminTours(): Promise<AdminTour[]> {
-  const rows = await db.select(tourColumns).from(tours).orderBy(desc(tours.updatedAt));
-  return hydrateAdminTours(rows);
+export async function listAdminTours(input: AdminListQuery = {}): Promise<AdminListResult<AdminTour>> {
+  const normalized = normalizeAdminListQuery(input);
+  const pattern = `%${normalized.query}%`;
+  const searchCondition = normalized.query ? ilike(tourTranslations.name, pattern) : undefined;
+  const [{ total }] = await db
+    .select({ total: countDistinct(tours.id) })
+    .from(tours)
+    .leftJoin(tourTranslations, eq(tourTranslations.tourId, tours.id))
+    .where(searchCondition);
+  const resolved = resolveAdminListPage(Number(total), normalized);
+  const rows = await db
+    .select(tourColumns)
+    .from(tours)
+    .leftJoin(tourTranslations, eq(tourTranslations.tourId, tours.id))
+    .where(searchCondition)
+    .groupBy(tours.id, tours.departureStartMonth, tours.createdAt, tours.updatedAt)
+    .orderBy(desc(tours.updatedAt), asc(tours.id))
+    .limit(resolved.pageSize)
+    .offset(resolved.offset);
+
+  return createAdminListResult(await hydrateAdminTours(rows), Number(total), resolved);
 }
 
-export async function listAdminDestinations(): Promise<AdminDestination[]> {
+export async function listAdminDestinations(input: AdminListQuery = {}): Promise<AdminListResult<AdminDestination>> {
+  const normalized = normalizeAdminListQuery(input);
+  const pattern = `%${normalized.query}%`;
+  const searchCondition = normalized.query
+    ? or(
+        ilike(destinationTranslations.name, pattern),
+        ilike(destinationTranslations.description, pattern),
+      )
+    : undefined;
+  const [{ total }] = await db
+    .select({ total: countDistinct(destinations.id) })
+    .from(destinations)
+    .leftJoin(destinationTranslations, eq(destinationTranslations.destinationId, destinations.id))
+    .where(searchCondition);
+  const resolved = resolveAdminListPage(Number(total), normalized);
   const rows = await db
     .select({ id: destinations.id })
     .from(destinations)
-    .orderBy(desc(destinations.updatedAt));
+    .leftJoin(destinationTranslations, eq(destinationTranslations.destinationId, destinations.id))
+    .where(searchCondition)
+    .groupBy(destinations.id, destinations.updatedAt)
+    .orderBy(desc(destinations.updatedAt), asc(destinations.id))
+    .limit(resolved.pageSize)
+    .offset(resolved.offset);
 
-  return hydrateDestinations(rows.map((row) => row.id));
+  return createAdminListResult(
+    await hydrateDestinations(rows.map((row) => row.id)),
+    Number(total),
+    resolved,
+  );
 }
 
 export async function searchWards(query: string): Promise<AdminWard[]> {

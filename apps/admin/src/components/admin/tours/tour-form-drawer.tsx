@@ -75,7 +75,7 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
   };
 }
 
-export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; tour: AdminTour | null; onOpenChange: (open: boolean) => void }) {
+export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: boolean; tour: AdminTour | null; onSaved?: () => void; onOpenChange: (open: boolean) => void }) {
   const values = useMemo(() => toFormValues(tour), [tour]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
@@ -185,6 +185,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
         setPendingImages([]);
         setPendingPlanImages([]);
         onOpenChange(false);
+        onSaved?.();
       }
     });
   }, (errors) => {

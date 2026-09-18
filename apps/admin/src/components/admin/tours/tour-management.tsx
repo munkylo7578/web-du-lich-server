@@ -1,18 +1,17 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Edit3, ImageIcon, Languages, MapPin, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 
-import { deleteTourAction } from "@/app/admin/tours/actions";
+import { deleteTourAction, listAdminToursAction } from "@/app/admin/tours/actions";
 import { TourFormDrawer } from "./tour-form-drawer";
+import { ServerPagination } from "@/components/admin/shared/server-pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,11 +19,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AdminTour } from "@/features/admin-tours/tour-types";
+import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
+import { useServerPagination } from "@/hooks/use-server-pagination";
 
 const helper = createColumnHelper<AdminTour>();
 
-export function TourManagement({ tours }: { tours: AdminTour[] }) {
-  const [query, setQuery] = useState("");
+export function TourManagement({ initialResult }: { initialResult: AdminListResult<AdminTour> }) {
+  const loadPage = useCallback((input: AdminListQuery) => listAdminToursAction(input), []);
+  const list = useServerPagination({ initialResult, loadPage });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<AdminTour | null>(null);
   const [deletingTour, setDeletingTour] = useState<AdminTour | null>(null);
@@ -46,14 +48,9 @@ export function TourManagement({ tours }: { tours: AdminTour[] }) {
   ], []);
 
   const table = useReactTable({
-    data: tours,
+    data: list.items,
     columns,
-    state: { globalFilter: query },
-    onGlobalFilterChange: setQuery,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
   });
 
   return (
@@ -66,8 +63,8 @@ export function TourManagement({ tours }: { tours: AdminTour[] }) {
 
         <Card className="gap-0 overflow-hidden rounded-[28px] border border-cyan-900/15 bg-white/95 py-0 shadow-[0_18px_55px_-42px_rgba(8,47,73,0.55)]">
           <div className="flex flex-col gap-3 border-b border-cyan-900/15 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên tour..." /></div>
-            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{table.getFilteredRowModel().rows.length} tour</p>
+            <div className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} /><Input value={list.query} onChange={(event) => list.setQuery(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm theo tên tour..." /></div>
+            <p className="rounded-full border border-cyan-900/15 bg-cyan-50 px-3 py-1 text-sm font-medium text-slate-800">{list.total} tour</p>
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -76,14 +73,14 @@ export function TourManagement({ tours }: { tours: AdminTour[] }) {
                 <TableBody>{table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => <TableRow key={row.id}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={columns.length} className="h-52 text-center"><div className="mx-auto flex max-w-sm flex-col items-center"><div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div><p className="font-medium">Chưa tìm thấy tour</p><p className="mt-1 text-sm text-muted-foreground">Tạo tour mới hoặc thử từ khóa khác.</p></div></TableCell></TableRow>}</TableBody>
               </Table>
             </div>
-            {table.getPageCount() > 1 && <div className="flex items-center justify-end gap-2 border-t p-4"><Button variant="outline" disabled={!table.getCanPreviousPage()} onClick={() => table.previousPage()}>Trước</Button><span className="px-2 text-sm text-muted-foreground">{table.getState().pagination.pageIndex + 1} / {table.getPageCount()}</span><Button variant="outline" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>Sau</Button></div>}
+            <ServerPagination {...list} onPageChange={list.setPage} onPageSizeChange={list.setPageSize} />
           </CardContent>
         </Card>
       </section>
 
-      <TourFormDrawer key={editingTour?.id || "new"} open={drawerOpen} tour={editingTour} onOpenChange={setDrawerOpen} />
+      <TourFormDrawer key={editingTour?.id || "new"} open={drawerOpen} tour={editingTour} onSaved={list.reload} onOpenChange={setDrawerOpen} />
       <AlertDialog open={Boolean(deletingTour)} onOpenChange={(open) => !open && setDeletingTour(null)}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xóa tour này?</AlertDialogTitle><AlertDialogDescription>Tour và liên kết hình ảnh sẽ bị xóa khỏi cơ sở dữ liệu. Thao tác này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel><AlertDialogAction disabled={isDeleting} onClick={(event) => { event.preventDefault(); if (!deletingTour) return; startDelete(async () => { const result = await deleteTourAction(deletingTour.id); if (result.success) setDeletingTour(null); }); }}>{isDeleting ? "Đang xóa..." : "Xóa tour"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xóa tour này?</AlertDialogTitle><AlertDialogDescription>Tour và liên kết hình ảnh sẽ bị xóa khỏi cơ sở dữ liệu. Thao tác này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel><AlertDialogAction disabled={isDeleting} onClick={(event) => { event.preventDefault(); if (!deletingTour) return; startDelete(async () => { const result = await deleteTourAction(deletingTour.id); if (result.success) { setDeletingTour(null); list.reload(); } }); }}>{isDeleting ? "Đang xóa..." : "Xóa tour"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
     </>
   );

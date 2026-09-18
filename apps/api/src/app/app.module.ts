@@ -5,6 +5,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ApiExceptionFilter } from './common/api-exception.filter';
 import { ApiKeyGuard } from './common/api-key.guard';
 import { ApiResponseInterceptor } from './common/api-response.interceptor';
+import { ContactController } from './contact/contact.controller';
+import { ContactService } from './contact/contact.service';
 import { ContentController } from './content/content.controller';
 import { ContentService } from './content/content.service';
 import { API_ENV, loadEnvironment } from './config/env';
@@ -17,9 +19,10 @@ const env = loadEnvironment();
     DatabaseModule,
     ThrottlerModule.forRoot([{ ttl: env.rateLimitTtlMs, limit: env.rateLimitLimit }]),
   ],
-  controllers: [ContentController],
+  controllers: [ContentController, ContactController],
   providers: [
     ContentService,
+    ContactService,
     { provide: API_ENV, useValue: env },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: ApiKeyGuard },

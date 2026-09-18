@@ -1,25 +1,70 @@
 import "server-only";
 
 import { db, siteSettings, siteSettingTranslations } from "@database";
-import { eq } from "drizzle-orm";
+import { and, asc, countDistinct, eq, ilike, inArray, or } from "drizzle-orm";
 import { isSettingCategory, type SettingCategory } from "@setting-category";
 
 import { Setting, type SettingLocale, type SettingRepository, type SettingSnapshot } from "@/domains/setting/domain";
 import type { AdminSetting } from "./settings-types";
 import { removeUnreferencedMediaFiles } from "@/features/shared/media-cleanup";
+import {
+  createAdminListResult,
+  normalizeAdminListQuery,
+  resolveAdminListPage,
+  type AdminListQuery,
+  type AdminListResult,
+} from "@/features/shared/admin-list";
 
 type SettingRow = typeof siteSettings.$inferSelect & {
   translations: Array<typeof siteSettingTranslations.$inferSelect>;
 };
 
-export async function listAdminSettings(category: SettingCategory): Promise<AdminSetting[]> {
+export async function listAdminSettings(
+  category: SettingCategory,
+  input: AdminListQuery = {},
+): Promise<AdminListResult<AdminSetting>> {
   if (!isSettingCategory(category)) throw new Error("Nhóm setting không hợp lệ.");
-  const rows = await db.query.siteSettings.findMany({
-    where: (table, { eq: equals }) => equals(table.category, category),
-    orderBy: (table, { asc: ascending }) => [ascending(table.key)],
-    with: { translations: true },
+  const normalized = normalizeAdminListQuery(input);
+  const pattern = `%${normalized.query}%`;
+  const searchCondition = normalized.query
+    ? or(
+        ilike(siteSettings.key, pattern),
+        ilike(siteSettings.description, pattern),
+        ilike(siteSettings.value, pattern),
+        ilike(siteSettings.type, pattern),
+        ilike(siteSettingTranslations.value, pattern),
+      )
+    : undefined;
+  const whereCondition = and(eq(siteSettings.category, category), searchCondition);
+  const [{ total }] = await db
+    .select({ total: countDistinct(siteSettings.key) })
+    .from(siteSettings)
+    .leftJoin(siteSettingTranslations, eq(siteSettingTranslations.settingKey, siteSettings.key))
+    .where(whereCondition);
+  const resolved = resolveAdminListPage(Number(total), normalized);
+  const keys = await db
+    .select({ key: siteSettings.key })
+    .from(siteSettings)
+    .leftJoin(siteSettingTranslations, eq(siteSettingTranslations.settingKey, siteSettings.key))
+    .where(whereCondition)
+    .groupBy(siteSettings.key)
+    .orderBy(asc(siteSettings.key))
+    .limit(resolved.pageSize)
+    .offset(resolved.offset);
+  const orderedKeys = keys.map((row) => row.key);
+  const rows = orderedKeys.length
+    ? await db.query.siteSettings.findMany({
+        where: (table, { inArray: within }) => within(table.key, orderedKeys),
+        with: { translations: true },
+      })
+    : [];
+  const byKey = new Map(rows.map((row) => [row.key, row]));
+  const items = orderedKeys.flatMap((key) => {
+    const row = byKey.get(key);
+    return row ? [toAdminSetting(row)] : [];
   });
-  return rows.map(toAdminSetting);
+
+  return createAdminListResult(items, Number(total), resolved);
 }
 
 function toAdminSetting(row: SettingRow): AdminSetting {

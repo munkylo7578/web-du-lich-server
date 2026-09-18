@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { DestinationCountry } from '@destination-country';
 import { SERVICE_CATEGORIES, type ServiceCategory } from '@service-category';
+import { SETTING_CATEGORIES, type SettingCategory } from '@setting-category';
 
 class ContentLocaleMetaDto {
   @ApiProperty({ enum: ['vi', 'en'] }) requested!: 'vi' | 'en';
@@ -52,8 +53,24 @@ class WardContentDto {
   province!: ProvinceContentDto | null;
 }
 
+class TourPlanContentDto {
+  @ApiProperty({ format: 'uuid' }) planId!: string;
+  @ApiProperty({ example: 'Ngày 1' }) name!: string;
+  @ApiProperty() description!: string;
+  @ApiProperty({ minimum: 0 }) sortOrder!: number;
+  @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
+  @ApiProperty({ type: ContentImageDto, isArray: true })
+  images!: ContentImageDto[];
+}
+
 class LinkedTourContentDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiPropertyOptional({ nullable: true, minimum: 1, maximum: 12 })
+  departureStartMonth!: number | null;
+  @ApiProperty() name!: string;
+  @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
+  @ApiProperty({ type: TourPlanContentDto, isArray: true })
+  plans!: TourPlanContentDto[];
   @ApiProperty({ type: TourImageDto, isArray: true }) images!: TourImageDto[];
 }
 
@@ -89,16 +106,6 @@ export class DestinationContentDto {
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
 }
 
-class TourPlanContentDto {
-  @ApiProperty({ format: 'uuid' }) planId!: string;
-  @ApiProperty({ example: 'Ngày 1' }) name!: string;
-  @ApiProperty() description!: string;
-  @ApiProperty({ minimum: 0 }) sortOrder!: number;
-  @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
-  @ApiProperty({ type: ContentImageDto, isArray: true })
-  images!: ContentImageDto[];
-}
-
 export class TourContentDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiPropertyOptional({ nullable: true, minimum: 1, maximum: 12 })
@@ -121,8 +128,15 @@ export class TourContentDto {
 
 export class SettingContentDto {
   @ApiProperty() key!: string;
+  @ApiProperty({
+    enum: SETTING_CATEGORIES,
+    description: 'Stable setting category, independent of locale.',
+    example: 'general',
+  })
+  category!: SettingCategory;
   @ApiProperty() value!: string;
-  @ApiProperty({ enum: ['text', 'image'] }) type!: 'text' | 'image';
+  @ApiProperty({ enum: ['text', 'image', 'video'] })
+  type!: 'text' | 'image' | 'video';
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
 }

@@ -42,6 +42,9 @@ type WardCoordinate = { latitude: number | null; longitude: number | null };
 type DestinationTourLinkRow = {
   tour: {
     id: string;
+    departureStartMonth: number | null;
+    translations: TranslationRow[];
+    planRows: PlanRow[];
     imageLinks: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   };
 };
@@ -214,8 +217,18 @@ export class ContentService {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
             tour: {
-              columns: { id: true },
+              columns: { id: true, departureStartMonth: true },
               with: {
+                translations: true,
+                planRows: {
+                  orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
+                  with: {
+                    imageLinks: {
+                      orderBy: (link, { asc }) => [asc(link.sortOrder)],
+                      with: { image: true },
+                    },
+                  },
+                },
                 imageLinks: {
                   orderBy: (link, { asc }) => [asc(link.sortOrder)],
                   with: { image: true },
@@ -247,8 +260,18 @@ export class ContentService {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
             tour: {
-              columns: { id: true },
+              columns: { id: true, departureStartMonth: true },
               with: {
+                translations: true,
+                planRows: {
+                  orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
+                  with: {
+                    imageLinks: {
+                      orderBy: (link, { asc }) => [asc(link.sortOrder)],
+                      with: { image: true },
+                    },
+                  },
+                },
                 imageLinks: {
                   orderBy: (link, { asc }) => [asc(link.sortOrder)],
                   with: { image: true },
@@ -309,16 +332,7 @@ export class ContentService {
   }
 
   async settings(locale: Locale) {
-    if (this.env.publicSettingKeys.length === 0)
-      return {
-        data: [],
-        meta: {
-          locale: { requested: locale, effective: locale, fallback: false },
-        },
-      };
     const rows = await this.db.query.siteSettings.findMany({
-      where: (table, { inArray: includedIn }) =>
-        includedIn(table.key, this.env.publicSettingKeys),
       orderBy: (table, { asc }) => [asc(table.key)],
       with: { translations: true },
     });
@@ -329,8 +343,6 @@ export class ContentService {
   }
 
   async setting(key: string, locale: Locale) {
-    if (!this.env.publicSettingKeys.includes(key))
-      throw new NotFoundException('Setting not found');
     const row = await this.db.query.siteSettings.findFirst({
       where: (table, { eq: equals }) => equals(table.key, key),
       with: { translations: true },
@@ -349,6 +361,7 @@ export class ContentService {
     if (row.type === 'image' || row.type === 'video') {
       return {
         key: row.key,
+        category: row.category,
         value: row.value,
         type: row.type,
         updatedAt: row.updatedAt,
@@ -365,6 +378,7 @@ export class ContentService {
     const translation = requested ?? vietnamese;
     return {
       key: row.key,
+      category: row.category,
       value: translation?.value ?? '',
       type: row.type,
       updatedAt: row.updatedAt,
@@ -474,14 +488,25 @@ export class ContentService {
             }
           : null,
       })),
-      tours: (row.tourLinks ?? []).map(({ tour }) => ({
-        id: tour.id,
-        images: tour.imageLinks.map((link) => ({
-          role: link.role,
-          sortOrder: link.sortOrder,
-          ...this.mapImage(link.image),
-        })),
-      })),
+      tours: (row.tourLinks ?? [])
+        .map(({ tour }) => {
+          const tourTranslation = localized(tour.translations, locale);
+          if (!tourTranslation) return null;
+
+          return {
+            id: tour.id,
+            departureStartMonth: tour.departureStartMonth ?? null,
+            name: tourTranslation.value.name,
+            locale: tourTranslation.locale,
+            plans: this.localizePlans(tour.planRows, locale),
+            images: tour.imageLinks.map((link) => ({
+              role: link.role,
+              sortOrder: link.sortOrder,
+              ...this.mapImage(link.image),
+            })),
+          };
+        })
+        .filter(Boolean),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

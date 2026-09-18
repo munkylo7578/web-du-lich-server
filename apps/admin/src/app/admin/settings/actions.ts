@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { Setting } from "@/domains/setting/domain";
 import { settingKeySchema, settingFormSchema, settingCategorySchema } from "@/features/admin-settings/settings-form-schema";
 import { settingRepository } from "@/features/admin-settings/repository";
+import { listAdminSettings } from "@/features/admin-settings/repository";
+import type { AdminSetting } from "@/features/admin-settings/settings-types";
+import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
+import type { SettingCategory } from "@setting-category";
 import { removeUploadedSettingFiles, saveSettingImage, saveSettingVideo } from "@/features/admin-settings/upload";
 import { requireSession } from "@/lib/auth/session";
 
@@ -13,6 +17,15 @@ export type SettingActionState = {
   message: string;
   fieldErrors?: Record<string, string[]>;
 };
+
+export async function listAdminSettingsAction(
+  category: SettingCategory,
+  input: AdminListQuery,
+): Promise<AdminListResult<AdminSetting>> {
+  await requireSession();
+  const parsedCategory = settingCategorySchema.parse(category);
+  return listAdminSettings(parsedCategory, input);
+}
 
 export async function saveSettingAction(formData: FormData): Promise<SettingActionState> {
   await requireSession();
