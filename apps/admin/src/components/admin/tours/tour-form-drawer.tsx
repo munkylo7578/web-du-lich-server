@@ -22,6 +22,7 @@ import { imageFieldErrors, pendingImagesSchema, tourFormSchema, type TourFormVal
 import type { AdminTour } from "@/features/admin-tours/tour-types";
 
 type Locale = "vi" | "en";
+type FormTab = "information" | "plan" | "services";
 
 function createEmptyValues(): TourFormValues {
   return {
@@ -78,6 +79,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [message, setMessage] = useState<string>();
   const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
+  const [activeTab, setActiveTab] = useState<FormTab>("information");
   const [translationLocale, setTranslationLocale] = useState<Locale>("vi");
   const [planLocales, setPlanLocales] = useState<Record<string, Locale>>({});
   const [isPending, startTransition] = useTransition();
@@ -89,6 +91,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
     setPendingImages([]);
     setMessage(undefined);
     setImageErrors({});
+    setActiveTab("information");
     setTranslationLocale("vi");
     setPlanLocales({});
     form.reset(values);
@@ -101,6 +104,14 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
 
   const activateTabForError = (path: string) => {
     const parts = path.split(".");
+    if (parts[0] === "plans") {
+      setActiveTab("plan");
+    } else if (parts[0] === "services") {
+      setActiveTab("services");
+    } else {
+      setActiveTab("information");
+    }
+
     if (parts[0] === "translations" && isLocale(parts[1])) {
       setTranslationLocale(parts[1]);
     }
@@ -182,90 +193,127 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
         </SheetHeader>
 
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-          <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto px-5 py-6 sm:px-8">
-            <div className="mx-auto w-full max-w-[1480px] space-y-7">
-            {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
-
-            <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-              <SectionHeading title="Thông tin khởi hành" description="Chọn tháng bắt đầu khởi hành của tour, không bao gồm ngày hoặc năm." />
-              <div data-field-path="departureStartMonth" className="space-y-2 sm:max-w-sm">
-                <Label htmlFor="departure-start-month">Tháng bắt đầu khởi hành</Label>
-                <Controller
-                  control={form.control}
-                  name="departureStartMonth"
-                  render={({ field, fieldState }) => (
-                    <select
-                      {...field}
-                      id="departure-start-month"
-                      value={field.value ?? ""}
-                      onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))}
-                      disabled={isPending}
-                      aria-invalid={Boolean(fieldState.error)}
-                      aria-describedby={fieldState.error ? "departure-start-month-help departure-start-month-error" : "departure-start-month-help"}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Chưa xác định</option>
-                      {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
-                        <option key={month} value={month}>Tháng {month}</option>
-                      ))}
-                    </select>
-                  )}
-                />
-                <p id="departure-start-month-help" className="text-sm text-muted-foreground">Không bắt buộc. Chọn “Chưa xác định” để bỏ tháng đã chọn.</p>
-                {form.formState.errors.departureStartMonth && (
-                  <p id="departure-start-month-error" role="alert" className="text-xs text-destructive">{form.formState.errors.departureStartMonth.message}</p>
-                )}
+          <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto">
+            <Tabs value={activeTab} onValueChange={(value) => isFormTab(value) && setActiveTab(value)} className="min-h-full gap-0">
+              <div className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-x-0 border-t-0 px-5 py-3 sm:px-8">
+                <div className="mx-auto w-full max-w-[1480px]">
+                  <TabsList aria-label="Các bước thiết lập tour" className="grid h-auto w-full grid-cols-3 rounded-2xl border border-cyan-900/15 bg-cyan-50/80 p-1 shadow-inner sm:max-w-2xl">
+                    <TabsTrigger value="information" disabled={isPending} className="h-10 rounded-xl px-2 text-xs data-active:bg-white data-active:text-cyan-950 data-active:shadow-sm sm:h-11 sm:px-4 sm:text-sm">Thông tin</TabsTrigger>
+                    <TabsTrigger value="plan" disabled={isPending} className="h-10 rounded-xl px-2 text-xs data-active:bg-white data-active:text-cyan-950 data-active:shadow-sm sm:h-11 sm:px-4 sm:text-sm">Kế hoạch tour</TabsTrigger>
+                    <TabsTrigger value="services" disabled={isPending} className="h-10 rounded-xl px-2 text-xs data-active:bg-white data-active:text-cyan-950 data-active:shadow-sm sm:h-11 sm:px-4 sm:text-sm">Dịch vụ</TabsTrigger>
+                  </TabsList>
+                </div>
               </div>
-            </section>
 
-            <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-              <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên và mô tả hiển thị trên website client." />
-              <Tabs value={translationLocale} onValueChange={(value) => isLocale(value) && setTranslationLocale(value)}>
-                <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
-                {(["vi", "en"] as const).map((locale) => (
-                  <TabsContent key={locale} value={locale} className="space-y-4 pt-3">
-                    <FormField fieldPath={`translations.${locale}.name`} label={`Tên tour (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.translations?.[locale]?.name?.message}>
-                      <Input aria-invalid={Boolean(form.formState.errors.translations?.[locale]?.name)} {...form.register(`translations.${locale}.name`)} placeholder={locale === "vi" ? "Ví dụ: Khám phá Đà Nẵng 3N2Đ" : "Example: Discover Da Nang 3D2N"} />
-                    </FormField>
-                    <FormField fieldPath={`translations.${locale}.description`} label={`Mô tả (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.description?.message}>
-                      <Controller control={form.control} name={`translations.${locale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của tour..." invalid={Boolean(form.formState.errors.translations?.[locale]?.description)} />} />
-                    </FormField>
-                    <FormField fieldPath={`translations.${locale}.inclusions`} label={`Dịch vụ bao gồm (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.inclusions?.message}>
-                      <Controller control={form.control} name={`translations.${locale}.inclusions`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Các dịch vụ và quyền lợi đã bao gồm..." invalid={Boolean(form.formState.errors.translations?.[locale]?.inclusions)} />} />
-                    </FormField>
-                    <FormField fieldPath={`translations.${locale}.exclusions`} label={`Dịch vụ không bao gồm (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.exclusions?.message}>
-                      <Controller control={form.control} name={`translations.${locale}.exclusions`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Các chi phí và dịch vụ không bao gồm..." invalid={Boolean(form.formState.errors.translations?.[locale]?.exclusions)} />} />
-                    </FormField>
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </section>
+              <div className="mx-auto w-full max-w-[1480px] px-5 py-6 sm:px-8">
+                {message && <Alert className="mb-7"><AlertDescription>{message}</AlertDescription></Alert>}
 
-            <Separator />
-            <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
-              <SectionHeading title="Điểm đến" description="Chọn hoặc tạo nhiều điểm đến. Mỗi điểm đến có thể liên kết nhiều phường/xã." />
-              <Controller
-                control={form.control}
-                name="destinations"
-                render={({ field }) => (
-                  <DestinationManager
-                    value={field.value}
-                    existingDestinations={tour?.destinations ?? []}
-                    error={form.formState.errors.destinations?.message}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </section>
+                <TabsContent value="information" className="space-y-7">
+                  <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+                    <SectionHeading title="Thông tin khởi hành" description="Chọn tháng bắt đầu khởi hành của tour, không bao gồm ngày hoặc năm." />
+                    <div data-field-path="departureStartMonth" className="space-y-2 sm:max-w-sm">
+                      <Label htmlFor="departure-start-month">Tháng bắt đầu khởi hành</Label>
+                      <Controller
+                        control={form.control}
+                        name="departureStartMonth"
+                        render={({ field, fieldState }) => (
+                          <select
+                            {...field}
+                            id="departure-start-month"
+                            value={field.value ?? ""}
+                            onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))}
+                            disabled={isPending}
+                            aria-invalid={Boolean(fieldState.error)}
+                            aria-describedby={fieldState.error ? "departure-start-month-help departure-start-month-error" : "departure-start-month-help"}
+                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="">Chưa xác định</option>
+                            {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                              <option key={month} value={month}>Tháng {month}</option>
+                            ))}
+                          </select>
+                        )}
+                      />
+                      <p id="departure-start-month-help" className="text-sm text-muted-foreground">Không bắt buộc. Chọn “Chưa xác định” để bỏ tháng đã chọn.</p>
+                      {form.formState.errors.departureStartMonth && (
+                        <p id="departure-start-month-error" role="alert" className="text-xs text-destructive">{form.formState.errors.departureStartMonth.message}</p>
+                      )}
+                    </div>
+                  </section>
 
-            <Separator />
-            <section className="tour-drawer-panel relative z-20 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
-              <SectionHeading title="Dịch vụ" description="Tìm và gắn các dịch vụ dùng chung vào tour theo thứ tự." />
-              <Controller control={form.control} name="services" render={({ field }) => <ServiceManager value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
-            </section>
+                  <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+                    <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên, mô tả và thông tin dịch vụ hiển thị trên website client." />
+                    <Tabs value={translationLocale} onValueChange={(value) => isLocale(value) && setTranslationLocale(value)}>
+                      <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
+                      {(["vi", "en"] as const).map((locale) => (
+                        <TabsContent key={locale} value={locale} className="space-y-4 pt-3">
+                          <FormField fieldPath={`translations.${locale}.name`} label={`Tên tour (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.translations?.[locale]?.name?.message}>
+                            <Input aria-invalid={Boolean(form.formState.errors.translations?.[locale]?.name)} {...form.register(`translations.${locale}.name`)} placeholder={locale === "vi" ? "Ví dụ: Khám phá Đà Nẵng 3N2Đ" : "Example: Discover Da Nang 3D2N"} />
+                          </FormField>
+                          <FormField fieldPath={`translations.${locale}.description`} label={`Mô tả (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.description?.message}>
+                            <Controller control={form.control} name={`translations.${locale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của tour..." invalid={Boolean(form.formState.errors.translations?.[locale]?.description)} />} />
+                          </FormField>
+                          <FormField fieldPath={`translations.${locale}.inclusions`} label={`Dịch vụ bao gồm (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.inclusions?.message}>
+                            <Controller control={form.control} name={`translations.${locale}.inclusions`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Các dịch vụ và quyền lợi đã bao gồm..." invalid={Boolean(form.formState.errors.translations?.[locale]?.inclusions)} />} />
+                          </FormField>
+                          <FormField fieldPath={`translations.${locale}.exclusions`} label={`Dịch vụ không bao gồm (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.exclusions?.message}>
+                            <Controller control={form.control} name={`translations.${locale}.exclusions`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Các chi phí và dịch vụ không bao gồm..." invalid={Boolean(form.formState.errors.translations?.[locale]?.exclusions)} />} />
+                          </FormField>
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  </section>
 
-            <Separator />
-            <section className="tour-drawer-panel relative z-0 space-y-4 rounded-[28px] p-5 sm:p-7">
+                  <Separator />
+                  <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
+                    <SectionHeading title="Điểm đến" description="Chọn hoặc tạo nhiều điểm đến. Mỗi điểm đến có thể liên kết nhiều phường/xã." />
+                    <Controller
+                      control={form.control}
+                      name="destinations"
+                      render={({ field }) => (
+                        <DestinationManager
+                          value={field.value}
+                          existingDestinations={tour?.destinations ?? []}
+                          error={form.formState.errors.destinations?.message}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </section>
+
+                  <Separator />
+                  <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+                    <SectionHeading title="Hình ảnh" description="Chọn, kéo thả hoặc paste ảnh. Tên ảnh không bắt buộc và dùng chung cho mọi ngôn ngữ. Chỉ một ảnh được đặt làm ảnh bìa." />
+                    <fieldset disabled={isPending}>
+                      <legend className="sr-only">Hình ảnh tour</legend>
+                      <Controller control={form.control} name="existingImages" render={({ field }) => (
+                        <ImageUploadField existing={field.value as AdminTour["images"]} pending={pendingImages}
+                          active={open && activeTab === "information"} disabled={isPending}
+                          errors={{
+                            ...imageErrors,
+                            ...Object.fromEntries(field.value.flatMap((_, index) => {
+                              const error = form.formState.errors.existingImages?.[index]?.altText?.message;
+                              return error ? [[`existingImages.${index}.altText`, [error]]] : [];
+                            })),
+                          }}
+                          onExistingChange={(images) => {
+                            if (isPending) return;
+                            setImageErrors({});
+                            field.onChange(images);
+                            if (form.formState.isSubmitted) void form.trigger("existingImages");
+                          }}
+                          onPendingChange={(images) => {
+                            if (isPending) return;
+                            setImageErrors({});
+                            setPendingImages(images);
+                          }} />
+                      )} />
+                    </fieldset>
+                  </section>
+                </TabsContent>
+
+                <TabsContent value="plan" className="space-y-7">
+                  <section className="tour-drawer-panel relative z-0 space-y-4 rounded-[28px] p-5 sm:p-7">
                 <div className="flex items-center justify-between gap-4">
                   <SectionHeading title="Lịch trình" description="Tên và mô tả từng ngày theo ngôn ngữ." />
                   <Button type="button" variant="outline" onClick={() => plans.append({ sortOrder: plans.fields.length, name: { vi: "", en: "" }, description: { vi: "", en: "" } })}><Plus data-icon="inline-start" />Thêm chặng</Button>
@@ -295,38 +343,17 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                   </Tabs>
                 </div>
               ))}
-            </section>
+                  </section>
+                </TabsContent>
 
-            <Separator />
-            <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-              <SectionHeading title="Hình ảnh" description="Chọn, kéo thả hoặc paste ảnh. Tên ảnh không bắt buộc và dùng chung cho mọi ngôn ngữ. Chỉ một ảnh được đặt làm ảnh bìa." />
-              <fieldset disabled={isPending}>
-                <legend className="sr-only">Hình ảnh tour</legend>
-                <Controller control={form.control} name="existingImages" render={({ field }) => (
-                  <ImageUploadField existing={field.value as AdminTour["images"]} pending={pendingImages}
-                    active={open} disabled={isPending}
-                    errors={{
-                      ...imageErrors,
-                      ...Object.fromEntries(field.value.flatMap((_, index) => {
-                        const error = form.formState.errors.existingImages?.[index]?.altText?.message;
-                        return error ? [[`existingImages.${index}.altText`, [error]]] : [];
-                      })),
-                    }}
-                    onExistingChange={(images) => {
-                      if (isPending) return;
-                      setImageErrors({});
-                      field.onChange(images);
-                      if (form.formState.isSubmitted) void form.trigger("existingImages");
-                    }}
-                    onPendingChange={(images) => {
-                      if (isPending) return;
-                      setImageErrors({});
-                      setPendingImages(images);
-                    }} />
-                )} />
-              </fieldset>
-            </section>
-            </div>
+                <TabsContent value="services" className="space-y-7">
+                  <section className="tour-drawer-panel relative z-20 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
+                    <SectionHeading title="Dịch vụ" description="Tìm và gắn các dịch vụ dùng chung vào tour theo thứ tự." />
+                    <Controller control={form.control} name="services" render={({ field }) => <ServiceManager value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
+                  </section>
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
 
           <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
@@ -355,6 +382,10 @@ function RequiredMark() {
 
 function isLocale(value: unknown): value is Locale {
   return value === "vi" || value === "en";
+}
+
+function isFormTab(value: unknown): value is FormTab {
+  return value === "information" || value === "plan" || value === "services";
 }
 
 function getFirstErrorPath(errors: FieldErrors<TourFormValues>): string | undefined {
