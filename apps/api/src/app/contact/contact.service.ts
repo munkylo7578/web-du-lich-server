@@ -9,10 +9,10 @@ import {
 import { API_ENV, type ApiEnvironment } from '../config/env';
 import { DATABASE, type Database } from '../database/database.module';
 import type { ContactRequestDto } from './contact.dto';
+import { renderContactEmail } from './contact-email.template';
 
 const BREVO_SEND_EMAIL_URL = 'https://api.brevo.com/v3/smtp/email';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NOT_PROVIDED = 'Not provided';
 
 type BrevoPayload = {
   sender: { email: string; name: string };
@@ -107,29 +107,7 @@ export class ContactService {
     recipient: string,
     request: ContactRequestDto,
   ): BrevoPayload {
-    const fields = [
-      ['Name', request.name],
-      ['Mobile', request.mobile],
-      ['Email', request.email],
-      [
-        'Tourist arrivals',
-        request.touristArrivals === undefined
-          ? undefined
-          : String(request.touristArrivals),
-      ],
-      ['Message', request.message],
-    ] as const;
-    const value = (input: string | undefined) => input ?? NOT_PROVIDED;
-    const htmlRows = fields
-      .map(
-        ([label, input]) =>
-          `<tr><th align="left" style="padding:8px;vertical-align:top">${label}</th>` +
-          `<td style="padding:8px;white-space:pre-wrap">${this.escapeHtml(value(input))}</td></tr>`,
-      )
-      .join('');
-    const textContent = fields
-      .map(([label, input]) => `${label}: ${value(input)}`)
-      .join('\n');
+    const email = renderContactEmail(request);
 
     return {
       sender: {
@@ -137,9 +115,7 @@ export class ContactService {
         name: this.env.brevoSenderName,
       },
       to: [{ email: recipient }],
-      subject: 'New travel enquiry',
-      htmlContent: `<h1>New travel enquiry</h1><table>${htmlRows}</table>`,
-      textContent,
+      ...email,
       ...(request.email
         ? {
             replyTo: {
@@ -151,16 +127,4 @@ export class ContactService {
     };
   }
 
-  private escapeHtml(value: string) {
-    return value.replace(/[&<>'"]/g, (character) => {
-      const entities: Record<string, string> = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        "'": '&#39;',
-        '"': '&quot;',
-      };
-      return entities[character];
-    });
-  }
 }
