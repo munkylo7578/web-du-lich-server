@@ -25,6 +25,12 @@ import type { AdminTour } from "@/features/admin-tours/tour-types";
 type Locale = "vi" | "en";
 type FormTab = "information" | "plan" | "services";
 
+const FORM_TABS: { value: FormTab; label: string }[] = [
+  { value: "information", label: "Thông tin" },
+  { value: "plan", label: "Kế hoạch tour" },
+  { value: "services", label: "Dịch vụ" },
+];
+
 function createEmptyValues(): TourFormValues {
   return {
     departureStartMonth: null,
@@ -106,6 +112,22 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
   const closeAndReset = () => {
     resetDraft();
     onOpenChange(false);
+  };
+
+  const handleFormTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, currentTab: FormTab) => {
+    const currentIndex = FORM_TABS.findIndex((tab) => tab.value === currentTab);
+    let nextIndex = currentIndex;
+
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % FORM_TABS.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + FORM_TABS.length) % FORM_TABS.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = FORM_TABS.length - 1;
+    else return;
+
+    event.preventDefault();
+    const nextTab = FORM_TABS[nextIndex].value;
+    setActiveTab(nextTab);
+    document.getElementById(`tour-form-tab-${nextTab}`)?.focus();
   };
 
   const activateTabForError = (path: string) => {
@@ -222,21 +244,38 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
 
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
           <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto">
-            <Tabs value={activeTab} onValueChange={(value) => isFormTab(value) && setActiveTab(value)} className="min-h-full w-full min-w-0 gap-0">
+            <div className="min-h-full w-full min-w-0">
               <div className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-x-0 border-t-0 px-5 py-3 sm:px-8">
                 <div className="mx-auto w-full max-w-[1480px]">
-                  <TabsList aria-label="Các bước thiết lập tour" className="mx-auto grid h-auto w-full grid-cols-3 rounded-2xl border border-cyan-900/15 bg-cyan-50/80 p-1 shadow-inner">
-                    <TabsTrigger value="information" disabled={isPending} className="h-10 min-w-0 justify-center rounded-xl px-2 text-center text-xs data-active:bg-white data-active:text-cyan-950 data-active:shadow-sm sm:h-11 sm:px-4 sm:text-sm">Thông tin</TabsTrigger>
-                    <TabsTrigger value="plan" disabled={isPending} className="h-10 min-w-0 justify-center rounded-xl px-2 text-center text-xs data-active:bg-white data-active:text-cyan-950 data-active:shadow-sm sm:h-11 sm:px-4 sm:text-sm">Kế hoạch tour</TabsTrigger>
-                    <TabsTrigger value="services" disabled={isPending} className="h-10 min-w-0 justify-center rounded-xl px-2 text-center text-xs data-active:bg-white data-active:text-cyan-950 data-active:shadow-sm sm:h-11 sm:px-4 sm:text-sm">Dịch vụ</TabsTrigger>
-                  </TabsList>
+                  <div role="tablist" aria-label="Các bước thiết lập tour" className="mx-auto grid w-full grid-cols-3 rounded-2xl border border-cyan-900/15 bg-cyan-50/80 p-1 shadow-inner">
+                    {FORM_TABS.map((tab) => {
+                      const isActive = activeTab === tab.value;
+                      return (
+                        <button
+                          key={tab.value}
+                          id={`tour-form-tab-${tab.value}`}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-controls={`tour-form-panel-${tab.value}`}
+                          tabIndex={isActive ? 0 : -1}
+                          disabled={isPending}
+                          onClick={() => setActiveTab(tab.value)}
+                          onKeyDown={(event) => handleFormTabKeyDown(event, tab.value)}
+                          className={`h-10 min-w-0 rounded-xl px-2 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/50 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:px-4 sm:text-sm ${isActive ? "bg-white text-cyan-950 shadow-sm" : "text-slate-600 hover:bg-white/60 hover:text-slate-950"}`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
               <div className="mx-auto w-full min-w-0 max-w-[1480px] px-5 py-6 sm:px-8">
                 {message && <Alert className="mb-7"><AlertDescription>{message}</AlertDescription></Alert>}
 
-                <TabsContent value="information" className="w-full min-w-0 space-y-7">
+                <div id="tour-form-panel-information" role="tabpanel" aria-labelledby="tour-form-tab-information" hidden={activeTab !== "information"} className="w-full min-w-0 space-y-7">
                   <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
                     <SectionHeading title="Thông tin khởi hành" description="Chọn tháng bắt đầu khởi hành của tour, không bao gồm ngày hoặc năm." />
                     <div data-field-path="departureStartMonth" className="space-y-2 sm:max-w-sm">
@@ -338,9 +377,9 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                       )} />
                     </fieldset>
                   </section>
-                </TabsContent>
+                </div>
 
-                <TabsContent value="plan" className="w-full min-w-0 space-y-7">
+                <div id="tour-form-panel-plan" role="tabpanel" aria-labelledby="tour-form-tab-plan" hidden={activeTab !== "plan"} className="w-full min-w-0 space-y-7">
                   <section className="tour-drawer-panel relative z-0 space-y-4 rounded-[28px] p-5 sm:p-7">
                 <div className="flex items-center justify-between gap-4">
                   <SectionHeading title="Lịch trình" description="Tên và mô tả từng ngày theo ngôn ngữ." />
@@ -421,16 +460,16 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                 </div>
               ))}
                   </section>
-                </TabsContent>
+                </div>
 
-                <TabsContent value="services" className="w-full min-w-0 space-y-7">
+                <div id="tour-form-panel-services" role="tabpanel" aria-labelledby="tour-form-tab-services" hidden={activeTab !== "services"} className="w-full min-w-0 space-y-7">
                   <section className="tour-drawer-panel relative z-20 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
                     <SectionHeading title="Dịch vụ" description="Tìm và gắn các dịch vụ dùng chung vào tour theo thứ tự." />
                     <Controller control={form.control} name="services" render={({ field }) => <ServiceManager value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
                   </section>
-                </TabsContent>
+                </div>
               </div>
-            </Tabs>
+            </div>
           </div>
 
           <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
@@ -459,10 +498,6 @@ function RequiredMark() {
 
 function isLocale(value: unknown): value is Locale {
   return value === "vi" || value === "en";
-}
-
-function isFormTab(value: unknown): value is FormTab {
-  return value === "information" || value === "plan" || value === "services";
 }
 
 function getFirstErrorPath(errors: FieldErrors<TourFormValues>): string | undefined {
