@@ -9,12 +9,13 @@ import {
   TourDestination,
   TourImageRef,
   TourPlan,
+  TourPlanImageRef,
   TourService,
   type TourTranslationSnapshot,
 } from "@/domains/tour/domain";
 import { requireSession } from "@/lib/auth/session";
 import { saveDestinationRecord, searchDestinations, searchWards, tourRepository } from "@/features/admin-tours/repository";
-import { destinationEditorSchema, imageFieldErrors, pendingImagesSchema, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
+import { destinationEditorSchema, imageFieldErrors, pendingImagesSchema, pendingPlanImagesSchema, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
 import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
 import { removeUploadedFiles, saveTourImage } from "@/features/admin-tours/upload";
 
@@ -84,9 +85,11 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
 
   let payload: unknown;
   let pendingPayload: unknown;
+  let pendingPlanPayload: unknown;
   try {
     payload = JSON.parse(String(formData.get("payload") || "{}"));
     pendingPayload = JSON.parse(String(formData.get("pendingImages") || "[]"));
+    pendingPlanPayload = JSON.parse(String(formData.get("pendingPlanImages") || "[]"));
   } catch {
     console.error("[TourUpload] saveTourAction:parse_failed", { requestId });
     return { success: false, message: "Dữ liệu biểu mẫu không hợp lệ." };
@@ -101,6 +104,20 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     };
   }
   const pendingMeta = parsedPending.data;
+  const parsedPendingPlans = pendingPlanImagesSchema.safeParse(pendingPlanPayload);
+  if (!parsedPendingPlans.success) {
+    return {
+      success: false,
+      message: "Vui lòng kiểm tra lại thông tin ảnh chặng mới.",
+      fieldErrors: imageFieldErrors(parsedPendingPlans.error.issues, "pendingPlanImages"),
+    };
+  }
+  const pendingPlanMeta = parsedPendingPlans.data;
+
+  if (new Set([...pendingMeta, ...pendingPlanMeta].map((meta) => meta.clientId)).size
+    !== pendingMeta.length + pendingPlanMeta.length) {
+    return { success: false, message: "Mã tệp ảnh mới bị trùng lặp." };
+  }
 
   console.info("[TourUpload] saveTourAction:parsed", {
     requestId,
@@ -149,32 +166,32 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     const services = data.services.map((service, index) =>
       TourService.create({ serviceId: service.serviceId, sortOrder: index }),
     );
-    const plans = data.plans.map((plan, index) =>
-      TourPlan.create({ ...plan, sortOrder: index }),
-    );
-
     const tour = data.id ? await tourRepository.findById(data.id) : null;
     if (data.id && !tour) return { success: false, message: "Không tìm thấy tour." };
 
-    const linkedIds = new Set(tour?.toSnapshot().images.map((image) => image.imageId) ?? []);
+    const storedSnapshot = tour?.toSnapshot();
+    const linkedIds = new Set(storedSnapshot?.images.map((image) => image.imageId) ?? []);
     if (data.existingImages.some((image) => !linkedIds.has(image.imageId))) {
       return { success: false, message: "Ảnh không thuộc tour đang chỉnh sửa." };
     }
+    const storedPlans = new Map((storedSnapshot?.plans ?? []).map((plan) => [plan.planId, plan]));
+    for (const plan of data.plans) {
+      const storedPlan = storedPlans.get(plan.planId);
+      const storedImageIds = new Set(storedPlan?.images.map((image) => image.imageId) ?? []);
+      if (plan.images.some((image) => !storedImageIds.has(image.imageId))) {
+        return { success: false, message: "Ảnh không thuộc chặng đang chỉnh sửa." };
+      }
+    }
+    const submittedPlanIds = new Set(data.plans.map((plan) => plan.planId));
+    if (pendingPlanMeta.some((image) => !submittedPlanIds.has(image.planId))) {
+      return { success: false, message: "Ảnh mới không thuộc chặng nào trong tour." };
+    }
     // Reject missing files before writing any uploads, rather than silently dropping images.
-    if (pendingMeta.some((meta) => !(formData.get(`file:${meta.clientId}`) instanceof File))) {
+    if ([...pendingMeta, ...pendingPlanMeta].some((meta) => !(formData.get(`file:${meta.clientId}`) instanceof File))) {
       return { success: false, message: "Không tìm thấy tệp ảnh mới. Vui lòng chọn lại ảnh." };
     }
 
     const departureStartMonth = data.departureStartMonth ?? undefined;
-    const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth });
-    if (tour) {
-      aggregate.updateDepartureStartMonth(departureStartMonth);
-      aggregate.replaceTranslations(translations);
-      aggregate.replaceDestinations(destinations);
-      aggregate.replaceServices(services);
-      aggregate.replacePlans(plans);
-    }
-
     const existingRefs = data.existingImages.map((image, index) =>
       TourImageRef.fromSnapshot({
         imageId: image.imageId,
@@ -227,9 +244,53 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
       newRefs.push(ref);
     }
 
+    const newPlanRefs = new Map<string, TourPlanImageRef[]>();
+    for (const meta of pendingPlanMeta) {
+      const file = formData.get(`file:${meta.clientId}`);
+      if (!(file instanceof File)) throw new Error("Không tìm thấy tệp ảnh chặng mới.");
+
+      const stored = await saveTourImage(file);
+      uploadedPaths.push(stored.physicalPath);
+      const image = Image.create({
+        url: stored.url,
+        altText: meta.altText || undefined,
+        fileName: stored.fileName,
+        mimeType: stored.mimeType,
+        sizeInBytes: stored.sizeInBytes,
+      });
+      const ref = TourPlanImageRef.create({ imageId: image.getId().toString(), sortOrder: meta.sortOrder });
+      newImages.push({ image, physicalPath: stored.physicalPath });
+      newPlanRefs.set(meta.planId, [...(newPlanRefs.get(meta.planId) ?? []), ref]);
+    }
+
+    const plans = data.plans.map((plan, index) => TourPlan.create({
+      planId: plan.planId,
+      name: plan.name,
+      description: plan.description,
+      sortOrder: index,
+      images: [
+        ...plan.images.map((image, imageIndex) => ({ imageId: image.imageId, sortOrder: imageIndex })),
+        ...(newPlanRefs.get(plan.planId) ?? []).map((image) => image.toSnapshot()),
+      ],
+    }));
+
+    const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth });
+    if (tour) {
+      aggregate.updateDepartureStartMonth(departureStartMonth);
+      aggregate.replaceTranslations(translations);
+      aggregate.replaceDestinations(destinations);
+      aggregate.replaceServices(services);
+      aggregate.replacePlans(plans);
+    }
+
     aggregate.replaceImages([...existingRefs, ...newRefs]);
+    const imageUpdates = new Map<string, string | undefined>();
+    for (const image of data.existingImages) imageUpdates.set(image.imageId, image.altText);
+    for (const plan of data.plans) {
+      for (const image of plan.images) imageUpdates.set(image.imageId, image.altText);
+    }
     await tourRepository.save(aggregate, newImages, undefined,
-      data.existingImages.map(({ imageId, altText }) => ({ imageId, altText })),
+      [...imageUpdates].map(([imageId, altText]) => ({ imageId, altText })),
     );
     committed = true;
     console.info("[TourUpload] saveTourAction:success", {

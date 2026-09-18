@@ -10,6 +10,7 @@ import { submitUpload } from "@/features/shared/upload-validation";
 import { DestinationManager } from "./destination-manager";
 import { ServiceManager } from "./service-manager";
 import { ImageUploadField, type PendingImage } from "./image-upload-field";
+import { PlanImageUploadField, type PendingPlanImage } from "./plan-image-upload-field";
 import { RichTextEditor } from "./rich-text-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { imageFieldErrors, pendingImagesSchema, tourFormSchema, type TourFormValues } from "@/features/admin-tours/tour-form-schema";
+import { imageFieldErrors, pendingImagesSchema, pendingPlanImagesSchema, tourFormSchema, type TourFormValues } from "@/features/admin-tours/tour-form-schema";
 import type { AdminTour } from "@/features/admin-tours/tour-types";
 
 type Locale = "vi" | "en";
@@ -64,9 +65,11 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
     })),
     services: tour.services.map((service) => ({ serviceId: service.serviceId, sortOrder: service.sortOrder })),
     plans: tour.plans.map((plan) => ({
+      planId: plan.planId,
       sortOrder: plan.sortOrder,
       name: { vi: plan.name.vi || "", en: plan.name.en || "" },
       description: { vi: plan.description.vi || "", en: plan.description.en || "" },
+      images: plan.images.map((image) => ({ ...image, altText: image.altText || "" })),
     })),
     existingImages: tour.images.map((image) => ({ ...image, altText: image.altText || "" })),
   };
@@ -76,6 +79,7 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
   const values = useMemo(() => toFormValues(tour), [tour]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [pendingPlanImages, setPendingPlanImages] = useState<PendingPlanImage[]>([]);
   const [message, setMessage] = useState<string>();
   const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
   const [translationLocale, setTranslationLocale] = useState<Locale>("vi");
@@ -86,7 +90,9 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
 
   const resetDraft = () => {
     pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    pendingPlanImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setPendingImages([]);
+    setPendingPlanImages([]);
     setMessage(undefined);
     setImageErrors({});
     setTranslationLocale("vi");
@@ -132,8 +138,12 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
   const submit = (event: React.FormEvent<HTMLFormElement>) => form.handleSubmit((data) => {
     setMessage(undefined);
     const parsedPending = pendingImagesSchema.safeParse(pendingImages);
-    if (!parsedPending.success) {
-      const errors = imageFieldErrors(parsedPending.error.issues, "pendingImages");
+    const parsedPendingPlans = pendingPlanImagesSchema.safeParse(pendingPlanImages);
+    if (!parsedPending.success || !parsedPendingPlans.success) {
+      const errors = {
+        ...(parsedPending.success ? {} : imageFieldErrors(parsedPending.error.issues, "pendingImages")),
+        ...(parsedPendingPlans.success ? {} : imageFieldErrors(parsedPendingPlans.error.issues, "pendingPlanImages")),
+      };
       setImageErrors(errors);
       scrollToError(Object.keys(errors)[0]);
       return;
@@ -142,14 +152,26 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
     startTransition(async () => {
       const payload = {
         ...data,
-        plans: data.plans.map((plan, index) => ({ ...plan, sortOrder: index })),
+        plans: data.plans.map((plan, index) => ({
+          ...plan,
+          sortOrder: index,
+          images: plan.images.map((image, imageIndex) => ({ ...image, sortOrder: imageIndex })),
+        })),
         existingImages: data.existingImages.map((image, index) => ({ ...image, sortOrder: index })),
       };
       const normalizedPending = pendingImages.map((image, index) => ({ ...image, sortOrder: data.existingImages.length + index }));
+      const normalizedPendingPlans = pendingPlanImages.flatMap((image) => {
+        const plan = data.plans.find((candidate) => candidate.planId === image.planId);
+        if (!plan) return [];
+        const planImages = pendingPlanImages.filter((candidate) => candidate.planId === image.planId);
+        return [{ ...image, sortOrder: plan.images.length + planImages.findIndex((candidate) => candidate.clientId === image.clientId) }];
+      });
       const body = new FormData();
       body.set("payload", JSON.stringify(payload));
       body.set("pendingImages", JSON.stringify(normalizedPending.map(({ clientId, altText, role, sortOrder }) => ({ clientId, altText, role, sortOrder }))));
+      body.set("pendingPlanImages", JSON.stringify(normalizedPendingPlans.map(({ clientId, planId, altText, sortOrder }) => ({ clientId, planId, altText, sortOrder }))));
       normalizedPending.forEach((image) => body.set(`file:${image.clientId}`, image.file));
+      normalizedPendingPlans.forEach((image) => body.set(`file:${image.clientId}`, image.file));
       const result = await submitUpload(body, saveTourAction);
       setMessage(result.message);
       if (result.fieldErrors) {
@@ -159,13 +181,19 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
       }
       if (result.success) {
         pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+        pendingPlanImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
         setPendingImages([]);
+        setPendingPlanImages([]);
         onOpenChange(false);
       }
     });
   }, (errors) => {
     const pending = pendingImagesSchema.safeParse(pendingImages);
-    setImageErrors(pending.success ? {} : imageFieldErrors(pending.error.issues, "pendingImages"));
+    const pendingPlans = pendingPlanImagesSchema.safeParse(pendingPlanImages);
+    setImageErrors({
+      ...(pending.success ? {} : imageFieldErrors(pending.error.issues, "pendingImages")),
+      ...(pendingPlans.success ? {} : imageFieldErrors(pendingPlans.error.issues, "pendingPlanImages")),
+    });
     const firstErrorPath = getFirstErrorPath(errors);
     if (firstErrorPath) scrollToError(firstErrorPath);
   })(event);
@@ -267,12 +295,19 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
             <section className="tour-drawer-panel relative z-0 space-y-4 rounded-[28px] p-5 sm:p-7">
                 <div className="flex items-center justify-between gap-4">
                   <SectionHeading title="Lịch trình" description="Tên và mô tả từng ngày theo ngôn ngữ." />
-                  <Button type="button" variant="outline" onClick={() => plans.append({ sortOrder: plans.fields.length, name: { vi: "", en: "" }, description: { vi: "", en: "" } })}><Plus data-icon="inline-start" />Thêm chặng</Button>
+                  <Button type="button" variant="outline" onClick={() => plans.append({ planId: crypto.randomUUID(), sortOrder: plans.fields.length, name: { vi: "", en: "" }, description: { vi: "", en: "" }, images: [] })}><Plus data-icon="inline-start" />Thêm chặng</Button>
                 </div>
               {!plans.fields.length && <div className="rounded-2xl border border-dashed border-cyan-800/35 bg-cyan-50/50 p-6 text-center text-sm font-medium text-slate-700">Chưa có lịch trình. Bấm “Thêm chặng” để bắt đầu.</div>}
               {plans.fields.map((plan, index) => (
                 <div key={plan.id} className="rounded-2xl border border-cyan-900/15 bg-white/95 p-4 shadow-[0_12px_32px_-28px_rgba(8,47,73,0.55)] sm:p-5">
-                  <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium"><GripVertical className="size-4 text-muted-foreground" />Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => plans.remove(index)}><Trash2 /></Button></div>
+                  <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium"><GripVertical className="size-4 text-muted-foreground" />Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => {
+                    const planId = form.getValues(`plans.${index}.planId`);
+                    setPendingPlanImages((current) => {
+                      current.filter((image) => image.planId === planId).forEach((image) => URL.revokeObjectURL(image.previewUrl));
+                      return current.filter((image) => image.planId !== planId);
+                    });
+                    plans.remove(index);
+                  }}><Trash2 /></Button></div>
                   <Tabs
                     value={planLocales[index] ?? "vi"}
                     onValueChange={(value) => {
@@ -292,6 +327,48 @@ export function TourFormDrawer({ open, tour, onOpenChange }: { open: boolean; to
                       </TabsContent>
                     ))}
                   </Tabs>
+                  <div className="mt-5 border-t border-cyan-900/10 pt-5">
+                    <SectionHeading title="Hình ảnh chặng" description="Thêm nhiều ảnh riêng cho chặng này. Ảnh được lưu khi lưu tour." />
+                    <div className="mt-4">
+                      <Controller
+                        control={form.control}
+                        name={`plans.${index}.images`}
+                        render={({ field }) => {
+                          const planId = form.getValues(`plans.${index}.planId`);
+                          const planPending = pendingPlanImages.filter((image) => image.planId === planId);
+                          return (
+                            <PlanImageUploadField
+                              active={open}
+                              disabled={isPending}
+                              planId={planId}
+                              planIndex={index}
+                              existing={field.value}
+                              pending={planPending}
+                              errors={{
+                                ...imageErrors,
+                                ...Object.fromEntries(field.value.flatMap((_, imageIndex) => {
+                                  const error = form.formState.errors.plans?.[index]?.images?.[imageIndex]?.altText?.message;
+                                  return error ? [[`plans.${index}.images.${imageIndex}.altText`, [error]]] : [];
+                                })),
+                              }}
+                              pendingFieldPath={(clientId) => `pendingPlanImages.${pendingPlanImages.findIndex((image) => image.clientId === clientId)}.altText`}
+                              onExistingChange={(images) => {
+                                setImageErrors({});
+                                field.onChange(images);
+                              }}
+                              onPendingChange={(images) => {
+                                setImageErrors({});
+                                setPendingPlanImages((current) => [
+                                  ...current.filter((image) => image.planId !== planId),
+                                  ...images,
+                                ]);
+                              }}
+                            />
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </section>
