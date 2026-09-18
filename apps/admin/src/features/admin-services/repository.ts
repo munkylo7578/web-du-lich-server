@@ -8,26 +8,29 @@ import {
   serviceTranslations,
   tourServices,
 } from '@database';
-import { asc, countDistinct, desc, eq, ilike, inArray, or } from 'drizzle-orm';
+import { and, asc, countDistinct, desc, eq, ilike, inArray, or } from 'drizzle-orm';
+import { isServiceCategory } from '@service-category';
 
 import {
   Service,
   type ServiceRepository,
   type ServiceSaveImage,
 } from '@/domains/service/domain';
-import type { AdminService } from './service-types';
+import type { AdminService, AdminServiceListQuery } from './service-types';
 import { deleteUnreferencedImages, removeUnreferencedMediaFiles } from '@/features/shared/media-cleanup';
 import {
   createAdminListResult,
   normalizeAdminListQuery,
   resolveAdminListPage,
-  type AdminListQuery,
   type AdminListResult,
 } from '@/features/shared/admin-list';
 
 const SERVICE_SEARCH_LIMIT = 20;
 
-export async function listAdminServices(input: AdminListQuery = {}): Promise<AdminListResult<AdminService>> {
+export async function listAdminServices(input: AdminServiceListQuery = {}): Promise<AdminListResult<AdminService>> {
+  if (input.category !== undefined && !isServiceCategory(input.category)) {
+    throw new Error('Phân loại dịch vụ không hợp lệ.');
+  }
   const normalized = normalizeAdminListQuery(input);
   const pattern = `%${normalized.query}%`;
   const searchCondition = normalized.query
@@ -36,17 +39,21 @@ export async function listAdminServices(input: AdminListQuery = {}): Promise<Adm
         ilike(serviceTranslations.description, pattern),
       )
     : undefined;
+  const categoryCondition = input.category
+    ? eq(services.category, input.category)
+    : undefined;
+  const filterCondition = and(searchCondition, categoryCondition);
   const [{ total }] = await db
     .select({ total: countDistinct(services.id) })
     .from(services)
     .leftJoin(serviceTranslations, eq(serviceTranslations.serviceId, services.id))
-    .where(searchCondition);
+    .where(filterCondition);
   const resolved = resolveAdminListPage(Number(total), normalized);
   const rows = await db
     .select({ id: services.id })
     .from(services)
     .leftJoin(serviceTranslations, eq(serviceTranslations.serviceId, services.id))
-    .where(searchCondition)
+    .where(filterCondition)
     .groupBy(services.id, services.updatedAt)
     .orderBy(desc(services.updatedAt), asc(services.id))
     .limit(resolved.pageSize)

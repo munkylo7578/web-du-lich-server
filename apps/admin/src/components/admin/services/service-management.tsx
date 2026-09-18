@@ -67,17 +67,32 @@ import {
   serviceFormSchema,
   type ServiceFormValues,
 } from '@/features/admin-services/service-form-schema';
-import type { AdminService } from '@/features/admin-services/service-types';
+import type {
+  AdminService,
+  AdminServiceListQuery,
+} from '@/features/admin-services/service-types';
 import type { AdminListQuery, AdminListResult } from '@/features/shared/admin-list';
 import { ServerPagination } from '@/components/admin/shared/server-pagination';
 import { useServerPagination } from '@/hooks/use-server-pagination';
-import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from '@service-category';
+import {
+  SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_LABELS,
+  type ServiceCategory,
+} from '@service-category';
 
 const helper = createColumnHelper<AdminService>();
 
 export function ServiceManagement({ initialResult }: { initialResult: AdminListResult<AdminService> }) {
   const router = useRouter();
-  const loadPage = useCallback((input: AdminListQuery) => listAdminServicesAction(input), []);
+  const [category, setCategory] = useState<ServiceCategory | ''>('');
+  const loadPage = useCallback(
+    (input: AdminListQuery) =>
+      listAdminServicesAction({
+        ...input,
+        category: category || undefined,
+      } satisfies AdminServiceListQuery),
+    [category],
+  );
   const list = useServerPagination({ initialResult, loadPage });
   const [editing, setEditing] = useState<AdminService | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -215,15 +230,39 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
           </Button>
         </div>
         <Card className="gap-0 overflow-hidden rounded-[28px] border border-cyan-900/15 bg-white/95 py-0">
-          <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-              <Input
-                value={list.query}
-                onChange={(event) => list.setQuery(event.target.value)}
-                className="pl-9"
-                placeholder="Tìm theo tên, mô tả dịch vụ..."
-              />
+          <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:max-w-3xl">
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+                <Input
+                  value={list.query}
+                  onChange={(event) => list.setQuery(event.target.value)}
+                  className="pl-9"
+                  placeholder="Tìm theo tên, mô tả dịch vụ..."
+                />
+              </div>
+              <div className="w-full sm:w-64">
+                <Label htmlFor="service-category-filter" className="sr-only">
+                  Lọc theo phân loại dịch vụ
+                </Label>
+                <select
+                  id="service-category-filter"
+                  value={category}
+                  disabled={list.isPending}
+                  onChange={(event) => {
+                    setCategory(event.target.value as ServiceCategory | '');
+                    list.setPage(1);
+                  }}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">Tất cả phân loại</option>
+                  {SERVICE_CATEGORIES.map((item) => (
+                    <option key={item} value={item}>
+                      {SERVICE_CATEGORY_LABELS[item]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <p className="text-sm">
               {list.total} dịch vụ

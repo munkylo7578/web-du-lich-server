@@ -1,5 +1,10 @@
 import type { ServiceTranslationSnapshot } from '@/domains/service/domain';
+import type { AdminListQuery } from '@/features/shared/admin-list';
 import type { ServiceCategory } from '@service-category';
+
+export type AdminServiceListQuery = AdminListQuery & {
+  category?: ServiceCategory;
+};
 
 export type AdminServiceImage = {
   imageId: string;

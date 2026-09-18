@@ -17,13 +17,16 @@ import {
   searchServices,
   serviceRepository,
 } from '@/features/admin-services/repository';
-import type { AdminService } from '@/features/admin-services/service-types';
+import type {
+  AdminService,
+  AdminServiceListQuery,
+} from '@/features/admin-services/service-types';
 import {
   removeUploadedFiles,
   saveServiceImage,
 } from '@/features/admin-services/upload';
 import { requireSession } from '@/lib/auth/session';
-import type { AdminListQuery, AdminListResult } from '@/features/shared/admin-list';
+import type { AdminListResult } from '@/features/shared/admin-list';
 
 export type ServiceActionState = {
   success: boolean;
@@ -31,7 +34,7 @@ export type ServiceActionState = {
   fieldErrors?: Record<string, string[]>;
 };
 
-export async function listAdminServicesAction(input: AdminListQuery): Promise<AdminListResult<AdminService>> {
+export async function listAdminServicesAction(input: AdminServiceListQuery): Promise<AdminListResult<AdminService>> {
   await requireSession();
   return listAdminServices(input);
 }

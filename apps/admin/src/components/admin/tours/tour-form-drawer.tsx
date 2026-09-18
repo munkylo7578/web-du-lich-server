@@ -244,18 +244,18 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) resetDraft(); onOpenChange(nextOpen); }}>
       <SheetContent fullscreen className="tour-drawer-surface gap-0 text-slate-950" showCloseButton={!isPending}>
-        <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
-          <div className="mx-auto w-full max-w-[1480px] pr-12">
-            <SheetTitle className="text-xl sm:text-2xl">{tour ? "Chỉnh sửa tour" : "Tạo tour mới"}</SheetTitle>
-            <SheetDescription className="mt-1">Nội dung tiếng Việt là bắt buộc. Ảnh mới chỉ được upload sau khi lưu.</SheetDescription>
+        <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-0 py-4">
+          <div className="mx-auto w-full max-w-[1480px] px-5 sm:px-8">
+            <SheetTitle className="pr-12 text-xl sm:text-2xl">{tour ? "Chỉnh sửa tour" : "Tạo tour mới"}</SheetTitle>
+            <SheetDescription className="mt-1 pr-12">Nội dung tiếng Việt là bắt buộc. Ảnh mới chỉ được upload sau khi lưu.</SheetDescription>
           </div>
         </SheetHeader>
 
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
           <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto">
             <div className="min-h-full w-full min-w-0">
-              <div className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-x-0 border-t-0 px-5 py-3 sm:px-8">
-                <div className="mx-auto w-full max-w-[1480px]">
+              <div className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-0 shadow-none">
+                <div className="mx-auto w-full max-w-[1480px] px-5 sm:px-8">
                   <div role="tablist" aria-label="Các bước thiết lập tour" className="mx-auto grid w-full grid-cols-3 gap-1 border-b border-cyan-900/20">
                     {FORM_TABS.map((tab) => {
                       const isActive = activeTab === tab.value;
@@ -271,7 +271,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                           disabled={isPending}
                           onClick={() => setActiveTab(tab.value)}
                           onKeyDown={(event) => handleFormTabKeyDown(event, tab.value)}
-                          className={`relative h-11 min-w-0 px-2 text-center text-xs font-semibold transition-colors after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/50 focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:px-4 sm:text-sm ${isActive ? "bg-cyan-900 text-white after:bg-cyan-300" : "text-slate-600 after:bg-transparent hover:bg-cyan-900/5 hover:text-cyan-950"}`}
+                          className={`relative h-11 min-w-0 cursor-pointer bg-transparent px-2 text-center text-xs font-semibold transition-colors after:absolute after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-t-full after:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/50 focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:px-4 sm:text-sm ${isActive ? "font-bold text-cyan-950 after:bg-cyan-800" : "text-slate-600 after:bg-transparent hover:bg-cyan-900/5 hover:text-cyan-950"}`}
                         >
                           {tab.label}
                         </button>
@@ -500,8 +500,8 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
             </div>
           </div>
 
-          <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
-            <div className="mx-auto flex w-full max-w-[1480px] flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-0 py-4">
+            <div className="mx-auto flex w-full max-w-[1480px] flex-col-reverse gap-2 px-5 sm:flex-row sm:justify-end sm:px-8">
               <Button type="button" variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending} onClick={closeAndReset}>Hủy</Button>
               <Button type="submit" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending}>{isPending ? "Đang lưu..." : tour ? "Lưu thay đổi" : "Tạo tour"}</Button>
             </div>
