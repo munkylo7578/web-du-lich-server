@@ -202,7 +202,12 @@ function SettingFormDrawer({
   const [pendingVideo, setPendingVideo] = useState<PendingSettingVideo>();
   const [message, setMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
-  const form = useForm<SettingFormValues>({ resolver: zodResolver(settingFormSchema), values });
+  const form = useForm<SettingFormValues>({
+    resolver: zodResolver(settingFormSchema),
+    values,
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
   const watchedType = form.watch("type");
   const watchedValue = form.watch("value") || "";
   const imageExisting = watchedType === "image" && watchedValue
@@ -221,8 +226,10 @@ function SettingFormDrawer({
     setPendingImages([]);
     if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
     setPendingVideo(undefined);
-    form.setValue("value", "", { shouldDirty: true, shouldValidate: true });
-    form.setValue("translations", { vi: "", en: "" }, { shouldDirty: true, shouldValidate: true });
+    // Changing the type starts fresh content; validate it when the user saves.
+    form.setValue("value", "", { shouldDirty: true, shouldValidate: false });
+    form.setValue("translations", { vi: "", en: "" }, { shouldDirty: true, shouldValidate: false });
+    form.clearErrors(["value", "translations"]);
   }, [form, pendingImages, pendingVideo, watchedType]);
 
   const resetDraft = () => {
