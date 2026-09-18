@@ -1,6 +1,10 @@
 export type ApiEnvironment = {
   databaseUrl: string;
   apiKeys: string[];
+  brevoApiKey: string;
+  brevoSenderEmail: string;
+  brevoSenderName: string;
+  contactRecipientSettingKey: string;
   port: number;
   maxPageSize: number;
   rateLimitTtlMs: number;
@@ -22,6 +26,20 @@ function csv(value: string | undefined) {
   return (value ?? '').split(',').map((item) => item.trim()).filter(Boolean);
 }
 
+function required(name: string, value: string | undefined) {
+  const parsed = value?.trim();
+  if (!parsed) throw new Error(`${name} is required`);
+  return parsed;
+}
+
+function email(name: string, value: string | undefined) {
+  const parsed = required(name, value);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parsed)) {
+    throw new Error(`${name} must be a valid email address`);
+  }
+  return parsed;
+}
+
 export function loadEnvironment(env: NodeJS.ProcessEnv = process.env): ApiEnvironment {
   const databaseUrl = env['DATABASE_URL']?.trim();
   if (!databaseUrl) throw new Error('DATABASE_URL is required');
@@ -34,6 +52,13 @@ export function loadEnvironment(env: NodeJS.ProcessEnv = process.env): ApiEnviro
   return {
     databaseUrl,
     apiKeys,
+    brevoApiKey: required('BREVO_API_KEY', env['BREVO_API_KEY']),
+    brevoSenderEmail: email('BREVO_SENDER_EMAIL', env['BREVO_SENDER_EMAIL']),
+    brevoSenderName: required('BREVO_SENDER_NAME', env['BREVO_SENDER_NAME']),
+    contactRecipientSettingKey: required(
+      'CONTACT_RECIPIENT_SETTING_KEY',
+      env['CONTACT_RECIPIENT_SETTING_KEY'],
+    ),
     port: integer('API_PORT', env['API_PORT'], 3001, 1, 65535),
     maxPageSize: integer('API_MAX_PAGE_SIZE', env['API_MAX_PAGE_SIZE'], 100, 1, 500),
     rateLimitTtlMs: integer('API_RATE_LIMIT_TTL_MS', env['API_RATE_LIMIT_TTL_MS'], 60_000, 1_000, 3_600_000),

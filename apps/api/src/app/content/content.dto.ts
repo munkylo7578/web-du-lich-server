@@ -53,8 +53,24 @@ class WardContentDto {
   province!: ProvinceContentDto | null;
 }
 
+class TourPlanContentDto {
+  @ApiProperty({ format: 'uuid' }) planId!: string;
+  @ApiProperty({ example: 'Ngày 1' }) name!: string;
+  @ApiProperty() description!: string;
+  @ApiProperty({ minimum: 0 }) sortOrder!: number;
+  @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
+  @ApiProperty({ type: ContentImageDto, isArray: true })
+  images!: ContentImageDto[];
+}
+
 class LinkedTourContentDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiPropertyOptional({ nullable: true, minimum: 1, maximum: 12 })
+  departureStartMonth!: number | null;
+  @ApiProperty() name!: string;
+  @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
+  @ApiProperty({ type: TourPlanContentDto, isArray: true })
+  plans!: TourPlanContentDto[];
   @ApiProperty({ type: TourImageDto, isArray: true }) images!: TourImageDto[];
 }
 
@@ -88,16 +104,6 @@ export class DestinationContentDto {
   tours!: LinkedTourContentDto[];
   @ApiProperty({ format: 'date-time' }) createdAt!: Date;
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
-}
-
-class TourPlanContentDto {
-  @ApiProperty({ format: 'uuid' }) planId!: string;
-  @ApiProperty({ example: 'Ngày 1' }) name!: string;
-  @ApiProperty() description!: string;
-  @ApiProperty({ minimum: 0 }) sortOrder!: number;
-  @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
-  @ApiProperty({ type: ContentImageDto, isArray: true })
-  images!: ContentImageDto[];
 }
 
 export class TourContentDto {

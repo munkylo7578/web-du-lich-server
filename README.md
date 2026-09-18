@@ -155,7 +155,7 @@ import { db, tours, tourTranslations } from '@database';
 
 Keep Drizzle table definitions and DB persistence-only snapshot types inside `libs/database`. Avoid importing application domain classes into the database library so it remains reusable by future apps in this monorepo.
 
-## Read-only content API
+## Travel API
 
 Copy [`.env.example`](.env.example), set `DATABASE_URL`, and set one or more comma-separated `API_KEYS` of at least 32 characters. During rotation, deploy both the old and new key, update callers, then remove the old key. Start locally with `npm run api:dev`; the default address is `http://localhost:3001/api/v1`.
 
@@ -167,6 +167,38 @@ Content routes require both `x-api-key` and an explicit `locale=vi|en` query par
 - `GET /api/v1/services` and `GET /api/v1/services/:id`
 - `GET /api/v1/settings` and `GET /api/v1/settings/:key`
 - Public checks: `GET /api/v1/health/live` and `GET /api/v1/health/ready`
+
+### Contact email API (Brevo)
+
+`POST /api/v1/contact` requires `x-api-key` and uses the global API rate limit. All body fields are optional; supplied email values must be valid and `touristArrivals` must be an integer from `0` to `100000`.
+
+```json
+{
+  "name": "Nguyễn Văn An",
+  "mobile": "+84 912 345 678",
+  "email": "visitor@example.com",
+  "touristArrivals": 4,
+  "message": "Please send me the itinerary and price."
+}
+```
+
+A successful request returns:
+
+```json
+{
+  "success": true,
+  "data": { "sent": true }
+}
+```
+
+Configure these server-only environment values:
+
+- `BREVO_API_KEY`: Brevo Transactional Email API key.
+- `BREVO_SENDER_EMAIL`: sender address verified in Brevo.
+- `BREVO_SENDER_NAME`: sender display name.
+- `CONTACT_RECIPIENT_SETTING_KEY`: key of a `text` row in `site_settings` whose translation value is the recipient email.
+
+The recipient lookup prefers the Vietnamese translation and otherwise uses the first nonblank translation. Keep the Brevo API key only in the process environment or a secret manager; never store it in `site_settings` or expose it to browser code. The setting stores a recipient address, which is returned by the existing public settings endpoint, so only use it if that visibility is acceptable. The visitor email is used as Brevo `replyTo` when supplied.
 
 Service responses include a stable `category` key: `accommodation`, `transportation`, or `tourguide`. Destination responses include `latitude` and `longitude` on each Vietnamese ward. These coordinates are derived from `ST_PointOnSurface(gis_wards.geom)` and are `null` when GIS geometry is unavailable. Swagger documents the concrete response fields for list and detail endpoints.
 

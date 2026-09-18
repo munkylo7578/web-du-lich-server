@@ -8,6 +8,7 @@ import {
   ApiProperty,
   ApiPropertyOptional,
   ApiResponse,
+  ApiServiceUnavailableResponse,
   ApiUnauthorizedResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
@@ -93,6 +94,10 @@ export function ApiCommonErrorResponses(): ClassDecorator & MethodDecorator {
     }),
     ApiInternalServerErrorResponse({
       description: 'Unexpected server error',
+      type: ApiErrorResponseDto,
+    }),
+    ApiServiceUnavailableResponse({
+      description: 'Upstream service unavailable',
       type: ApiErrorResponseDto,
     }),
   );

@@ -42,6 +42,9 @@ type WardCoordinate = { latitude: number | null; longitude: number | null };
 type DestinationTourLinkRow = {
   tour: {
     id: string;
+    departureStartMonth: number | null;
+    translations: TranslationRow[];
+    planRows: PlanRow[];
     imageLinks: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   };
 };
@@ -214,8 +217,18 @@ export class ContentService {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
             tour: {
-              columns: { id: true },
+              columns: { id: true, departureStartMonth: true },
               with: {
+                translations: true,
+                planRows: {
+                  orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
+                  with: {
+                    imageLinks: {
+                      orderBy: (link, { asc }) => [asc(link.sortOrder)],
+                      with: { image: true },
+                    },
+                  },
+                },
                 imageLinks: {
                   orderBy: (link, { asc }) => [asc(link.sortOrder)],
                   with: { image: true },
@@ -247,8 +260,18 @@ export class ContentService {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
             tour: {
-              columns: { id: true },
+              columns: { id: true, departureStartMonth: true },
               with: {
+                translations: true,
+                planRows: {
+                  orderBy: (plan, { asc }) => [asc(plan.sortOrder)],
+                  with: {
+                    imageLinks: {
+                      orderBy: (link, { asc }) => [asc(link.sortOrder)],
+                      with: { image: true },
+                    },
+                  },
+                },
                 imageLinks: {
                   orderBy: (link, { asc }) => [asc(link.sortOrder)],
                   with: { image: true },
@@ -465,14 +488,25 @@ export class ContentService {
             }
           : null,
       })),
-      tours: (row.tourLinks ?? []).map(({ tour }) => ({
-        id: tour.id,
-        images: tour.imageLinks.map((link) => ({
-          role: link.role,
-          sortOrder: link.sortOrder,
-          ...this.mapImage(link.image),
-        })),
-      })),
+      tours: (row.tourLinks ?? [])
+        .map(({ tour }) => {
+          const tourTranslation = localized(tour.translations, locale);
+          if (!tourTranslation) return null;
+
+          return {
+            id: tour.id,
+            departureStartMonth: tour.departureStartMonth ?? null,
+            name: tourTranslation.value.name,
+            locale: tourTranslation.locale,
+            plans: this.localizePlans(tour.planRows, locale),
+            images: tour.imageLinks.map((link) => ({
+              role: link.role,
+              sortOrder: link.sortOrder,
+              ...this.mapImage(link.image),
+            })),
+          };
+        })
+        .filter(Boolean),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

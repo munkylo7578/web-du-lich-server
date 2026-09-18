@@ -172,6 +172,23 @@ describe('ContentService destination tour images', () => {
       {
         tour: {
           id: tourId,
+          departureStartMonth: 6,
+          translations: [
+            {
+              locale: 'vi',
+              name: 'Hành trình di sản miền Trung',
+              description: null,
+            },
+          ],
+          planRows: [
+            {
+              id: '0a7bdc2b-e3a8-4b49-a393-d2749211a594',
+              name: { vi: 'Ngày 1', en: 'Day 1' },
+              description: { vi: 'Khám phá Hội An', en: 'Explore Hoi An' },
+              sortOrder: 0,
+              imageLinks: [],
+            },
+          ],
           imageLinks: [
             {
               role: 'cover',
@@ -240,6 +257,19 @@ describe('ContentService destination tour images', () => {
     const expectedTours = [
       {
         id: tourId,
+        departureStartMonth: 6,
+        name: 'Hành trình di sản miền Trung',
+        locale: { requested: 'vi', effective: 'vi', fallback: false },
+        plans: [
+          {
+            planId: '0a7bdc2b-e3a8-4b49-a393-d2749211a594',
+            name: 'Ngày 1',
+            description: 'Khám phá Hội An',
+            sortOrder: 0,
+            locale: { requested: 'vi', effective: 'vi', fallback: false },
+            images: [],
+          },
+        ],
         images: [
           {
             id: '8642d66c-30c8-4703-bb17-4ef65e5707ba',

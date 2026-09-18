@@ -14,7 +14,7 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', env.trustProxy ? 1 : false);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }));
   if (env.corsOrigins.length > 0) {
-    app.enableCors({ origin: env.corsOrigins, methods: ['GET'], allowedHeaders: ['x-api-key', 'content-type'] });
+    app.enableCors({ origin: env.corsOrigins, methods: ['GET', 'POST'], allowedHeaders: ['x-api-key', 'content-type'] });
   }
   const globalPrefix = 'api/v1';
   app.setGlobalPrefix(globalPrefix);
@@ -22,7 +22,7 @@ async function bootstrap() {
   if (env.docsEnabled) {
     const config = new DocumentBuilder()
       .setTitle('Travel Content API')
-      .setDescription('Read-only localized REST API. Every content route requires locale=vi|en and x-api-key.')
+      .setDescription('Travel REST API. Content routes require locale=vi|en; every protected route requires x-api-key.')
       .setVersion('1.0')
       .addApiKey({ type: 'apiKey', in: 'header', name: 'x-api-key' }, 'x-api-key')
       .build();
