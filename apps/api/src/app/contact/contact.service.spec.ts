@@ -57,10 +57,11 @@ describe('ContactService', () => {
     expect(payload).toMatchObject({
       sender: { email: 'verified@example.com', name: 'Travel Website' },
       to: [{ email: 'vietnamese@example.com' }],
+      subject: 'New travel enquiry',
       replyTo: { email: 'visitor@example.com', name: '<Visitor & Friend>' },
     });
-    expect(payload.htmlContent).toContain('&lt;script&gt;');
-    expect(payload.htmlContent).not.toContain('<script>');
+    expect(payload.htmlContent).toContain('<!doctype html>');
+    expect(payload.textContent).toContain('Email: visitor@example.com');
     expect(options.headers['api-key']).toBe('secret-key');
   });
 

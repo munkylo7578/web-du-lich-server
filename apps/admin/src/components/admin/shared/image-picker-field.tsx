@@ -206,7 +206,7 @@ export function ImagePickerField<TMeta = Record<string, unknown>>({
       >
         <input {...getInputProps()} />
         <div className="mb-3 rounded-xl border border-white/70 bg-white/70 p-2.5 text-cyan-700 shadow-sm"><Upload className="size-5" /></div>
-        <p className="font-medium">Kéo thả, chọn hoặc paste ảnh</p>
+        <p className="font-medium">{allowPaste ? "Kéo thả, chọn hoặc paste ảnh" : "Kéo thả hoặc chọn ảnh"}</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {helperText ?? `JPEG, PNG, WebP, AVIF · tối đa ${maxSizeMb}MB · ${mode === "single" ? "1 ảnh" : "nhiều ảnh"}`}
         </p>

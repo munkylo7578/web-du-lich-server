@@ -22,6 +22,23 @@ export const pendingImagesSchema = z.array(z.object({
   "Danh sách ảnh mới chứa mã ảnh trùng lặp.",
 );
 
+export const pendingPlanImagesSchema = z.array(z.object({
+  clientId: z.string().uuid(),
+  planId: z.string().uuid(),
+  altText: imageNameSchema,
+  sortOrder: z.number().int().min(0),
+})).refine(
+  (items) => new Set(items.map((item) => item.clientId)).size === items.length,
+  "Danh sách ảnh chặng mới chứa mã ảnh trùng lặp.",
+);
+
+const existingPlanImageSchema = z.object({
+  imageId: z.string().uuid(),
+  url: z.string(),
+  altText: imageNameSchema,
+  sortOrder: z.number().int().min(0),
+});
+
 export function imageFieldErrors(issues: readonly z.core.$ZodIssue[], prefix = ""): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
   for (const issue of issues) {
@@ -82,9 +99,11 @@ export const tourFormSchema = z.object({
   services: z.array(z.object({ serviceId: z.string().uuid(), sortOrder: z.number().int().min(0) })),
   plans: z.array(
     z.object({
+      planId: z.string().uuid(),
       sortOrder: z.number().int().min(0),
       name: localizedTextSchema,
       description: localizedTextSchema,
+      images: z.array(existingPlanImageSchema),
     }),
   ),
   existingImages: z.array(
@@ -107,3 +126,5 @@ export type DestinationEditorFormValues = z.input<typeof destinationEditorSchema
 export type DestinationEditorValues = z.output<typeof destinationEditorSchema>;
 
 export type PendingImageMeta = z.output<typeof pendingImagesSchema>[number];
+
+export type PendingPlanImageMeta = z.output<typeof pendingPlanImagesSchema>[number];
