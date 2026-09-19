@@ -36,6 +36,13 @@ describe('renderContactEmail', () => {
     );
   });
 
+  it('preserves zero tourist arrivals instead of treating it as missing', () => {
+    const email = renderContactEmail({ touristArrivals: 0 });
+
+    expect(email.textContent).toContain('Tourist arrivals: 0');
+    expect(email.htmlContent).toContain('>0</td>');
+  });
+
   it('uses a consistent fallback for omitted fields', () => {
     const email = renderContactEmail({});
 

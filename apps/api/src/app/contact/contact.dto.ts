@@ -2,13 +2,17 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
+
+import { LOCALES, type Locale } from '../common/query.dto';
 
 function optionalTrimmedString(value: unknown) {
   if (typeof value !== 'string') return value;
@@ -22,6 +26,15 @@ function optionalNumber(value: unknown) {
 }
 
 export class ContactRequestDto {
+  @ApiPropertyOptional({
+    enum: LOCALES,
+    default: 'vi',
+    description: 'Email language. Defaults to Vietnamese when omitted.',
+  })
+  @ValidateIf((_request, value) => value !== undefined)
+  @IsIn(LOCALES)
+  locale?: Locale;
+
   @ApiPropertyOptional({ example: 'Nguyễn Văn An', maxLength: 200 })
   @IsOptional()
   @Transform(({ value }) => optionalTrimmedString(value))

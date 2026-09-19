@@ -45,6 +45,7 @@ describe('ContactService', () => {
 
     await expect(
       service.send({
+        locale: 'en',
         name: '<Visitor & Friend>',
         email: 'visitor@example.com',
         touristArrivals: 3,
@@ -65,6 +66,31 @@ describe('ContactService', () => {
     expect(payload.textContent).toContain('Email: visitor@example.com');
     expect(options.headers['api-key']).toBe('secret-key');
   });
+
+  it.each([
+    [undefined, 'vi', 'Yêu cầu tư vấn du lịch mới', 'Họ và tên: Nguyễn Văn An'],
+    ['vi', 'vi', 'Yêu cầu tư vấn du lịch mới', 'Họ và tên: Nguyễn Văn An'],
+    ['en', 'en', 'New travel enquiry', 'Name: Nguyễn Văn An'],
+  ] as const)(
+    'selects the email language for locale %s without changing the recipient',
+    async (locale, language, subject, nameField) => {
+      const { service } = createService([
+        { locale: 'en', value: 'english@example.com' },
+        { locale: 'vi', value: 'vietnamese@example.com' },
+      ]);
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 201 });
+      global.fetch = fetchMock as typeof fetch;
+
+      await service.send({ ...(locale ? { locale } : {}), name: 'Nguyễn Văn An' });
+
+      const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(payload.subject).toBe(subject);
+      expect(payload.htmlContent).toContain(`<html lang="${language}">`);
+      expect(payload.htmlContent).toContain(subject);
+      expect(payload.textContent).toContain(nameField);
+      expect(payload.to).toEqual([{ email: 'vietnamese@example.com' }]);
+    },
+  );
 
   it('uses a plain-text recipient without HTML wrapping', async () => {
     const { service } = createService([{ locale: 'vi', value: ' Sales@kindtraveldmc.com ' }], 'plain_text');
@@ -87,8 +113,8 @@ describe('ContactService', () => {
     const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(payload.to).toEqual([{ email: 'fallback@example.com' }]);
     expect(payload.replyTo).toBeUndefined();
-    expect(payload.textContent).toContain('Name: Not provided');
-    expect(payload.textContent).toContain('Tourist arrivals: Not provided');
+    expect(payload.textContent).toContain('Họ và tên: Chưa cung cấp');
+    expect(payload.textContent).toContain('Số lượng khách: Chưa cung cấp');
   });
 
   it.each([

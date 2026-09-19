@@ -9,6 +9,21 @@ describe('ContactRequestDto', () => {
     expect(await validate(request)).toEqual([]);
   });
 
+  it.each(['vi', 'en'])('accepts the %s email locale', async (locale) => {
+    const request = plainToInstance(ContactRequestDto, { locale });
+    expect(await validate(request, { whitelist: true, forbidNonWhitelisted: true })).toEqual([]);
+    expect(request.locale).toBe(locale);
+  });
+
+  it.each(['fr', '', 'VI', null, 123, ['vi'], {}])(
+    'rejects an invalid supplied locale: %s',
+    async (locale) => {
+      const request = plainToInstance(ContactRequestDto, { locale });
+      const errors = await validate(request);
+      expect(errors.some((error) => error.property === 'locale')).toBe(true);
+    },
+  );
+
   it('trims strings and transforms tourist arrivals to an integer', async () => {
     const request = plainToInstance(ContactRequestDto, {
       name: '  Nguyễn Văn An  ',

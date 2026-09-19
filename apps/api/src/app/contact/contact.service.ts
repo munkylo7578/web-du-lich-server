@@ -11,6 +11,7 @@ import { API_ENV, type ApiEnvironment } from '../config/env';
 import { DATABASE, type Database } from '../database/database.module';
 import type { ContactRequestDto } from './contact.dto';
 import { renderContactEmail } from './contact-email.template';
+import { renderVietnameseContactEmail } from './contact-email.vi.template';
 
 const BREVO_SEND_EMAIL_URL = 'https://api.brevo.com/v3/smtp/email';
 
@@ -143,7 +144,10 @@ export class ContactService {
     recipient: string,
     request: ContactRequestDto,
   ): BrevoPayload {
-    const email = renderContactEmail(request);
+    const email =
+      request.locale === 'en'
+        ? renderContactEmail(request)
+        : renderVietnameseContactEmail(request);
 
     return {
       sender: {
