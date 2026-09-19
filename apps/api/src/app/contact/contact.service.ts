@@ -10,8 +10,9 @@ import { isEmail } from 'class-validator';
 import { API_ENV, type ApiEnvironment } from '../config/env';
 import { DATABASE, type Database } from '../database/database.module';
 import type { ContactRequestDto } from './contact.dto';
-import { renderContactEmail } from './contact-email.template';
+import { renderContactEmail, type ContactEmailVariant } from './contact-email.template';
 import { renderVietnameseContactEmail } from './contact-email.vi.template';
+import type { JourneyContactRequestDto } from './journey-contact.dto';
 
 const BREVO_SEND_EMAIL_URL = 'https://api.brevo.com/v3/smtp/email';
 
@@ -34,8 +35,23 @@ export class ContactService {
   ) {}
 
   async send(request: ContactRequestDto) {
+    return this.deliver(request, 'contact');
+  }
+
+  async sendJourney(request: JourneyContactRequestDto) {
+    return this.deliver({
+      locale: request.locale,
+      name: request.name,
+      email: request.email,
+      mobile: request.phoneNumber,
+      touristArrivals: request.numberOfTickets ?? undefined,
+      message: request.message,
+    }, 'journey');
+  }
+
+  private async deliver(request: ContactRequestDto, variant: ContactEmailVariant) {
     const recipient = await this.recipientEmail();
-    const payload = this.brevoPayload(recipient, request);
+    const payload = this.brevoPayload(recipient, request, variant);
 
     let response: Response;
     try {
@@ -84,6 +100,7 @@ export class ContactService {
           request.name,
           request.mobile,
           request.message,
+          request.touristArrivals?.toString(),
         ].filter((item): item is string => Boolean(item));
         for (const sensitive of sensitiveValues.sort((a, b) => b.length - a.length)) {
           safe = safe.split(sensitive).join('[redacted]');
@@ -143,11 +160,12 @@ export class ContactService {
   private brevoPayload(
     recipient: string,
     request: ContactRequestDto,
+    variant: ContactEmailVariant,
   ): BrevoPayload {
     const email =
       request.locale === 'en'
-        ? renderContactEmail(request)
-        : renderVietnameseContactEmail(request);
+        ? renderContactEmail(request, variant)
+        : renderVietnameseContactEmail(request, variant);
 
     return {
       sender: {

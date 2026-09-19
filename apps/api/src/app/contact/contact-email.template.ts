@@ -10,8 +10,13 @@ export type ContactEmail = {
 
 type EmailField = readonly [label: string, value: string];
 
-export function renderContactEmail(request: ContactRequestDto): ContactEmail {
-  const fields = contactFields(request);
+export type ContactEmailVariant = 'contact' | 'journey';
+
+export function renderContactEmail(
+  request: ContactRequestDto,
+  variant: ContactEmailVariant = 'contact',
+): ContactEmail {
+  const fields = contactFields(request, variant);
   const rows = fields.map(renderFieldRow).join('');
 
   return {
@@ -73,13 +78,13 @@ export function renderContactEmail(request: ContactRequestDto): ContactEmail {
   };
 }
 
-function contactFields(request: ContactRequestDto): EmailField[] {
+function contactFields(request: ContactRequestDto, variant: ContactEmailVariant): EmailField[] {
   return [
     ['Name', present(request.name)],
-    ['Mobile', present(request.mobile)],
+    [variant === 'journey' ? 'Phone number' : 'Mobile', present(request.mobile)],
     ['Email', present(request.email)],
     [
-      'Tourist arrivals',
+      variant === 'journey' ? 'Number of ticket' : 'Tourist arrivals',
       present(
         request.touristArrivals === undefined
           ? undefined

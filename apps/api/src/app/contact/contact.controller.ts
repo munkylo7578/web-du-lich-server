@@ -7,6 +7,7 @@ import {
 } from '../common/api-response.swagger';
 import { ContactRequestDto, ContactResponseDto } from './contact.dto';
 import { ContactService } from './contact.service';
+import { JourneyContactRequestDto } from './journey-contact.dto';
 
 @ApiTags('contact')
 @ApiSecurity('x-api-key')
@@ -24,5 +25,16 @@ export class ContactController {
   })
   submit(@Body() request: ContactRequestDto) {
     return this.contact.send(request);
+  }
+
+  @Post('journey')
+  @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: JourneyContactRequestDto })
+  @ApiSuccessEnvelope({
+    dataType: ContactResponseDto,
+    description: 'The journey enquiry was accepted and sent by email.',
+  })
+  submitJourney(@Body() request: JourneyContactRequestDto) {
+    return this.contact.sendJourney(request);
   }
 }

@@ -1,12 +1,15 @@
 import type { ContactRequestDto } from './contact.dto';
-import type { ContactEmail } from './contact-email.template';
+import type { ContactEmail, ContactEmailVariant } from './contact-email.template';
 
 const NOT_PROVIDED = 'Chưa cung cấp';
 
 type EmailField = readonly [label: string, value: string];
 
-export function renderVietnameseContactEmail(request: ContactRequestDto): ContactEmail {
-  const fields = contactFields(request);
+export function renderVietnameseContactEmail(
+  request: ContactRequestDto,
+  variant: ContactEmailVariant = 'contact',
+): ContactEmail {
+  const fields = contactFields(request, variant);
   const rows = fields.map(renderFieldRow).join('');
 
   return {
@@ -68,13 +71,13 @@ export function renderVietnameseContactEmail(request: ContactRequestDto): Contac
   };
 }
 
-function contactFields(request: ContactRequestDto): EmailField[] {
+function contactFields(request: ContactRequestDto, variant: ContactEmailVariant): EmailField[] {
   return [
     ['Họ và tên', present(request.name)],
     ['Số điện thoại', present(request.mobile)],
     ['Email', present(request.email)],
     [
-      'Số lượng khách',
+      variant === 'journey' ? 'Số lượng vé' : 'Số lượng khách',
       present(
         request.touristArrivals === undefined
           ? undefined

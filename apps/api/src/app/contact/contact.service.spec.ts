@@ -35,6 +35,100 @@ describe('ContactService', () => {
     jest.restoreAllMocks();
   });
 
+  describe('sendJourney', () => {
+    it.each([
+      [undefined, 'vi', 'Số lượng vé', 'Số điện thoại'],
+      ['vi', 'vi', 'Số lượng vé', 'Số điện thoại'],
+      ['en', 'en', 'Number of ticket', 'Phone number'],
+    ] as const)('maps journey fields and uses locale %s with the existing recipient', async (locale, language, ticketLabel, phoneLabel) => {
+      const { service } = createService([
+        { locale: 'en', value: 'english@example.com' },
+        { locale: 'vi', value: ' vietnamese@example.com ' },
+      ], 'plain_text');
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+      global.fetch = fetchMock as typeof fetch;
+      await expect(service.sendJourney({
+        locale, name: 'Visitor', email: 'visitor@example.com',
+        phoneNumber: '+84912345678', numberOfTickets: 4, message: 'Travel plans',
+      })).resolves.toEqual({ data: { sent: true } });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, options] = fetchMock.mock.calls[0];
+      expect(url).toBe('https://api.brevo.com/v3/smtp/email');
+      expect(options).toMatchObject({ method: 'POST', headers: { 'api-key': environment.brevoApiKey } });
+      expect(options.signal).toBeInstanceOf(AbortSignal);
+      const payload = JSON.parse(options.body);
+      expect(payload).toMatchObject({
+        to: [{ email: 'vietnamese@example.com' }],
+        sender: { email: environment.brevoSenderEmail, name: environment.brevoSenderName },
+        replyTo: { email: 'visitor@example.com', name: 'Visitor' },
+      });
+      expect(payload.htmlContent).toContain(`<html lang="${language}">`);
+      expect(payload.textContent).toContain(`${ticketLabel}: 4`);
+      expect(payload.textContent).toContain(`${phoneLabel}: +84912345678`);
+      expect(payload.textContent).toContain('Travel plans');
+    });
+
+    it('sends an empty journey enquiry without reply-to and falls back to a nonblank recipient', async () => {
+      const { service } = createService([
+        { locale: 'en', value: 'fallback@example.com' }, { locale: 'vi', value: ' ' },
+      ]);
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+      global.fetch = fetchMock as typeof fetch;
+      await expect(service.sendJourney({})).resolves.toEqual({ data: { sent: true } });
+      const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(payload.to).toEqual([{ email: 'fallback@example.com' }]);
+      expect(payload.replyTo).toBeUndefined();
+      expect(payload.textContent).toContain('Số lượng vé: Chưa cung cấp');
+    });
+
+    it('sets reply-to without a name when only email is provided', async () => {
+      const { service } = createService([{ locale: 'vi', value: 'recipient@example.com' }]);
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+      global.fetch = fetchMock as typeof fetch;
+      await service.sendJourney({ email: 'visitor@example.com' });
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body).replyTo).toEqual({ email: 'visitor@example.com' });
+    });
+
+    it('does not contact Brevo when the recipient is invalid', async () => {
+      const { service } = createService([{ locale: 'vi', value: 'invalid' }]);
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      global.fetch = jest.fn() as typeof fetch;
+      await expect(service.sendJourney({})).rejects.toBeInstanceOf(InternalServerErrorException);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it.each(['network', 'timeout', 'rejection', 'unreadable'])('maps a %s failure to service unavailable', async (failure) => {
+      const { service } = createService([{ locale: 'vi', value: 'recipient@example.com' }]);
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const fetchMock = jest.fn();
+      if (failure === 'network' || failure === 'timeout') {
+        fetchMock.mockRejectedValue(new Error(failure));
+      } else {
+        fetchMock.mockResolvedValue({ ok: false, status: 500, json: failure === 'unreadable'
+          ? jest.fn().mockRejectedValue(new Error('Invalid JSON'))
+          : jest.fn().mockResolvedValue({ code: 'provider_error' }) });
+      }
+      global.fetch = fetchMock as typeof fetch;
+      await expect(service.sendJourney({})).rejects.toThrow('Email service unavailable');
+    });
+
+    it('redacts journey phone, ticket count and other sensitive fields from provider errors', async () => {
+      const { service } = createService([{ locale: 'vi', value: 'recipient@example.com' }]);
+      const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const request = { name: 'Private visitor', email: 'visitor@example.com',
+        phoneNumber: '+84912345678', numberOfTickets: 87654, message: 'Private travel plans' };
+      global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 400,
+        json: jest.fn().mockResolvedValue({ code: 'invalid_parameter',
+          message: `${environment.brevoApiKey}\n${Object.values(request).join(' ')}` }) }) as typeof fetch;
+      await expect(service.sendJourney(request)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      const logged = String(log.mock.calls[0][0]);
+      for (const value of [environment.brevoApiKey, ...Object.values(request)]) {
+        expect(logged).not.toContain(String(value));
+      }
+      expect(logged).not.toContain('\n');
+    });
+  });
+
   it('prefers the Vietnamese recipient and sends an escaped Brevo payload', async () => {
     const { service, findFirst } = createService([
       { locale: 'en', value: 'english@example.com' },
