@@ -17,6 +17,7 @@ import {
   Plus,
   Search,
   Trash2,
+  X,
 } from 'lucide-react';
 
 import {
@@ -263,6 +264,22 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
                   ))}
                 </select>
               </div>
+              {category && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10"
+                  aria-label="Xóa bộ lọc phân loại dịch vụ"
+                  disabled={list.isPending}
+                  onClick={() => {
+                    setCategory('');
+                    list.setPage(1);
+                  }}
+                >
+                  <X data-icon="inline-start" />
+                  Xóa bộ lọc
+                </Button>
+              )}
             </div>
             <p className="text-sm">
               {list.total} dịch vụ

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { db, siteSettings, siteSettingTranslations } from "@database";
-import { and, asc, countDistinct, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, countDistinct, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { isSettingCategory, type SettingCategory } from "@setting-category";
 
 import { Setting, type SettingLocale, type SettingRepository, type SettingSnapshot } from "@/domains/setting/domain";
@@ -31,7 +31,7 @@ export async function listAdminSettings(
         ilike(siteSettings.key, pattern),
         ilike(siteSettings.description, pattern),
         ilike(siteSettings.value, pattern),
-        ilike(siteSettings.type, pattern),
+        ilike(sql`${siteSettings.type}::text`, pattern),
         ilike(siteSettingTranslations.value, pattern),
       )
     : undefined;
