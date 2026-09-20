@@ -27,7 +27,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AdminListTable } from "@/components/admin/shared/admin-list-table";
+import { ExpandableText } from "@/components/admin/shared/expandable-text";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RichTextEditor } from "@/components/admin/tours/rich-text-editor";
 import {
@@ -59,15 +61,13 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
       id: "name",
       header: "Điểm đến",
       cell: ({ row, getValue }) => (
-        <div className="flex min-w-72 items-start gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-800">
             <MapPin className="size-5" />
           </div>
-          <div>
-            <p className="font-medium text-foreground">{getValue()}</p>
-            <p className="mt-1 line-clamp-2 max-w-xl text-xs text-muted-foreground">
-              {getDestinationDescription(row.original)}
-            </p>
+          <div className="min-w-0 flex-1 space-y-1">
+            <ExpandableText text={getValue()} className="font-medium text-foreground" />
+            <ExpandableText text={getDestinationDescription(row.original)} className="text-xs text-muted-foreground" />
           </div>
         </div>
       ),
@@ -81,10 +81,10 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
       id: "wards",
       header: "Phường/xã",
       cell: ({ row }) => row.original.wards.length ? (
-        <div className="flex max-w-sm flex-wrap gap-1.5">
+        <div className="flex min-w-0 flex-wrap gap-1.5">
           {row.original.wards.slice(0, 3).map((ward) => (
-            <Badge key={ward.code} variant="secondary">
-              <MapPin data-icon="inline-start" />{ward.fullName || ward.name}
+            <Badge key={ward.code} variant="secondary" className="h-auto max-w-full items-start whitespace-normal py-1">
+              <MapPin data-icon="inline-start" className="mt-0.5 shrink-0" /><span className="min-w-0 [overflow-wrap:anywhere]">{ward.fullName || ward.name}</span>
             </Badge>
           ))}
           {row.original.wards.length > 3 && <Badge variant="outline">+{row.original.wards.length - 3}</Badge>}
@@ -95,7 +95,7 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
       id: "languages",
       header: "Ngôn ngữ",
       cell: ({ row }) => (
-        <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
           {row.original.translations.map((item) => (
             <Badge key={item.locale} variant="secondary"><Languages data-icon="inline-start" />{item.locale.toUpperCase()}</Badge>
           ))}
@@ -188,10 +188,11 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table>
+              <AdminListTable className="min-w-[1160px]">
+                <colgroup><col /><col className="w-32" /><col className="w-60" /><col className="w-28" /><col className="w-20" /><col className="w-36" /><col className="w-28" /></colgroup>
                 <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-cyan-900/15 hover:bg-transparent">{group.headers.map((header) => <TableHead key={header.id} className="font-semibold text-slate-700">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
                 <TableBody>{table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => <TableRow key={row.id}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={columns.length} className="h-52 text-center"><div className="mx-auto flex max-w-sm flex-col items-center"><div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div><p className="font-medium">Chưa tìm thấy điểm đến</p><p className="mt-1 text-sm text-muted-foreground">Tạo điểm đến mới hoặc thử từ khóa khác.</p></div></TableCell></TableRow>}</TableBody>
-              </Table>
+              </AdminListTable>
             </div>
             <ServerPagination {...list} onPageChange={list.setPage} onPageSizeChange={list.setPageSize} />
           </CardContent>

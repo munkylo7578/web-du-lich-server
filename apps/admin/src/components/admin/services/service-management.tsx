@@ -57,7 +57,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -75,6 +74,8 @@ import type {
 } from '@/features/admin-services/service-types';
 import type { AdminListQuery, AdminListResult } from '@/features/shared/admin-list';
 import { ServerPagination } from '@/components/admin/shared/server-pagination';
+import { AdminListTable } from '@/components/admin/shared/admin-list-table';
+import { ExpandableText } from '@/components/admin/shared/expandable-text';
 import { useServerPagination } from '@/hooks/use-server-pagination';
 import {
   SERVICE_CATEGORIES,
@@ -108,23 +109,21 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
         id: 'name',
         header: 'Dịch vụ',
         cell: ({ row, getValue }) => (
-          <div className="flex min-w-72 items-center gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             {row.original.images[0] ? (
               <img
                 src={row.original.images[0].url}
                 alt={row.original.images[0].altText || getValue()}
-                className="size-14 rounded-xl object-cover"
+                className="size-14 shrink-0 rounded-xl object-cover"
               />
             ) : (
-              <div className="grid size-14 place-items-center rounded-xl bg-cyan-100 text-cyan-800">
+              <div className="grid size-14 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-800">
                 <ImageIcon />
               </div>
             )}
-            <div>
-              <p className="font-medium">{getValue()}</p>
-              <p className="mt-1 line-clamp-2 max-w-xl text-xs text-muted-foreground">
-                {descriptionOf(row.original)}
-              </p>
+            <div className="min-w-0 flex-1 space-y-1">
+              <ExpandableText text={getValue()} className="font-medium" />
+              <ExpandableText text={descriptionOf(row.original)} className="text-xs text-muted-foreground" />
             </div>
           </div>
         ),
@@ -139,7 +138,7 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
         id: 'languages',
         header: 'Ngôn ngữ',
         cell: ({ row }) => (
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {row.original.translations.map((item) => (
               <Badge key={item.locale} variant="secondary">
                 <Languages data-icon="inline-start" />
@@ -296,7 +295,8 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table>
+              <AdminListTable className="min-w-[1120px]">
+                <colgroup><col /><col className="w-44" /><col className="w-28" /><col className="w-20" /><col className="w-20" /><col className="w-36" /><col className="w-28" /></colgroup>
                 <TableHeader>
                   {table.getHeaderGroups().map((group) => (
                     <TableRow key={group.id}>
@@ -338,7 +338,7 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </AdminListTable>
             </div>
             <ServerPagination {...list} onPageChange={list.setPage} onPageSizeChange={list.setPageSize} />
           </CardContent>

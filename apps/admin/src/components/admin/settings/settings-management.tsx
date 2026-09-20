@@ -21,7 +21,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AdminListTable } from "@/components/admin/shared/admin-list-table";
+import { ExpandableText } from "@/components/admin/shared/expandable-text";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { settingFormSchema, type SettingFormValues } from "@/features/admin-settings/settings-form-schema";
@@ -75,7 +77,8 @@ export function SettingsManagement({ initialResult, category }: { initialResult:
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table>
+              <AdminListTable className="min-w-[1120px]">
+                <colgroup><col className="w-[22%]" /><col className="w-40" /><col className="w-[24%]" /><col /><col className="w-36" /><col className="w-28" /></colgroup>
                 <TableHeader>
                   <TableRow className="border-cyan-900/15 hover:bg-transparent">
                     <TableHead className="font-semibold text-slate-700">Key</TableHead>
@@ -90,10 +93,10 @@ export function SettingsManagement({ initialResult, category }: { initialResult:
                   {list.items.length ? list.items.map((setting) => (
                     <TableRow key={setting.key}>
                       <TableCell>
-                        <div className="flex min-w-52 items-center gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
                           <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-800"><Settings2 className="size-5" /></div>
-                          <div>
-                            <p className="font-mono text-sm font-semibold text-foreground">{setting.key}</p>
+                          <div className="min-w-0 flex-1">
+                            <ExpandableText text={setting.key} className="font-mono font-semibold text-foreground" />
                             <div className="mt-1 flex flex-wrap items-center gap-1.5">
                               <p className="text-xs text-muted-foreground">Key cố định</p>
                               {!setting.canDelete && <Badge variant="secondary">Không thể xóa</Badge>}
@@ -102,7 +105,7 @@ export function SettingsManagement({ initialResult, category }: { initialResult:
                         </div>
                       </TableCell>
                       <TableCell><SettingTypeBadge type={setting.type} /></TableCell>
-                      <TableCell><p className="line-clamp-2 max-w-sm text-sm text-slate-700">{setting.description || "—"}</p></TableCell>
+                      <TableCell><ExpandableText text={setting.description || "—"} className="text-slate-700" /></TableCell>
                       <TableCell><SettingValuePreview setting={setting} /></TableCell>
                       <TableCell><span className="text-sm text-muted-foreground">{formatDate(setting.updatedAt)}</span></TableCell>
                       <TableCell>
@@ -133,7 +136,7 @@ export function SettingsManagement({ initialResult, category }: { initialResult:
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </AdminListTable>
             </div>
             <ServerPagination {...list} onPageChange={list.setPage} onPageSizeChange={list.setPageSize} />
           </CardContent>
@@ -473,7 +476,7 @@ function SettingValuePreview({ setting }: { setting: AdminSetting }) {
     );
   }
 
-  return <p className="line-clamp-2 max-w-xs text-sm text-slate-700">{setting.type === "plain_text" ? setting.translations.vi : stripHtml(setting.translations.vi)}</p>;
+  return <ExpandableText text={setting.type === "plain_text" ? setting.translations.vi : stripHtml(setting.translations.vi)} className="text-slate-700" />;
 }
 
 function VideoPickerField({
