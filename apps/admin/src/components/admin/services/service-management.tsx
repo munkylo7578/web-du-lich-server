@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -11,6 +11,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import {
+  ChevronDown,
   Edit3,
   ImageIcon,
   Languages,
@@ -86,6 +87,7 @@ const helper = createColumnHelper<AdminService>();
 export function ServiceManagement({ initialResult }: { initialResult: AdminListResult<AdminService> }) {
   const router = useRouter();
   const [category, setCategory] = useState<ServiceCategory | ''>('');
+  const categoryFilterRef = useRef<HTMLSelectElement>(null);
   const loadPage = useCallback(
     (input: AdminListQuery) =>
       listAdminServicesAction({
@@ -232,21 +234,22 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
         </div>
         <Card className="gap-0 overflow-hidden rounded-[28px] border border-cyan-900/15 bg-white/95 py-0">
           <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex w-full flex-col gap-3 sm:flex-row lg:max-w-3xl">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:max-w-3xl">
               <div className="relative w-full sm:max-w-sm">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                 <Input
                   value={list.query}
                   onChange={(event) => list.setQuery(event.target.value)}
-                  className="pl-9"
+                  className="h-10 pl-9"
                   placeholder="Tìm theo tên, mô tả dịch vụ..."
                 />
               </div>
-              <div className="w-full sm:w-64">
+              <div className="relative w-full sm:w-64 sm:shrink-0">
                 <Label htmlFor="service-category-filter" className="sr-only">
                   Lọc theo phân loại dịch vụ
                 </Label>
                 <select
+                  ref={categoryFilterRef}
                   id="service-category-filter"
                   value={category}
                   disabled={list.isPending}
@@ -254,7 +257,7 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
                     setCategory(event.target.value as ServiceCategory | '');
                     list.setPage(1);
                   }}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background py-2 pl-3 pr-16 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">Tất cả phân loại</option>
                   {SERVICE_CATEGORIES.map((item) => (
@@ -263,23 +266,29 @@ export function ServiceManagement({ initialResult }: { initialResult: AdminListR
                     </option>
                   ))}
                 </select>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                />
+                {category && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-8 top-1/2 -translate-y-1/2"
+                    aria-label="Xóa bộ lọc phân loại dịch vụ"
+                    title="Xóa bộ lọc phân loại dịch vụ"
+                    disabled={list.isPending}
+                    onClick={() => {
+                      setCategory('');
+                      list.setPage(1);
+                      categoryFilterRef.current?.focus();
+                    }}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                )}
               </div>
-              {category && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10"
-                  aria-label="Xóa bộ lọc phân loại dịch vụ"
-                  disabled={list.isPending}
-                  onClick={() => {
-                    setCategory('');
-                    list.setPage(1);
-                  }}
-                >
-                  <X data-icon="inline-start" />
-                  Xóa bộ lọc
-                </Button>
-              )}
             </div>
             <p className="text-sm">
               {list.total} dịch vụ
