@@ -397,7 +397,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
               {!plans.fields.length && <div className="rounded-2xl border border-dashed border-cyan-800/35 bg-cyan-50/50 p-6 text-center text-sm font-medium text-slate-700">Chưa có lịch trình. Bấm “Thêm chặng” để bắt đầu.</div>}
               {plans.fields.map((plan, index) => (
                 <div key={plan.id} className="rounded-2xl border border-cyan-900/15 bg-white/95 p-4 shadow-[0_12px_32px_-28px_rgba(8,47,73,0.55)] sm:p-5">
-                  <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium"><GripVertical className="size-4 text-muted-foreground" />Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => {
+                  <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium">Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => {
                     const planId = form.getValues(`plans.${index}.planId`);
                     setPendingPlanImages((current) => {
                       current.filter((image) => image.planId === planId).forEach((image) => URL.revokeObjectURL(image.previewUrl));

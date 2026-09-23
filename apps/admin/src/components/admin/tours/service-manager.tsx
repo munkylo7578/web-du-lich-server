@@ -119,7 +119,6 @@ export function ServiceManager({
               key={item.serviceId}
               className="flex items-center gap-3 rounded-2xl border bg-white p-3"
             >
-              <GripVertical className="size-4 text-muted-foreground" />
               <span className="flex-1 font-medium">
                 {service?.translations.find(
                   (translation) => translation.locale === 'vi',
