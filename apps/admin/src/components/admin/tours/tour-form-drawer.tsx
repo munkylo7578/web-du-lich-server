@@ -485,12 +485,13 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                       <section className="space-y-5 py-2 sm:py-4">
                         <SectionHeading title={SERVICE_CATEGORY_LABELS[category]} description="Bổ sung mô tả riêng và chọn các dịch vụ thuộc đúng nhóm này." />
                         <div className="grid min-w-0 gap-6 xl:grid-cols-2 xl:items-start">
+                           <div className="min-w-0">
+                        <Controller control={form.control} name="services" render={({ field }) => <ServiceManager category={category} value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
+                          </div>
                           <FormField fieldPath={`serviceDescriptions.${category}`} label={`Mô tả ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}`} error={form.formState.errors.serviceDescriptions?.[category]?.message}>
                             <Controller control={form.control} name={`serviceDescriptions.${category}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder={`Thông tin về ${SERVICE_CATEGORY_LABELS[category].toLowerCase()}...`} invalid={Boolean(form.formState.errors.serviceDescriptions?.[category])} />} />
                           </FormField>
-                          <div className="min-w-0">
-                        <Controller control={form.control} name="services" render={({ field }) => <ServiceManager category={category} value={field.value} existingServices={tour?.services ?? []} onChange={field.onChange} />} />
-                          </div>
+                         
                         </div>
                       </section>
                     </div>

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { SETTING_CATEGORY_LABELS } from "@setting-category";
 import {
   BarChart3,
+  Building2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -83,6 +84,7 @@ const adminNavItems: AdminNavItem[] = [
     icon: Settings,
     children: [
       { title: SETTING_CATEGORY_LABELS.home, href: "/admin/settings/home", icon: House },
+      { title: SETTING_CATEGORY_LABELS["about-us"], href: "/admin/settings/about-us", icon: Building2 },
       { title: SETTING_CATEGORY_LABELS.general, href: "/admin/settings/general", icon: SlidersHorizontal },
     ],
   },

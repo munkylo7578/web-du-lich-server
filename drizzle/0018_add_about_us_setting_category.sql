@@ -1,0 +1,1 @@
+ALTER TYPE "public"."site_setting_category" ADD VALUE 'about-us';

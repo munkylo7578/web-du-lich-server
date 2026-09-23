@@ -34,6 +34,12 @@ import { useServerPagination } from "@/hooks/use-server-pagination";
 type PendingSettingImage = ImagePickerPendingImage;
 type PendingSettingVideo = { file: File; previewUrl: string };
 
+const SETTING_CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
+  general: "Quản lý các cấu hình dùng chung cho website.",
+  home: "Quản lý nội dung và hình ảnh trên trang chủ.",
+  "about-us": "Quản lý nội dung và hình ảnh trên trang About us.",
+};
+
 export function SettingsManagement({ initialResult, category }: { initialResult: AdminListResult<AdminSetting>; category: SettingCategory }) {
   const categoryLabel = SETTING_CATEGORY_LABELS[category];
   const router = useRouter();
@@ -52,7 +58,7 @@ export function SettingsManagement({ initialResult, category }: { initialResult:
           <div>
             <p className="mb-2 text-sm font-medium text-slate-600">Settings / {categoryLabel}</p>
             <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-950">Cấu hình {categoryLabel.toLowerCase()}</h1>
-            <p className="mt-2 text-sm text-slate-600">{category === "home" ? "Quản lý nội dung và hình ảnh trên trang chủ." : "Quản lý các cấu hình dùng chung cho website."}</p>
+            <p className="mt-2 text-sm text-slate-600">{SETTING_CATEGORY_DESCRIPTIONS[category]}</p>
           </div>
           <Button
             size="lg"

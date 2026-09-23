@@ -127,6 +127,13 @@
       "when": 1789758962054,
       "tag": "0017_setting_plain_text",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790156898411,
+      "tag": "0018_add_about_us_setting_category",
+      "breakpoints": true
     }
   ]
 }
