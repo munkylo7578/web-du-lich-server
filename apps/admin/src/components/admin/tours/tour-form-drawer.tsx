@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, type FieldError, type FieldErrors, useFieldArray, useForm } from "react-hook-form";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
@@ -94,6 +94,8 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
 export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: boolean; tour: AdminTour | null; onSaved?: () => void; onOpenChange: (open: boolean) => void }) {
   const values = useMemo(() => toFormValues(tour), [tour]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const newPlanIdRef = useRef<string | null>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [pendingPlanImages, setPendingPlanImages] = useState<PendingPlanImage[]>([]);
   const [message, setMessage] = useState<string>();
@@ -105,7 +107,39 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
   const form = useForm<TourFormValues>({ resolver: zodResolver(tourFormSchema), values });
   const plans = useFieldArray({ control: form.control, name: "plans" });
 
+  useEffect(() => {
+    if (!open || activeTab !== "plan" || !newPlanIdRef.current) return;
+
+    // Wait for the new card and its Vietnamese tab to mount before focusing.
+    const frame = window.requestAnimationFrame(() => {
+      const root = scrollAreaRef.current;
+      const card = root?.querySelector<HTMLElement>(`[data-plan-id="${newPlanIdRef.current}"]`);
+      if (!root || !card) return;
+
+      const input = card.querySelector<HTMLInputElement>('input[name$=".name.vi"]');
+      input?.focus({ preventScroll: true });
+      const tabBarHeight = tabBarRef.current?.getBoundingClientRect().height ?? 0;
+      root.scrollTo({
+        top: Math.max(0, root.scrollTop + card.getBoundingClientRect().top - root.getBoundingClientRect().top - tabBarHeight - 16),
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      });
+      newPlanIdRef.current = null;
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, activeTab, plans.fields]);
+
+  const addPlan = () => {
+    if (isPending) return;
+    const index = form.getValues("plans").length;
+    const planId = crypto.randomUUID();
+    newPlanIdRef.current = planId;
+    setPlanLocales((current) => ({ ...current, [index]: "vi" }));
+    plans.append({ planId, sortOrder: index, name: { vi: "", en: "" }, description: { vi: "", en: "" }, images: [] }, { shouldFocus: false });
+  };
+
   const resetDraft = () => {
+    newPlanIdRef.current = null;
     pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     pendingPlanImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setPendingImages([]);
@@ -222,11 +256,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
         if (path) scrollToError(path);
       }
       if (result.success) {
-        pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-        pendingPlanImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-        setPendingImages([]);
-        setPendingPlanImages([]);
-        onOpenChange(false);
+        closeAndReset();
         onSaved?.();
       }
     });
@@ -254,7 +284,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
           <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto">
             <div className="min-h-full w-full min-w-0">
-              <div className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-0 shadow-none">
+              <div ref={tabBarRef} className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-0 shadow-none">
                 <div className="mx-auto w-full max-w-[1480px] px-5 sm:px-8">
                   <div role="tablist" aria-label="Các bước thiết lập tour" className="mx-auto grid w-full grid-cols-3 gap-1 border-b border-cyan-900/20">
                     {FORM_TABS.map((tab) => {
@@ -392,11 +422,11 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                   <section className="tour-drawer-panel relative z-0 space-y-4 rounded-[28px] p-5 sm:p-7">
                 <div className="flex items-center justify-between gap-4">
                   <SectionHeading title="Lịch trình" description="Tên và mô tả từng ngày theo ngôn ngữ." />
-                  <Button type="button" variant="outline" onClick={() => plans.append({ planId: crypto.randomUUID(), sortOrder: plans.fields.length, name: { vi: "", en: "" }, description: { vi: "", en: "" }, images: [] })}><Plus data-icon="inline-start" />Thêm chặng</Button>
+                  <Button type="button" variant="outline" disabled={isPending} onClick={addPlan}><Plus data-icon="inline-start" />Thêm chặng</Button>
                 </div>
               {!plans.fields.length && <div className="rounded-2xl border border-dashed border-cyan-800/35 bg-cyan-50/50 p-6 text-center text-sm font-medium text-slate-700">Chưa có lịch trình. Bấm “Thêm chặng” để bắt đầu.</div>}
               {plans.fields.map((plan, index) => (
-                <div key={plan.id} className="rounded-2xl border border-cyan-900/15 bg-white/95 p-4 shadow-[0_12px_32px_-28px_rgba(8,47,73,0.55)] sm:p-5">
+                <div key={plan.id} data-plan-id={plan.planId} className="rounded-2xl border border-cyan-900/15 bg-white/95 p-4 shadow-[0_12px_32px_-28px_rgba(8,47,73,0.55)] sm:p-5">
                   <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2 font-medium">Chặng {index + 1}</div><Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa chặng ${index + 1}`} onClick={() => {
                     const planId = form.getValues(`plans.${index}.planId`);
                     setPendingPlanImages((current) => {
@@ -468,6 +498,11 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                   </div>
                 </div>
               ))}
+                  {plans.fields.length > 0 && (
+                    <Button type="button" variant="outline" className="min-h-11 w-full rounded-2xl border-dashed" disabled={isPending} onClick={addPlan}>
+                      <Plus data-icon="inline-start" />Thêm chặng tiếp theo
+                    </Button>
+                  )}
                   </section>
                 </div>
 
