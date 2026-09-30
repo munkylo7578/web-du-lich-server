@@ -207,6 +207,7 @@ function SettingFormDrawer({
 }) {
   const values = useMemo(() => toFormValues(setting, category), [setting, category]);
   const previousTypeRef = useRef(values.type);
+  const [locale, setLocale] = useState<"en" | "vi">("en");
   const [pendingImages, setPendingImages] = useState<PendingSettingImage[]>([]);
   const [pendingVideo, setPendingVideo] = useState<PendingSettingVideo>();
   const [message, setMessage] = useState<string>();
@@ -248,6 +249,7 @@ function SettingFormDrawer({
     setPendingVideo(undefined);
     setMessage(undefined);
     form.reset(values);
+    setLocale("en");
   };
 
   const submit = form.handleSubmit((data) => {
@@ -255,7 +257,7 @@ function SettingFormDrawer({
       key: data.key,
       originalKey: data.originalKey,
       type: data.type,
-      hasValue: data.type === "text" || data.type === "plain_text" ? Boolean(data.translations?.vi) : Boolean(data.value),
+      hasValue: data.type === "text" || data.type === "plain_text" ? Boolean(data.translations?.en) : Boolean(data.value),
       pendingImages: pendingImages.length,
       pendingVideo: Boolean(pendingVideo),
     });
@@ -281,6 +283,7 @@ function SettingFormDrawer({
       const result = await submitUpload(body, saveSettingAction);
       setMessage(result.message);
       if (result.success) {
+        setLocale("en");
         pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
         setPendingImages([]);
         if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
@@ -291,6 +294,8 @@ function SettingFormDrawer({
     });
   }, (errors) => {
     console.warn("[SettingsForm] submit_invalid", errors);
+    if (errors.translations?.en) setLocale("en");
+    else if (errors.translations?.vi) setLocale("vi");
     setMessage("Vui lòng kiểm tra lại các trường bắt buộc.");
   });
 
@@ -375,34 +380,34 @@ function SettingFormDrawer({
                   </div>
                 )}
                 {watchedType === "text" || watchedType === "plain_text" ? (
-                  <Tabs defaultValue="vi" className="gap-4">
+                  <Tabs value={locale} onValueChange={(value) => { if (value === "en" || value === "vi") setLocale(value); }} className="gap-4">
                     <div>
                       <Label className="mb-2 gap-0">Giá trị<RequiredMark /></Label>
-                      <p className="mb-3 text-xs text-muted-foreground">Soạn nội dung riêng cho từng ngôn ngữ. Tiếng Anh sẽ fallback sang tiếng Việt khi để trống.</p>
+                      <p className="mb-3 text-xs text-muted-foreground">Nội dung tiếng Anh là bắt buộc. Tiếng Việt sẽ fallback sang tiếng Anh khi để trống.</p>
                       {watchedType === "plain_text" && <p className="mb-3 text-xs text-muted-foreground">Nhập văn bản một dòng, không thêm định dạng HTML. Phù hợp cho email, số điện thoại hoặc URL.</p>}
                       <TabsList className="h-10 rounded-xl p-1">
+                        <TabsTrigger value="en" className="px-4">English *</TabsTrigger>
                         <TabsTrigger value="vi" className="px-4">Tiếng Việt</TabsTrigger>
-                        <TabsTrigger value="en" className="px-4">English</TabsTrigger>
                       </TabsList>
                     </div>
                     <TabsContent value="vi">
-                      <FormField label="Nội dung tiếng Việt" required error={form.formState.errors.translations?.vi?.message}>
+                      <FormField label="Nội dung tiếng Việt" error={form.formState.errors.translations?.vi?.message}>
                         <Controller
                           control={form.control}
                           name="translations.vi"
                           render={({ field }) => watchedType === "plain_text" ? (
-                            <Input {...field} value={field.value || ""} aria-label="Giá trị tiếng Việt" aria-required="true" aria-invalid={Boolean(form.formState.errors.translations?.vi)} placeholder="Ví dụ: Sales@kindtraveldmc.com" />
+                            <Input {...field} value={field.value || ""} aria-label="Giá trị tiếng Việt" aria-invalid={Boolean(form.formState.errors.translations?.vi)} placeholder="Để trống để dùng nội dung tiếng Anh" />
                           ) : <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nhập giá trị cấu hình bằng tiếng Việt..." invalid={Boolean(form.formState.errors.translations?.vi)} />}
                         />
                       </FormField>
                     </TabsContent>
                     <TabsContent value="en">
-                      <FormField label="English content" error={form.formState.errors.translations?.en?.message}>
+                      <FormField label="English content" required error={form.formState.errors.translations?.en?.message}>
                         <Controller
                           control={form.control}
                           name="translations.en"
                           render={({ field }) => watchedType === "plain_text" ? (
-                            <Input {...field} value={field.value || ""} aria-label="English value" aria-invalid={Boolean(form.formState.errors.translations?.en)} placeholder="Leave blank to use the Vietnamese value" />
+                            <Input {...field} value={field.value || ""} aria-label="English value" aria-required="true" aria-invalid={Boolean(form.formState.errors.translations?.en)} placeholder="Enter the setting value in English" />
                           ) : <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Enter the setting value in English..." invalid={Boolean(form.formState.errors.translations?.en)} />}
                         />
                       </FormField>
@@ -482,7 +487,7 @@ function SettingValuePreview({ setting }: { setting: AdminSetting }) {
     );
   }
 
-  return <ExpandableText text={setting.type === "plain_text" ? setting.translations.vi : stripHtml(setting.translations.vi)} className="text-slate-700" />;
+  return <ExpandableText text={setting.type === "plain_text" ? setting.translations.en : stripHtml(setting.translations.en)} className="text-slate-700" />;
 }
 
 function VideoPickerField({
@@ -585,7 +590,7 @@ function toFormValues(setting: AdminSetting | null, category: SettingCategory): 
     type: setting.type,
     canDelete: setting.canDelete,
     value: setting.value ?? "",
-    translations: { vi: setting.translations.vi, en: setting.translations.en ?? "" },
+    translations: { en: setting.translations.en, vi: setting.translations.vi ?? "" },
   };
 }
 

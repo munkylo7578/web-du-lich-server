@@ -91,11 +91,11 @@ export const tourPlans = pgTable(
     check('tour_plans_sort_order_check', sql`${table.sortOrder} >= 0`),
     check(
       'tour_plans_name_check',
-      sql`(jsonb_typeof(${table.name}) = 'object' and jsonb_typeof(${table.name}->'vi') = 'string' and length(btrim(${table.name}->>'vi')) > 0) is true`,
+      sql`(jsonb_typeof(${table.name}) = 'object' and jsonb_typeof(${table.name}->'en') = 'string' and length(btrim(${table.name}->>'en')) > 0) is true`,
     ),
     check(
       'tour_plans_description_check',
-      sql`(jsonb_typeof(${table.description}) = 'object' and jsonb_typeof(${table.description}->'vi') = 'string' and length(btrim(${table.description}->>'vi')) > 0) is true`,
+      sql`(jsonb_typeof(${table.description}) = 'object' and jsonb_typeof(${table.description}->'en') = 'string' and length(btrim(${table.description}->>'en')) > 0) is true`,
     ),
     uniqueIndex('tour_plans_tour_sort_order_idx').on(
       table.tourId,

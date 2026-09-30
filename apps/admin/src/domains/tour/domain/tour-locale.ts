@@ -1,8 +1,8 @@
-export const TOUR_LOCALES = ["vi", "en"] as const;
+export const TOUR_LOCALES = ["en", "vi"] as const;
 
 export type TourLocale = (typeof TOUR_LOCALES)[number];
 
-export const DEFAULT_TOUR_LOCALE: TourLocale = "vi";
+export const DEFAULT_TOUR_LOCALE: TourLocale = "en";
 
 export type LocalizedText = Partial<Record<TourLocale, string>>;
 

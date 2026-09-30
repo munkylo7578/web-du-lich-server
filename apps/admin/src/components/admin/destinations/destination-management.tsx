@@ -262,7 +262,7 @@ function DestinationFormDrawer({
   onOpenChange: (open: boolean) => void;
 }) {
   const values = useMemo(() => toEditorValues(destination), [destination]);
-  const [locale, setLocale] = useState<Locale>("vi");
+  const [locale, setLocale] = useState<Locale>("en");
   const [message, setMessage] = useState<string>();
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
@@ -405,7 +405,7 @@ function DestinationFormDrawer({
         <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
           <div className="mx-auto w-full max-w-[1180px] pr-12">
             <SheetTitle className="text-xl sm:text-2xl">{destination ? "Chỉnh sửa điểm đến" : "Tạo điểm đến"}</SheetTitle>
-            <SheetDescription className="mt-1">Nội dung tiếng Việt là bắt buộc. Ảnh mới chỉ được upload khi lưu điểm đến.</SheetDescription>
+            <SheetDescription className="mt-1">Nội dung tiếng Anh là bắt buộc. Ảnh mới chỉ được upload khi lưu điểm đến.</SheetDescription>
           </div>
         </SheetHeader>
 
@@ -452,12 +452,12 @@ function DestinationFormDrawer({
               </section>
 
               <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-                <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên tiếng Việt là bắt buộc, tiếng Anh có thể bổ sung sau." />
+                <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên tiếng Anh là bắt buộc, tiếng Việt có thể bổ sung sau." />
                 <Tabs value={locale} onValueChange={(value) => isLocale(value) && setLocale(value)}>
-                  <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
-                  {(["vi", "en"] as const).map((currentLocale) => (
+                  <TabsList><TabsTrigger value="en">English *</TabsTrigger><TabsTrigger value="vi">Tiếng Việt</TabsTrigger></TabsList>
+                  {(["en", "vi"] as const).map((currentLocale) => (
                     <TabsContent key={currentLocale} value={currentLocale} className="space-y-4 pt-3">
-                      <FormField label={`Tên điểm đến (${currentLocale.toUpperCase()})`} required={currentLocale === "vi"} error={form.formState.errors.translations?.[currentLocale]?.name?.message}>
+                      <FormField label={`Tên điểm đến (${currentLocale.toUpperCase()})`} required={currentLocale === "en"} error={form.formState.errors.translations?.[currentLocale]?.name?.message}>
                         <Input aria-invalid={Boolean(form.formState.errors.translations?.[currentLocale]?.name)} {...form.register(`translations.${currentLocale}.name`)} placeholder={currentLocale === "vi" ? "Ví dụ: Hà Giang" : "Example: Ha Giang"} />
                       </FormField>
                       <FormField label={`Mô tả (${currentLocale.toUpperCase()})`} error={form.formState.errors.translations?.[currentLocale]?.description?.message}>
@@ -578,11 +578,11 @@ function RequiredMark() {
 }
 
 function getDestinationName(destination: AdminDestination): string {
-  return destination.translations.find((translation) => translation.locale === "vi")?.name || "Chưa đặt tên";
+  return destination.translations.find((translation) => translation.locale === "en")?.name || "Chưa đặt tên";
 }
 
 function getDestinationDescription(destination: AdminDestination): string {
-  const description = destination.translations.find((translation) => translation.locale === "vi")?.description;
+  const description = destination.translations.find((translation) => translation.locale === "en")?.description;
   const text = stripHtml(description || "");
 
   return text || "Chưa có mô tả điểm đến.";

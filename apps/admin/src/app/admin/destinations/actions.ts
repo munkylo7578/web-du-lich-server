@@ -144,15 +144,15 @@ export async function saveAdminDestinationAction(
     provinceCodes: destinationProvinceCodes(data.country, data.provinceCodes),
     translations: [
       {
-        locale: "vi",
-        name: data.translations.vi.name,
-        description: data.translations.vi.description,
+        locale: "en",
+        name: data.translations.en.name,
+        description: data.translations.en.description,
       },
-      ...(data.translations.en.name
+      ...(data.translations.vi.name
         ? [{
-            locale: "en" as const,
-            name: data.translations.en.name,
-            description: data.translations.en.description || undefined,
+            locale: "vi" as const,
+            name: data.translations.vi.name,
+            description: data.translations.vi.description || undefined,
           }]
         : []),
     ],

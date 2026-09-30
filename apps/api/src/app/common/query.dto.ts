@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsIn,
@@ -10,17 +10,19 @@ import {
   Min,
 } from 'class-validator';
 
-export const LOCALES = ['vi', 'en'] as const;
+export const LOCALES = ['en', 'vi'] as const;
 export type Locale = (typeof LOCALES)[number];
+export const DEFAULT_LOCALE: Locale = 'en';
 
 export class LocaleQueryDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     enum: LOCALES,
+    default: DEFAULT_LOCALE,
     description:
-      'Required content locale. Vietnamese is used only as a per-entity fallback.',
+      'Content locale. Defaults to English when omitted; missing translations fall back to English.',
   })
   @IsIn(LOCALES)
-  locale!: Locale;
+  locale: Locale = DEFAULT_LOCALE;
 }
 
 export class PageQueryDto extends LocaleQueryDto {
@@ -43,7 +45,7 @@ export class PageQueryDto extends LocaleQueryDto {
 export class TourListQueryDto extends PageQueryDto {
   @ApiPropertyOptional({
     description:
-      'Case-insensitive partial match against tour or destination names in the requested locale and Vietnamese fallback.',
+      'Case-insensitive partial match against tour or destination names in the requested locale and English fallback.',
     maxLength: 255,
   })
   @IsOptional()
@@ -100,7 +102,7 @@ export function localized<T extends { locale: Locale }>(
 ): { value: T; locale: LocaleMeta } | null {
   const value =
     rows.find((row) => row.locale === requested) ??
-    rows.find((row) => row.locale === 'vi');
+    rows.find((row) => row.locale === DEFAULT_LOCALE);
   if (!value) return null;
   return {
     value,

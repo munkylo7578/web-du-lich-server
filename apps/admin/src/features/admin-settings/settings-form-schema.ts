@@ -26,12 +26,12 @@ export const settingFormSchema = z.object({
     context.addIssue({ code: "custom", path: ["key"], message: "Key không thể thay đổi sau khi tạo." });
   }
 
-  if ((value.type === "text" && !hasTextContent(value.translations.vi)) ||
-      (value.type === "plain_text" && !value.translations.vi.trim())) {
+  if ((value.type === "text" && !hasTextContent(value.translations.en)) ||
+      (value.type === "plain_text" && !value.translations.en.trim())) {
     context.addIssue({
       code: "custom",
-      path: ["translations", "vi"],
-      message: "Giá trị tiếng Việt là bắt buộc.",
+      path: ["translations", "en"],
+      message: "Giá trị tiếng Anh là bắt buộc.",
     });
   }
 

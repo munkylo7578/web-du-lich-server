@@ -94,7 +94,7 @@ export function ServiceManager({
                 <span>
                   {
                     item.translations.find(
-                      (translation) => translation.locale === 'vi',
+                      (translation) => translation.locale === 'en',
                     )?.name
                   }
                 </span>
@@ -121,7 +121,7 @@ export function ServiceManager({
             >
               <span className="flex-1 font-medium">
                 {service?.translations.find(
-                  (translation) => translation.locale === 'vi',
+                  (translation) => translation.locale === 'en',
                 )?.name || item.serviceId}
               </span>
               {service && <Badge variant="outline">Đã chọn</Badge>}

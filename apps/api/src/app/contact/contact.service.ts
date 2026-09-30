@@ -144,7 +144,7 @@ export class ContactService {
       }))
       .filter((translation) => Boolean(translation.email));
     const recipient =
-      translations.find((translation) => translation.locale === 'vi')?.email ??
+      translations.find((translation) => translation.locale === 'en')?.email ??
       translations[0]?.email;
 
     if (!recipient || /[<>]/.test(recipient) || !isEmail(recipient)) {
@@ -163,9 +163,9 @@ export class ContactService {
     variant: ContactEmailVariant,
   ): BrevoPayload {
     const email =
-      request.locale === 'en'
-        ? renderContactEmail(request, variant)
-        : renderVietnameseContactEmail(request, variant);
+      request.locale === 'vi'
+        ? renderVietnameseContactEmail(request, variant)
+        : renderContactEmail(request, variant);
 
     return {
       sender: {

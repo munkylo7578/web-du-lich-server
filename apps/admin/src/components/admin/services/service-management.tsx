@@ -406,7 +406,7 @@ function ServiceFormDrawer({
   onSaved: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [locale, setLocale] = useState<'vi' | 'en'>('vi');
+  const [locale, setLocale] = useState<'vi' | 'en'>('en');
   const [pending, setPending] = useState<ImagePickerPendingImage[]>([]);
   const [message, setMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
@@ -431,6 +431,7 @@ function ServiceFormDrawer({
     pending.forEach((item) => URL.revokeObjectURL(item.previewUrl));
     setPending([]);
     setMessage(undefined);
+    setLocale('en');
     onOpenChange(false);
   };
   const submit = form.handleSubmit((data) =>
@@ -486,7 +487,7 @@ function ServiceFormDrawer({
               {service ? 'Chỉnh sửa dịch vụ' : 'Tạo dịch vụ'}
             </SheetTitle>
             <SheetDescription>
-              Phân loại và tiếng Việt bắt buộc. Có thể thêm nhiều ảnh; ảnh đầu
+              Phân loại và tiếng Anh bắt buộc. Có thể thêm nhiều ảnh; ảnh đầu
               tiên là ảnh đại diện.
             </SheetDescription>
           </div>
@@ -525,10 +526,10 @@ function ServiceFormDrawer({
                   onValueChange={(value) => setLocale(value as 'vi' | 'en')}
                 >
                   <TabsList>
-                    <TabsTrigger value="vi">Tiếng Việt *</TabsTrigger>
-                    <TabsTrigger value="en">English</TabsTrigger>
+                    <TabsTrigger value="en">English *</TabsTrigger>
+                    <TabsTrigger value="vi">Tiếng Việt</TabsTrigger>
                   </TabsList>
-                  {(['vi', 'en'] as const).map((current) => (
+                  {(['en', 'vi'] as const).map((current) => (
                     <TabsContent
                       key={current}
                       value={current}
@@ -537,7 +538,7 @@ function ServiceFormDrawer({
                       <div className="space-y-2">
                         <Label>
                           Tên dịch vụ ({current.toUpperCase()})
-                          {current === 'vi' && ' *'}
+                          {current === 'en' && ' *'}
                         </Label>
                         <Input
                           {...form.register(`translations.${current}.name`)}
@@ -637,13 +638,13 @@ function ServiceFormDrawer({
 
 function nameOf(service: AdminService) {
   return (
-    service.translations.find((item) => item.locale === 'vi')?.name ||
+    service.translations.find((item) => item.locale === 'en')?.name ||
     'Chưa đặt tên'
   );
 }
 function descriptionOf(service: AdminService) {
   const value =
-    service.translations.find((item) => item.locale === 'vi')?.description ||
+    service.translations.find((item) => item.locale === 'en')?.description ||
     '';
   return (
     value

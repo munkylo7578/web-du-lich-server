@@ -1,11 +1,11 @@
 import { isSettingCategory, type SettingCategory } from "@setting-category";
 
 export const SETTING_TYPES = ["text", "image", "video", "plain_text"] as const;
-export const SETTING_LOCALES = ["vi", "en"] as const;
+export const SETTING_LOCALES = ["en", "vi"] as const;
 
 export type SettingType = (typeof SETTING_TYPES)[number];
 export type SettingLocale = (typeof SETTING_LOCALES)[number];
-export type SettingTranslations = { vi: string; en?: string };
+export type SettingTranslations = { en: string; vi?: string };
 
 export type SettingSnapshot = {
   key: string;
@@ -146,23 +146,23 @@ export class Setting {
       if (!normalized) throw new Error("Setting value is required.");
       if (type === "image" && !isImageUrl(normalized)) throw new Error("Image setting value must be a local upload path or an absolute URL.");
       if (type === "video" && !isVideoUrl(normalized)) throw new Error("Video setting value must be a local settings video upload path.");
-      return { value: normalized, translations: { vi: "" } as SettingTranslations };
+      return { value: normalized, translations: { en: "" } as SettingTranslations };
     }
 
     if (type === "plain_text") {
-      const vi = translations?.vi.trim() ?? "";
+      const vi = translations?.vi?.trim() ?? "";
       const en = translations?.en?.trim() ?? "";
-      if (!vi) throw new Error("Giá trị tiếng Việt là bắt buộc.");
-      return { value: undefined, translations: { vi, ...(en ? { en } : {}) } };
+      if (!en) throw new Error("Giá trị tiếng Anh là bắt buộc.");
+      return { value: undefined, translations: { en, ...(vi ? { vi } : {}) } };
     }
 
     const vi = normalizeRichText(translations?.vi);
     const en = normalizeRichText(translations?.en);
-    if (!hasTextContent(vi)) throw new Error("Giá trị tiếng Việt là bắt buộc.");
+    if (!hasTextContent(en)) throw new Error("Giá trị tiếng Anh là bắt buộc.");
 
     return {
       value: undefined,
-      translations: { vi, ...(hasTextContent(en) ? { en } : {}) },
+      translations: { en, ...(hasTextContent(vi) ? { vi } : {}) },
     };
   }
 }

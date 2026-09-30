@@ -1,0 +1,4 @@
+ALTER TABLE "tour_plans" DROP CONSTRAINT "tour_plans_name_check";--> statement-breakpoint
+ALTER TABLE "tour_plans" DROP CONSTRAINT "tour_plans_description_check";--> statement-breakpoint
+ALTER TABLE "tour_plans" ADD CONSTRAINT "tour_plans_name_check" CHECK ((jsonb_typeof("tour_plans"."name") = 'object' and jsonb_typeof("tour_plans"."name"->'en') = 'string' and length(btrim("tour_plans"."name"->>'en')) > 0) is true);--> statement-breakpoint
+ALTER TABLE "tour_plans" ADD CONSTRAINT "tour_plans_description_check" CHECK ((jsonb_typeof("tour_plans"."description") = 'object' and jsonb_typeof("tour_plans"."description"->'en') = 'string' and length(btrim("tour_plans"."description"->>'en')) > 0) is true);

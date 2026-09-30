@@ -28,8 +28,8 @@ function optionalNumber(value: unknown) {
 export class ContactRequestDto {
   @ApiPropertyOptional({
     enum: LOCALES,
-    default: 'vi',
-    description: 'Email language. Defaults to Vietnamese when omitted.',
+    default: 'en',
+    description: 'Email language. Defaults to English when omitted.',
   })
   @ValidateIf((_request, value) => value !== undefined)
   @IsIn(LOCALES)

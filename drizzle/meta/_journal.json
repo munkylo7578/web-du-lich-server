@@ -148,6 +148,13 @@
       "when": 1790795026381,
       "tag": "0020_destination_provinces",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790796060792,
+      "tag": "0021_english_default_locale",
+      "breakpoints": true
     }
   ]
 }

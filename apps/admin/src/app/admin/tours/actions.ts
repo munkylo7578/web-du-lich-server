@@ -61,15 +61,15 @@ export async function saveDestinationAction(payload: unknown): Promise<TourActio
     provinceCodes: destinationProvinceCodes(data.country, data.provinceCodes),
     translations: [
       {
-        locale: "vi",
-        name: data.translations.vi.name,
-        description: data.translations.vi.description,
+        locale: "en",
+        name: data.translations.en.name,
+        description: data.translations.en.description,
       },
-      ...(data.translations.en.name
+      ...(data.translations.vi.name
         ? [{
-            locale: "en" as const,
-            name: data.translations.en.name,
-            description: data.translations.en.description || undefined,
+            locale: "vi" as const,
+            name: data.translations.vi.name,
+            description: data.translations.vi.description || undefined,
           }]
         : []),
     ],
@@ -150,19 +150,19 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     const data = parsed.data;
     const translations: TourTranslationSnapshot[] = [
       {
-        locale: "vi",
-        name: data.translations.vi.name,
-        description: data.translations.vi.description || undefined,
-        inclusions: data.translations.vi.inclusions || undefined,
-        exclusions: data.translations.vi.exclusions || undefined,
+        locale: "en",
+        name: data.translations.en.name,
+        description: data.translations.en.description || undefined,
+        inclusions: data.translations.en.inclusions || undefined,
+        exclusions: data.translations.en.exclusions || undefined,
       },
-      ...(data.translations.en.name
+      ...(data.translations.vi.name
         ? [{
-            locale: "en" as const,
-            name: data.translations.en.name,
-            description: data.translations.en.description || undefined,
-            inclusions: data.translations.en.inclusions || undefined,
-            exclusions: data.translations.en.exclusions || undefined,
+            locale: "vi" as const,
+            name: data.translations.vi.name,
+            description: data.translations.vi.description || undefined,
+            inclusions: data.translations.vi.inclusions || undefined,
+            exclusions: data.translations.vi.exclusions || undefined,
           }]
         : []),
     ];

@@ -17,11 +17,11 @@ export const serviceFormSchema = z.object({
     message: 'Vui lòng chọn phân loại dịch vụ.',
   }),
   translations: z.object({
-    vi: z.object({
+    en: z.object({
       name: z.string().trim().min(2, 'Tên dịch vụ cần ít nhất 2 ký tự.'),
       description: optionalDescription,
     }),
-    en: z.object({
+    vi: z.object({
       name: z.string().trim().optional().default(''),
       description: optionalDescription,
     }),

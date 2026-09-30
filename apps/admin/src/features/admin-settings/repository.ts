@@ -83,7 +83,7 @@ function toSnapshot(row: SettingRow): SettingSnapshot {
     category: row.category,
     description: row.description ?? undefined,
     value: row.value ?? undefined,
-    translations: { vi: translations.vi ?? "", ...(translations.en ? { en: translations.en } : {}) },
+    translations: { en: translations.en ?? "", ...(translations.vi ? { vi: translations.vi } : {}) },
     type: row.type,
     canDelete: row.canDelete,
     createdAt: row.createdAt,

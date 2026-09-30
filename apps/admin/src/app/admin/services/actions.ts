@@ -75,16 +75,16 @@ export async function saveServiceAction(
     const data = parsed.data;
     const translations: ServiceTranslationSnapshot[] = [
       {
-        locale: 'vi',
-        name: data.translations.vi.name,
-        description: data.translations.vi.description || undefined,
+        locale: 'en',
+        name: data.translations.en.name,
+        description: data.translations.en.description || undefined,
       },
-      ...(data.translations.en.name
+      ...(data.translations.vi.name
         ? [
             {
-              locale: 'en' as const,
-              name: data.translations.en.name,
-              description: data.translations.en.description || undefined,
+              locale: 'vi' as const,
+              name: data.translations.vi.name,
+              description: data.translations.vi.description || undefined,
             },
           ]
         : []),

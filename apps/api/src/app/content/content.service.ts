@@ -382,10 +382,10 @@ export class ContentService {
     const requested = row.translations.find(
       (translation) => translation.locale === locale,
     );
-    const vietnamese = row.translations.find(
-      (translation) => translation.locale === 'vi',
+    const english = row.translations.find(
+      (translation) => translation.locale === 'en',
     );
-    const translation = requested ?? vietnamese;
+    const translation = requested ?? english;
     return {
       key: row.key,
       category: row.category,
@@ -394,7 +394,7 @@ export class ContentService {
       updatedAt: row.updatedAt,
       locale: {
         requested: locale,
-        effective: translation?.locale ?? 'vi',
+        effective: translation?.locale ?? 'en',
         fallback: Boolean(translation && translation.locale !== locale),
       },
     };
@@ -410,7 +410,7 @@ export class ContentService {
     if (term) {
       const escapedTerm = term.replace(/[\\%_]/g, '\\$&');
       const pattern = `%${escapedTerm}%`;
-      const locales: Locale[] = locale === 'vi' ? ['vi'] : [locale, 'vi'];
+      const locales: Locale[] = locale === 'en' ? ['en'] : [locale, 'en'];
       const tourNameMatches = sql<boolean>`exists (
         select 1
         from ${tourTranslations}
@@ -589,7 +589,10 @@ export class ContentService {
 
   private localizePlans(plans: PlanRow[], locale: Locale) {
     return plans
-      .map((plan) => ({
+      .map((plan) => {
+        // Use one complete translation so the metadata describes both fields.
+        const effective: Locale = plan.name[locale]?.trim() && plan.description[locale]?.trim() ? locale : 'en';
+        return {
         planId: plan.id,
         images: [...plan.imageLinks]
           .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -597,15 +600,16 @@ export class ContentService {
             sortOrder: link.sortOrder,
             ...this.mapImage(link.image),
           })),
-        name: plan.name[locale] ?? plan.name.vi ?? '',
-        description: plan.description[locale] ?? plan.description.vi ?? '',
+        name: plan.name[effective] ?? '',
+        description: plan.description[effective] ?? '',
         sortOrder: plan.sortOrder,
         locale: {
           requested: locale,
-          effective: plan.name[locale] ? locale : 'vi',
-          fallback: !plan.name[locale],
+          effective,
+          fallback: effective !== locale,
         },
-      }))
+        };
+      })
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }
 }

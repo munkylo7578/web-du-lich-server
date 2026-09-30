@@ -101,7 +101,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
   const [message, setMessage] = useState<string>();
   const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
   const [activeTab, setActiveTab] = useState<FormTab>("information");
-  const [translationLocale, setTranslationLocale] = useState<Locale>("vi");
+  const [translationLocale, setTranslationLocale] = useState<Locale>("en");
   const [planLocales, setPlanLocales] = useState<Record<string, Locale>>({});
   const [isPending, startTransition] = useTransition();
   const form = useForm<TourFormValues>({ resolver: zodResolver(tourFormSchema), values });
@@ -110,13 +110,13 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
   useEffect(() => {
     if (!open || activeTab !== "plan" || !newPlanIdRef.current) return;
 
-    // Wait for the new card and its Vietnamese tab to mount before focusing.
+    // Wait for the new card and its English tab to mount before focusing.
     const frame = window.requestAnimationFrame(() => {
       const root = scrollAreaRef.current;
       const card = root?.querySelector<HTMLElement>(`[data-plan-id="${newPlanIdRef.current}"]`);
       if (!root || !card) return;
 
-      const input = card.querySelector<HTMLInputElement>('input[name$=".name.vi"]');
+      const input = card.querySelector<HTMLInputElement>('input[name$=".name.en"]');
       input?.focus({ preventScroll: true });
       const tabBarHeight = tabBarRef.current?.getBoundingClientRect().height ?? 0;
       root.scrollTo({
@@ -134,7 +134,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
     const index = form.getValues("plans").length;
     const planId = crypto.randomUUID();
     newPlanIdRef.current = planId;
-    setPlanLocales((current) => ({ ...current, [index]: "vi" }));
+    setPlanLocales((current) => ({ ...current, [index]: "en" }));
     plans.append({ planId, sortOrder: index, name: { vi: "", en: "" }, description: { vi: "", en: "" }, images: [] }, { shouldFocus: false });
   };
 
@@ -147,7 +147,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
     setMessage(undefined);
     setImageErrors({});
     setActiveTab("information");
-    setTranslationLocale("vi");
+    setTranslationLocale("en");
     setPlanLocales({});
     form.reset(values);
   };
@@ -277,7 +277,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
         <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-0 py-4">
           <div className="mx-auto w-full max-w-[1480px] px-5 sm:px-8">
             <SheetTitle className="pr-12 text-xl sm:text-2xl">{tour ? "Chỉnh sửa tour" : "Tạo tour mới"}</SheetTitle>
-            <SheetDescription className="mt-1 pr-12">Nội dung tiếng Việt là bắt buộc. Ảnh mới chỉ được upload sau khi lưu.</SheetDescription>
+            <SheetDescription className="mt-1 pr-12">Nội dung tiếng Anh là bắt buộc. Ảnh mới chỉ được upload sau khi lưu.</SheetDescription>
           </div>
         </SheetHeader>
 
@@ -350,10 +350,10 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                   <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
                     <SectionHeading title="Nội dung đa ngôn ngữ" description="Tên, mô tả và thông tin dịch vụ hiển thị trên website client." />
                     <Tabs value={translationLocale} onValueChange={(value) => isLocale(value) && setTranslationLocale(value)}>
-                      <TabsList><TabsTrigger value="vi">Tiếng Việt *</TabsTrigger><TabsTrigger value="en">English</TabsTrigger></TabsList>
-                      {(["vi", "en"] as const).map((locale) => (
+                      <TabsList><TabsTrigger value="en">English *</TabsTrigger><TabsTrigger value="vi">Tiếng Việt</TabsTrigger></TabsList>
+                      {(["en", "vi"] as const).map((locale) => (
                         <TabsContent key={locale} value={locale} className="space-y-4 pt-3">
-                          <FormField fieldPath={`translations.${locale}.name`} label={`Tên tour (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.translations?.[locale]?.name?.message}>
+                          <FormField fieldPath={`translations.${locale}.name`} label={`Tên tour (${locale.toUpperCase()})`} required={locale === "en"} error={form.formState.errors.translations?.[locale]?.name?.message}>
                             <Input aria-invalid={Boolean(form.formState.errors.translations?.[locale]?.name)} {...form.register(`translations.${locale}.name`)} placeholder={locale === "vi" ? "Ví dụ: Khám phá Đà Nẵng 3N2Đ" : "Example: Discover Da Nang 3D2N"} />
                           </FormField>
                           <FormField fieldPath={`translations.${locale}.description`} label={`Mô tả (${locale.toUpperCase()})`} error={form.formState.errors.translations?.[locale]?.description?.message}>
@@ -436,19 +436,19 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                     plans.remove(index);
                   }}><Trash2 /></Button></div>
                   <Tabs
-                    value={planLocales[index] ?? "vi"}
+                    value={planLocales[index] ?? "en"}
                     onValueChange={(value) => {
                       if (!isLocale(value)) return;
                       setPlanLocales((current) => ({ ...current, [index]: value }));
                     }}
                   >
-                    <TabsList><TabsTrigger value="vi">VI *</TabsTrigger><TabsTrigger value="en">EN</TabsTrigger></TabsList>
-                    {(["vi", "en"] as const).map((locale) => (
+                    <TabsList><TabsTrigger value="en">EN *</TabsTrigger><TabsTrigger value="vi">VI</TabsTrigger></TabsList>
+                    {(["en", "vi"] as const).map((locale) => (
                       <TabsContent key={locale} value={locale} className="space-y-3 pt-3">
-                        <FormField fieldPath={`plans.${index}.name.${locale}`} label={`Tên chặng (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.plans?.[index]?.name?.[locale]?.message}>
+                        <FormField fieldPath={`plans.${index}.name.${locale}`} label={`Tên chặng (${locale.toUpperCase()})`} required={locale === "en"} error={form.formState.errors.plans?.[index]?.name?.[locale]?.message}>
                           <Input aria-invalid={Boolean(form.formState.errors.plans?.[index]?.name?.[locale])} {...form.register(`plans.${index}.name.${locale}`)} placeholder={locale === "vi" ? "Tên chặng" : "Plan name"} />
                         </FormField>
-                        <FormField fieldPath={`plans.${index}.description.${locale}`} label={`Mô tả chặng (${locale.toUpperCase()})`} required={locale === "vi"} error={form.formState.errors.plans?.[index]?.description?.[locale]?.message}>
+                        <FormField fieldPath={`plans.${index}.description.${locale}`} label={`Mô tả chặng (${locale.toUpperCase()})`} required={locale === "en"} error={form.formState.errors.plans?.[index]?.description?.[locale]?.message}>
                           <Controller control={form.control} name={`plans.${index}.description.${locale}`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Nội dung lịch trình..." invalid={Boolean(form.formState.errors.plans?.[index]?.description?.[locale])} />} />
                         </FormField>
                       </TabsContent>

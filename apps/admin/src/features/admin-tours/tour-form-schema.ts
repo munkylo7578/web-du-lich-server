@@ -2,7 +2,7 @@ import { z } from "zod";
 import { DESTINATION_COUNTRIES } from "@destination-country";
 
 const optionalHtml = z.string().trim().optional().default("");
-const optionalVietnameseTourHtml = (message: string) => optionalHtml.refine(
+const optionalTourHtml = (message: string) => optionalHtml.refine(
   (value) => !value || value.replace(/<[^>]*>/g, "").trim().length >= 10,
   message,
 );
@@ -63,11 +63,11 @@ export const destinationEditorSchema = z.object({
   country: z.enum(DESTINATION_COUNTRIES, { error: "Vui lòng chọn quốc gia hợp lệ." }),
   provinceCodes: z.array(z.string().trim().min(1, "Vui lòng chọn tỉnh/thành hợp lệ.").max(20, "Mã tỉnh/thành không hợp lệ.")).default([]),
   translations: z.object({
-    vi: z.object({
+    en: z.object({
       name: z.string().trim().min(2, "Tên điểm đến cần ít nhất 2 ký tự."),
       description: optionalHtml,
     }),
-    en: z.object({
+    vi: z.object({
       name: z.string().trim().optional().default(""),
       description: optionalHtml,
     }),
@@ -75,8 +75,8 @@ export const destinationEditorSchema = z.object({
 });
 
 export const localizedTextSchema = z.object({
-  vi: z.string().trim().min(1, "Nội dung tiếng Việt là bắt buộc."),
-  en: z.string().trim().optional().default(""),
+  en: z.string().trim().min(1, "Nội dung tiếng Anh là bắt buộc."),
+  vi: z.string().trim().optional().default(""),
 });
 
 export const tourFormSchema = z.object({
@@ -86,20 +86,20 @@ export const tourFormSchema = z.object({
     .min(1, "Tháng khởi hành phải từ 1 đến 12.")
     .max(12, "Tháng khởi hành phải từ 1 đến 12.")
     .nullish(),
-  serviceDescription: optionalVietnameseTourHtml("Mô tả dịch vụ chung cần ít nhất 10 ký tự."),
+  serviceDescription: optionalTourHtml("Mô tả dịch vụ chung cần ít nhất 10 ký tự."),
   serviceDescriptions: z.object({
-    accommodation: optionalVietnameseTourHtml("Mô tả nơi lưu trú cần ít nhất 10 ký tự."),
-    transportation: optionalVietnameseTourHtml("Mô tả phương tiện di chuyển cần ít nhất 10 ký tự."),
-    tourguide: optionalVietnameseTourHtml("Mô tả hướng dẫn viên cần ít nhất 10 ký tự."),
+    accommodation: optionalTourHtml("Mô tả nơi lưu trú cần ít nhất 10 ký tự."),
+    transportation: optionalTourHtml("Mô tả phương tiện di chuyển cần ít nhất 10 ký tự."),
+    tourguide: optionalTourHtml("Mô tả hướng dẫn viên cần ít nhất 10 ký tự."),
   }),
   translations: z.object({
-    vi: z.object({
-      name: z.string().trim().min(2, "Tên tour cần ít nhất 2 ký tự."),
-      description: optionalVietnameseTourHtml("Mô tả cần ít nhất 10 ký tự."),
-      inclusions: optionalVietnameseTourHtml("Dịch vụ bao gồm cần ít nhất 10 ký tự."),
-      exclusions: optionalVietnameseTourHtml("Dịch vụ không bao gồm cần ít nhất 10 ký tự."),
-    }),
     en: z.object({
+      name: z.string().trim().min(2, "Tên tour cần ít nhất 2 ký tự."),
+      description: optionalTourHtml("Mô tả cần ít nhất 10 ký tự."),
+      inclusions: optionalTourHtml("Dịch vụ bao gồm cần ít nhất 10 ký tự."),
+      exclusions: optionalTourHtml("Dịch vụ không bao gồm cần ít nhất 10 ký tự."),
+    }),
+    vi: z.object({
       name: z.string().trim().optional().default(""),
       description: optionalHtml,
       inclusions: optionalHtml,

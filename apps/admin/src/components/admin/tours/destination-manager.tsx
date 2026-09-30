@@ -144,7 +144,7 @@ export function DestinationManager({ value, existingDestinations, error, onChang
 }
 
 function getDestinationName(destination: AdminDestination): string {
-  return destination.translations.find((translation) => translation.locale === "vi")?.name || "Chưa đặt tên";
+  return destination.translations.find((translation) => translation.locale === "en")?.name || "Chưa đặt tên";
 }
 
 function formatProvinceList(provinces: AdminProvince[]): string {

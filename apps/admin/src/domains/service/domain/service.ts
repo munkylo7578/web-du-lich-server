@@ -140,7 +140,7 @@ export class Service {
       };
     });
     if (!locales.has(DEFAULT_TOUR_LOCALE))
-      throw new Error('Vietnamese service content is required.');
+      throw new Error('English service content is required.');
     return normalized;
   }
 
