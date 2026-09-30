@@ -5,7 +5,7 @@ import type { ServiceCategory } from '@service-category';
 import {
   destinationTranslations,
   destinations,
-  gisWards,
+  gisProvinces,
   services,
   siteSettingTranslations,
   siteSettings,
@@ -28,17 +28,16 @@ type TranslationRow = {
 };
 type ImageRow = { id: string; url: string; altText: string | null };
 type ImageLinkRow = { sortOrder: number; image: ImageRow };
-type WardLinkRow = {
-  ward: {
+type ProvinceLinkRow = {
+  province: {
     code: string;
     name: string;
     nameEn: string | null;
     fullName: string | null;
     fullNameEn: string | null;
-    province: { code: string; name: string; nameEn: string | null } | null;
   };
 };
-type WardCoordinate = { latitude: number | null; longitude: number | null };
+type ProvinceCoordinate = { latitude: number | null; longitude: number | null };
 type DestinationTourLinkRow = {
   tour: {
     id: string;
@@ -53,7 +52,7 @@ type DestinationRow = {
   imageLinks?: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   country: DestinationCountry;
   translations: TranslationRow[];
-  wardLinks?: WardLinkRow[];
+  provinceLinks?: ProvinceLinkRow[];
   tourLinks?: DestinationTourLinkRow[];
   createdAt: Date;
   updatedAt: Date;
@@ -221,7 +220,7 @@ export class ContentService {
       orderBy: (table, { desc }) => [desc(table.updatedAt), desc(table.id)],
       with: {
         translations: true,
-        wardLinks: { with: { ward: { with: { province: true } } } },
+        provinceLinks: { orderBy: (link, { asc }) => [asc(link.provinceCode)], with: { province: true } },
         imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
         tourLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
@@ -249,10 +248,10 @@ export class ContentService {
         },
       },
     });
-    const wardCoordinates = await this.destinationWardCoordinates(rows);
+    const provinceCoordinates = await this.destinationProvinceCoordinates(rows);
     return {
       data: rows
-        .map((row) => this.mapDestination(row, locale, wardCoordinates))
+        .map((row) => this.mapDestination(row, locale, provinceCoordinates))
         .filter(Boolean),
       meta: fetchAll
         ? { page: 1, limit: total, total, totalPages: 1 }
@@ -265,7 +264,7 @@ export class ContentService {
       where: (table, { eq: equals }) => equals(table.id, id),
       with: {
         translations: true,
-        wardLinks: { with: { ward: { with: { province: true } } } },
+        provinceLinks: { orderBy: (link, { asc }) => [asc(link.provinceCode)], with: { province: true } },
         imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
         tourLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
@@ -293,10 +292,10 @@ export class ContentService {
         },
       },
     });
-    const wardCoordinates = row
-      ? await this.destinationWardCoordinates([row])
-      : new Map<string, WardCoordinate>();
-    const result = row && this.mapDestination(row, locale, wardCoordinates);
+    const provinceCoordinates = row
+      ? await this.destinationProvinceCoordinates([row])
+      : new Map<string, ProvinceCoordinate>();
+    const result = row && this.mapDestination(row, locale, provinceCoordinates);
     if (!result)
       throw new NotFoundException('Destination or translation not found');
     return { data: result };
@@ -485,7 +484,7 @@ export class ContentService {
   private mapDestination(
     row: DestinationRow,
     locale: Locale,
-    wardCoordinates = new Map<string, WardCoordinate>(),
+    provinceCoordinates = new Map<string, ProvinceCoordinate>(),
   ) {
     const translation = localized(row.translations, locale);
     if (!translation) return null;
@@ -498,22 +497,13 @@ export class ContentService {
       name: translation.value.name,
       description: translation.value.description,
       locale: translation.locale,
-      wards: (row.wardLinks ?? []).map(({ ward }) => ({
-        code: ward.code,
-        name: locale === 'en' ? (ward.nameEn ?? ward.name) : ward.name,
+      provinces: (row.provinceLinks ?? []).map(({ province }) => ({
+        code: province.code,
+        name: locale === 'en' ? (province.nameEn ?? province.name) : province.name,
         fullName:
-          locale === 'en' ? (ward.fullNameEn ?? ward.fullName) : ward.fullName,
-        latitude: wardCoordinates.get(ward.code)?.latitude ?? null,
-        longitude: wardCoordinates.get(ward.code)?.longitude ?? null,
-        province: ward.province
-          ? {
-              code: ward.province.code,
-              name:
-                locale === 'en'
-                  ? (ward.province.nameEn ?? ward.province.name)
-                  : ward.province.name,
-            }
-          : null,
+          locale === 'en' ? (province.fullNameEn ?? province.fullName) : province.fullName,
+        latitude: provinceCoordinates.get(province.code)?.latitude ?? null,
+        longitude: provinceCoordinates.get(province.code)?.longitude ?? null,
       })),
       tours: (row.tourLinks ?? [])
         .map(({ tour }) => {
@@ -561,32 +551,32 @@ export class ContentService {
     return { id: image.id, url: image.url, altText: image.altText };
   }
 
-  private async destinationWardCoordinates(
+  private async destinationProvinceCoordinates(
     rows: DestinationRow[],
-  ): Promise<Map<string, WardCoordinate>> {
-    const wardCodes = [
+  ): Promise<Map<string, ProvinceCoordinate>> {
+    const provinceCodes = [
       ...new Set(
         rows.flatMap((row) =>
-          (row.wardLinks ?? []).map(({ ward }) => ward.code),
+          (row.provinceLinks ?? []).map(({ province }) => province.code),
         ),
       ),
     ];
-    if (!wardCodes.length) return new Map();
+    if (!provinceCodes.length) return new Map();
 
     const coordinates = await this.db
       .select({
-        wardCode: gisWards.wardCode,
+        provinceCode: gisProvinces.provinceCode,
         longitude: sql<
           number | null
-        >`ST_X(ST_PointOnSurface(${gisWards.geom}))`,
-        latitude: sql<number | null>`ST_Y(ST_PointOnSurface(${gisWards.geom}))`,
+        >`ST_X(ST_PointOnSurface(${gisProvinces.geom}))`,
+        latitude: sql<number | null>`ST_Y(ST_PointOnSurface(${gisProvinces.geom}))`,
       })
-      .from(gisWards)
-      .where(inArray(gisWards.wardCode, wardCodes));
+      .from(gisProvinces)
+      .where(inArray(gisProvinces.provinceCode, provinceCodes));
 
     return new Map(
       coordinates.map((coordinate) => [
-        coordinate.wardCode,
+        coordinate.provinceCode,
         {
           latitude:
             coordinate.latitude === null ? null : Number(coordinate.latitude),

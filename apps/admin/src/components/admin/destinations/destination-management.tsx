@@ -17,7 +17,7 @@ import {
   deleteAdminDestinationAction,
   listAdminDestinationsAction,
   saveAdminDestinationAction,
-  searchDestinationWardsAction,
+  searchDestinationProvincesAction,
 } from "@/app/admin/destinations/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -41,7 +41,7 @@ import {
   type DestinationEditorFormValues,
   type DestinationEditorValues,
 } from "@/features/admin-tours/tour-form-schema";
-import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
+import type { AdminDestination, AdminProvince } from "@/features/admin-tours/tour-types";
 import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
 import { ServerPagination } from "@/components/admin/shared/server-pagination";
 import { useServerPagination } from "@/hooks/use-server-pagination";
@@ -85,16 +85,16 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
       cell: ({ getValue }) => <Badge variant="outline">{getValue()}</Badge>,
     }),
     helper.display({
-      id: "wards",
-      header: "Phường/xã",
-      cell: ({ row }) => row.original.wards.length ? (
+      id: "provinces",
+      header: "Tỉnh/thành",
+      cell: ({ row }) => row.original.provinces.length ? (
         <div className="flex min-w-0 flex-wrap gap-1.5">
-          {row.original.wards.slice(0, 3).map((ward) => (
-            <Badge key={ward.code} variant="secondary" className="h-auto max-w-full items-start whitespace-normal py-1">
-              <MapPin data-icon="inline-start" className="mt-0.5 shrink-0" /><span className="min-w-0 [overflow-wrap:anywhere]">{ward.fullName || ward.name}</span>
+          {row.original.provinces.slice(0, 3).map((province) => (
+            <Badge key={province.code} variant="secondary" className="h-auto max-w-full items-start whitespace-normal py-1">
+              <MapPin data-icon="inline-start" className="mt-0.5 shrink-0" /><span className="min-w-0 [overflow-wrap:anywhere]">{province.fullName || province.name}</span>
             </Badge>
           ))}
-          {row.original.wards.length > 3 && <Badge variant="outline">+{row.original.wards.length - 3}</Badge>}
+          {row.original.provinces.length > 3 && <Badge variant="outline">+{row.original.provinces.length - 3}</Badge>}
         </div>
       ) : <span className="text-muted-foreground">{row.original.country === "VN" ? "Chưa liên kết" : "Không áp dụng"}</span>,
     }),
@@ -210,7 +210,7 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
         key={editingDestination?.destinationId || "new"}
         open={drawerOpen}
         destination={editingDestination}
-        initialWards={list.items.flatMap((destination) => destination.wards)}
+        initialProvinces={list.items.flatMap((destination) => destination.provinces)}
         onSaved={() => { list.reload(); router.refresh(); }}
         onOpenChange={setDrawerOpen}
       />}
@@ -218,7 +218,7 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa điểm đến này?</AlertDialogTitle>
-            <AlertDialogDescription>Điểm đến, bản dịch, hình ảnh và liên kết phường/xã sẽ bị xóa. Chỉ có thể xóa điểm đến chưa được gắn với tour.</AlertDialogDescription>
+            <AlertDialogDescription>Điểm đến, bản dịch, hình ảnh và liên kết tỉnh/thành sẽ bị xóa. Chỉ có thể xóa điểm đến chưa được gắn với tour.</AlertDialogDescription>
           </AlertDialogHeader>
           {deleteMessage && <Alert><AlertDescription>{deleteMessage}</AlertDescription></Alert>}
           <AlertDialogFooter>
@@ -251,13 +251,13 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
 function DestinationFormDrawer({
   open,
   destination,
-  initialWards,
+  initialProvinces,
   onSaved,
   onOpenChange,
 }: {
   open: boolean;
   destination: AdminDestination | null;
-  initialWards: AdminWard[];
+  initialProvinces: AdminProvince[];
   onSaved: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -271,57 +271,57 @@ function DestinationFormDrawer({
   useEffect(() => () => {
     pendingImagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
   }, []);
-  const [wardQuery, setWardQuery] = useState("");
-  const [wardResults, setWardResults] = useState<AdminWard[]>([]);
-  const [knownWards, setKnownWards] = useState<AdminWard[]>(initialWards);
+  const [provinceQuery, setProvinceQuery] = useState("");
+  const [provinceResults, setProvinceResults] = useState<AdminProvince[]>([]);
+  const [knownProvinces, setKnownProvinces] = useState<AdminProvince[]>(initialProvinces);
   const [isPending, startTransition] = useTransition();
   const form = useForm<DestinationEditorFormValues, unknown, DestinationEditorValues>({ resolver: zodResolver(destinationEditorSchema), values });
   const country = form.watch("country");
-  const wardSearchVersion = useRef(0);
-  const watchedWardCodes = form.watch("wardCodes") ?? [];
-  const wardMap = useMemo(() => {
-    const map = new Map<string, AdminWard>();
+  const provinceSearchVersion = useRef(0);
+  const watchedProvinceCodes = form.watch("provinceCodes") ?? [];
+  const provinceMap = useMemo(() => {
+    const map = new Map<string, AdminProvince>();
 
-    for (const ward of knownWards) {
-      map.set(ward.code, ward);
+    for (const province of knownProvinces) {
+      map.set(province.code, province);
     }
 
     return map;
-  }, [knownWards]);
+  }, [knownProvinces]);
 
-  const searchWards = (query: string) => {
-    const version = ++wardSearchVersion.current;
-    setWardQuery(query);
+  const searchProvinces = (query: string) => {
+    const version = ++provinceSearchVersion.current;
+    setProvinceQuery(query);
 
     if (form.getValues("country") !== "VN" || query.trim().length < 2) {
-      setWardResults([]);
+      setProvinceResults([]);
       return;
     }
 
     startTransition(async () => {
-      const results = await searchDestinationWardsAction(query);
-      if (version !== wardSearchVersion.current || form.getValues("country") !== "VN") return;
-      setWardResults(results);
-      mergeKnownWards(results);
+      const results = await searchDestinationProvincesAction(query);
+      if (version !== provinceSearchVersion.current || form.getValues("country") !== "VN") return;
+      setProvinceResults(results);
+      mergeKnownProvinces(results);
     });
   };
 
-  const addWard = (ward: AdminWard) => {
+  const addProvince = (province: AdminProvince) => {
     if (form.getValues("country") !== "VN") return;
-    const currentCodes = form.getValues("wardCodes") ?? [];
-    if (currentCodes.includes(ward.code)) return;
+    const currentCodes = form.getValues("provinceCodes") ?? [];
+    if (currentCodes.includes(province.code)) return;
 
-    mergeKnownWards([ward]);
-    form.setValue("wardCodes", [...currentCodes, ward.code], { shouldDirty: true, shouldValidate: true });
-    wardSearchVersion.current += 1;
-    setWardQuery("");
-    setWardResults([]);
+    mergeKnownProvinces([province]);
+    form.setValue("provinceCodes", [...currentCodes, province.code], { shouldDirty: true, shouldValidate: true });
+    provinceSearchVersion.current += 1;
+    setProvinceQuery("");
+    setProvinceResults([]);
   };
 
-  const removeWard = (wardCode: string) => {
+  const removeProvince = (provinceCode: string) => {
     form.setValue(
-      "wardCodes",
-      (form.getValues("wardCodes") ?? []).filter((code) => code !== wardCode),
+      "provinceCodes",
+      (form.getValues("provinceCodes") ?? []).filter((code) => code !== provinceCode),
       { shouldDirty: true, shouldValidate: true },
     );
   };
@@ -346,6 +346,8 @@ function DestinationFormDrawer({
       if (result.fieldErrors?.country?.[0]) {
         form.setError("country", { type: "server", message: result.fieldErrors.country[0] });
       }
+      const provinceError = Object.entries(result.fieldErrors ?? {}).find(([path]) => path === "provinceCodes" || path.startsWith("provinceCodes."))?.[1]?.[0];
+      if (provinceError) form.setError("provinceCodes", { type: "server", message: provinceError });
       if (result.success) {
         onOpenChange(false);
         onSaved();
@@ -353,12 +355,12 @@ function DestinationFormDrawer({
     });
   });
 
-  function mergeKnownWards(wards: AdminWard[]) {
-    setKnownWards((current) => {
-      const map = new Map(current.map((ward) => [ward.code, ward]));
+  function mergeKnownProvinces(provinces: AdminProvince[]) {
+    setKnownProvinces((current) => {
+      const map = new Map(current.map((province) => [province.code, province]));
 
-      for (const ward of wards) {
-        map.set(ward.code, ward);
+      for (const province of provinces) {
+        map.set(province.code, province);
       }
 
       return [...map.values()];
@@ -395,11 +397,11 @@ function DestinationFormDrawer({
                       onChange: (event) => {
                         const nextCountry: unknown = event.target.value;
                         if (!isDestinationCountry(nextCountry)) return;
-                        wardSearchVersion.current += 1;
-                        setWardQuery("");
-                        setWardResults([]);
+                        provinceSearchVersion.current += 1;
+                        setProvinceQuery("");
+                        setProvinceResults([]);
                         if (nextCountry !== "VN") {
-                          form.setValue("wardCodes", [], { shouldDirty: true, shouldValidate: true });
+                          form.setValue("provinceCodes", [], { shouldDirty: true, shouldValidate: true });
                         }
                       },
                     })}
@@ -408,7 +410,7 @@ function DestinationFormDrawer({
                   </select>
                   {form.formState.errors.country && <p id="destination-country-error" role="alert" className="text-xs text-destructive">{form.formState.errors.country.message}</p>}
                 </div>
-                {country !== "VN" && <p className="text-sm text-muted-foreground">Liên kết phường/xã chỉ áp dụng cho Việt Nam. Khi lưu quốc gia Lào hoặc Cambodia, các liên kết phường/xã trước đó sẽ được xóa.</p>}
+                {country !== "VN" && <p className="text-sm text-muted-foreground">Liên kết tỉnh/thành chỉ áp dụng cho Việt Nam. Khi lưu quốc gia Lào hoặc Cambodia, các liên kết tỉnh/thành trước đó sẽ được xóa.</p>}
               </section>
 
               <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
@@ -447,38 +449,39 @@ function DestinationFormDrawer({
               </section>
 
               {country === "VN" && <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
-                <SectionHeading title="Phường/xã liên quan" description="Chọn các phường/xã để hỗ trợ tìm kiếm và phân loại điểm đến." />
+                <SectionHeading title="Tỉnh/thành liên quan" description="Chọn các tỉnh/thành để hỗ trợ tìm kiếm và phân loại điểm đến." />
                 <div className="space-y-2">
-                  <Label>Tìm phường/xã</Label>
+                  <Label htmlFor="destination-province-search">Tìm tỉnh/thành</Label>
                   <div className="relative">
                     <MapPin className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-950" strokeWidth={2.75} />
-                    <Input value={wardQuery} onChange={(event) => searchWards(event.target.value)} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm phường/xã, tỉnh/thành" />
+                    <Input id="destination-province-search" value={provinceQuery} onChange={(event) => searchProvinces(event.target.value)} aria-invalid={Boolean(form.formState.errors.provinceCodes)} aria-describedby={form.formState.errors.provinceCodes ? "destination-provinces-error" : undefined} className="glass-input h-10 rounded-2xl pl-9" placeholder="Tìm tên hoặc mã tỉnh/thành" />
                   </div>
-                  {wardQuery.trim().length >= 2 && (
+                  {provinceQuery.trim().length >= 2 && (
                     <div className="max-h-56 overflow-y-auto rounded-2xl border border-cyan-900/15 bg-white p-2 shadow-[0_18px_45px_-35px_rgba(8,47,73,0.65)]">
-                      {isPending ? <p className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Đang tìm phường/xã...</p> : wardResults.length ? wardResults.map((ward) => (
-                        <button key={ward.code} type="button" className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-cyan-100" onClick={() => addWard(ward)}>
-                          <span className="font-medium">{ward.fullName || ward.name}</span>
-                          <span className="ml-2 text-xs text-muted-foreground">{ward.provinceName}</span>
+                      {isPending ? <p className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Đang tìm tỉnh/thành...</p> : provinceResults.length ? provinceResults.map((province) => (
+                        <button key={province.code} type="button" disabled={watchedProvinceCodes.includes(province.code)} className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:opacity-50" onClick={() => addProvince(province)}>
+                          <span className="font-medium">{province.fullName || province.name}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">{province.code}{watchedProvinceCodes.includes(province.code) ? " · Đã chọn" : ""}</span>
                         </button>
-                      )) : <p className="px-3 py-6 text-center text-sm text-muted-foreground">Không tìm thấy phường/xã phù hợp.</p>}
+                      )) : <p className="px-3 py-6 text-center text-sm text-muted-foreground">Không tìm thấy tỉnh/thành phù hợp.</p>}
                     </div>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {watchedWardCodes.length ? watchedWardCodes.map((wardCode) => {
-                    const ward = wardMap.get(wardCode) ?? { code: wardCode, name: wardCode };
+                  {watchedProvinceCodes.length ? watchedProvinceCodes.map((provinceCode) => {
+                    const province = provinceMap.get(provinceCode) ?? { code: provinceCode, name: provinceCode };
 
                     return (
-                      <Badge key={wardCode} variant="secondary" className="h-7 gap-1.5 rounded-full">
-                        {ward.fullName || ward.name}{ward.provinceName ? `, ${ward.provinceName}` : ""}
-                        <button type="button" aria-label={`Bỏ ${ward.name}`} onClick={() => removeWard(wardCode)}>
+                      <Badge key={provinceCode} variant="secondary" className="h-7 gap-1.5 rounded-full">
+                        {province.fullName || province.name}
+                        <button type="button" aria-label={`Bỏ ${province.name}`} onClick={() => removeProvince(provinceCode)}>
                           <X className="size-3" />
                         </button>
                       </Badge>
                     );
-                  }) : <p className="text-xs text-muted-foreground">Chưa chọn phường/xã. Có thể bổ sung sau.</p>}
+                  }) : <p className="text-xs text-muted-foreground">Chưa chọn tỉnh/thành. Có thể bổ sung sau.</p>}
                 </div>
+                {form.formState.errors.provinceCodes && <p id="destination-provinces-error" role="alert" className="text-xs text-destructive">{form.formState.errors.provinceCodes.message}</p>}
               </section>}
             </div>
           </div>
@@ -499,7 +502,7 @@ function createEmptyEditorValues(): DestinationEditorFormValues {
   return {
     country: "VN",
     existingImages: [],
-    wardCodes: [],
+    provinceCodes: [],
     translations: {
       vi: { name: "", description: "" },
       en: { name: "", description: "" },
@@ -516,7 +519,7 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
     destinationId: destination.destinationId,
     existingImages: destination.images.map((image) => ({ ...image, altText: image.altText || "" })),
     country: destination.country,
-    wardCodes: destination.country === "VN" ? destination.wards.map((ward) => ward.code) : [],
+    provinceCodes: destination.country === "VN" ? destination.provinces.map((province) => province.code) : [],
     translations: {
       vi: { name: vi?.name || "", description: vi?.description || "" },
       en: { name: en?.name || "", description: en?.description || "" },

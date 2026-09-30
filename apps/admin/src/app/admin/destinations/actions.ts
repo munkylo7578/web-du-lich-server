@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { destinationWardCodes } from "@destination-country";
+import { destinationProvinceCodes } from "@destination-country";
 
 import { requireSession } from "@/lib/auth/session";
 import {
@@ -11,7 +11,7 @@ import {
   findAdminDestination,
   persistDestinationRecord,
   type DestinationImageSave,
-  searchWards,
+  searchProvinces,
 } from "@/features/admin-tours/repository";
 import {
   destinationEditorSchema,
@@ -19,7 +19,7 @@ import {
   pendingImagesSchema,
 } from "@/features/admin-tours/tour-form-schema";
 import { saveImageFile, removeUploadedFiles } from "@/features/shared/image-upload";
-import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
+import type { AdminDestination, AdminProvince } from "@/features/admin-tours/tour-types";
 import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
 
 export type DestinationActionState = {
@@ -35,9 +35,9 @@ export async function listAdminDestinationsAction(input: AdminListQuery): Promis
   return listAdminDestinations(input);
 }
 
-export async function searchDestinationWardsAction(query: string): Promise<AdminWard[]> {
+export async function searchDestinationProvincesAction(query: string): Promise<AdminProvince[]> {
   await requireSession();
-  return searchWards(query);
+  return searchProvinces(query);
 }
 
 export async function saveAdminDestinationAction(
@@ -103,7 +103,7 @@ export async function saveAdminDestinationAction(
     await persistDestinationRecord({
     destinationId,
     country: data.country,
-    wardCodes: destinationWardCodes(data.country, data.wardCodes),
+    provinceCodes: destinationProvinceCodes(data.country, data.provinceCodes),
     translations: [
       {
         locale: "vi",

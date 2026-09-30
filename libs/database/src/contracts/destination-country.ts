@@ -13,10 +13,10 @@ export function isDestinationCountry(value: unknown): value is DestinationCountr
   return DESTINATION_COUNTRIES.some((country) => country === value);
 }
 
-export function destinationWardCodes(country: DestinationCountry, wardCodes: readonly string[]): string[] {
+export function destinationProvinceCodes(country: DestinationCountry, provinceCodes: readonly string[]): string[] {
   if (!isDestinationCountry(country)) {
     throw new Error("Quốc gia điểm đến phải là Lào, Cambodia hoặc Việt Nam.");
   }
 
-  return country === "VN" ? [...new Set(wardCodes)] : [];
+  return country === "VN" ? [...new Set(provinceCodes)] : [];
 }

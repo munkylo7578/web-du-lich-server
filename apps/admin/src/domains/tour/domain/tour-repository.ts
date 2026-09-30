@@ -23,7 +23,7 @@ export type TourSaveDestination = {
   destinationId: string;
   country: DestinationCountry;
   translations: TourSaveDestinationTranslation[];
-  wardCodes: string[];
+  provinceCodes: string[];
 };
 
 export interface TourRepository {

@@ -25,20 +25,15 @@ class TourImageDto extends ContentImageDto {
 
 class ProvinceContentDto {
   @ApiProperty({ example: '79' }) code!: string;
-  @ApiProperty({ example: 'Thành phố Hồ Chí Minh' }) name!: string;
-}
-
-class WardContentDto {
-  @ApiProperty({ example: '26734' }) code!: string;
-  @ApiProperty({ example: 'Bến Nghé' }) name!: string;
-  @ApiPropertyOptional({ nullable: true, example: 'Phường Bến Nghé' })
-  fullName!: string | null;
+  @ApiProperty({ example: 'Hồ Chí Minh' }) name!: string;
+  @ApiProperty({ example: 'Thành phố Hồ Chí Minh' })
+  fullName!: string;
   @ApiPropertyOptional({
     nullable: true,
     type: Number,
     example: 10.7798,
     description:
-      'Y coordinate of ST_PointOnSurface(gis_wards.geom); null when geometry is unavailable.',
+      'Y coordinate of ST_PointOnSurface(gis_provinces.geom); null when geometry is unavailable.',
   })
   latitude!: number | null;
   @ApiPropertyOptional({
@@ -46,11 +41,9 @@ class WardContentDto {
     type: Number,
     example: 106.699,
     description:
-      'X coordinate of ST_PointOnSurface(gis_wards.geom); null when geometry is unavailable.',
+      'X coordinate of ST_PointOnSurface(gis_provinces.geom); null when geometry is unavailable.',
   })
   longitude!: number | null;
-  @ApiPropertyOptional({ nullable: true, type: ProvinceContentDto })
-  province!: ProvinceContentDto | null;
 }
 
 class TourPlanContentDto {
@@ -98,8 +91,8 @@ export class DestinationContentDto {
   @ApiProperty({ example: 'Thành phố Hồ Chí Minh' }) name!: string;
   @ApiPropertyOptional({ nullable: true }) description!: string | null;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
-  @ApiProperty({ type: WardContentDto, isArray: true })
-  wards!: WardContentDto[];
+  @ApiProperty({ type: ProvinceContentDto, isArray: true })
+  provinces!: ProvinceContentDto[];
   @ApiProperty({ type: LinkedTourContentDto, isArray: true })
   tours!: LinkedTourContentDto[];
   @ApiProperty({ format: 'date-time' }) createdAt!: Date;

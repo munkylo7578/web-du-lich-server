@@ -8,7 +8,7 @@ import { searchDestinationsAction } from "@/app/admin/tours/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { TourFormValues } from "@/features/admin-tours/tour-form-schema";
-import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
+import type { AdminDestination, AdminProvince } from "@/features/admin-tours/tour-types";
 
 type DestinationManagerProps = {
   value: TourFormValues["destinations"];
@@ -98,7 +98,7 @@ export function DestinationManager({ value, existingDestinations, error, onChang
                   >
                     <span>
                     <span className="block font-medium text-foreground">{getDestinationName(destination)} · {DESTINATION_COUNTRY_LABELS[destination.country]}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">{formatWardList(destination.wards)}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{destination.country === "VN" ? formatProvinceList(destination.provinces) : "Không áp dụng liên kết tỉnh/thành."}</span>
                     </span>
                     <Check className="mt-1 size-4 text-cyan-700" />
                   </button>
@@ -129,7 +129,7 @@ export function DestinationManager({ value, existingDestinations, error, onChang
               <div>
                 <p className="font-medium">{detail ? `${getDestinationName(detail)} · ${DESTINATION_COUNTRY_LABELS[detail.country]}` : destination.destinationId}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {detail ? (detail.country === "VN" ? formatWardList(detail.wards) : "Không áp dụng liên kết phường/xã.") : "Điểm đến đã được gắn với tour."}
+                  {detail ? (detail.country === "VN" ? formatProvinceList(detail.provinces) : "Không áp dụng liên kết tỉnh/thành.") : "Điểm đến đã được gắn với tour."}
                 </p>
               </div>
               <Button type="button" variant="destructive" size="icon-sm" aria-label={`Xóa điểm đến ${index + 1}`} onClick={() => removeDestination(index)}>
@@ -147,7 +147,7 @@ function getDestinationName(destination: AdminDestination): string {
   return destination.translations.find((translation) => translation.locale === "vi")?.name || "Chưa đặt tên";
 }
 
-function formatWardList(wards: AdminWard[]): string {
-  if (!wards.length) return "Chưa liên kết phường/xã";
-  return wards.map((ward) => ward.fullName || ward.name).slice(0, 3).join(" · ");
+function formatProvinceList(provinces: AdminProvince[]): string {
+  if (!provinces.length) return "Chưa liên kết tỉnh/thành";
+  return provinces.map((province) => province.fullName || province.name).slice(0, 3).join(" · ");
 }

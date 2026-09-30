@@ -15,7 +15,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-import { wards } from './geo-location';
+import { provinces } from './geo-location';
 import { DESTINATION_COUNTRIES } from '../contracts/destination-country';
 import { SERVICE_CATEGORIES } from '../contracts/service-category';
 
@@ -199,8 +199,8 @@ export const destinationTranslations = pgTable(
   ],
 );
 
-export const destinationWards = pgTable(
-  'destination_wards',
+export const destinationProvinces = pgTable(
+  'destination_provinces',
   {
     destinationId: uuid('destination_id')
       .notNull()
@@ -208,16 +208,16 @@ export const destinationWards = pgTable(
         onDelete: 'cascade',
         onUpdate: 'cascade',
       }),
-    wardCode: varchar('ward_code', { length: 20 })
+    provinceCode: varchar('province_code', { length: 20 })
       .notNull()
-      .references(() => wards.code, {
+      .references(() => provinces.code, {
         onDelete: 'restrict',
         onUpdate: 'cascade',
       }),
   },
   (table) => [
-    primaryKey({ columns: [table.destinationId, table.wardCode] }),
-    index('destination_wards_ward_code_idx').on(table.wardCode),
+    primaryKey({ columns: [table.destinationId, table.provinceCode] }),
+    index('destination_provinces_province_code_idx').on(table.provinceCode),
   ],
 );
 
@@ -475,7 +475,7 @@ export const tourTranslationsRelations = relations(
 export const destinationsRelations = relations(destinations, ({ many }) => ({
   imageLinks: many(destinationImages),
   translations: many(destinationTranslations),
-  wardLinks: many(destinationWards),
+  provinceLinks: many(destinationProvinces),
   tourLinks: many(tourDestinations),
 }));
 
@@ -489,16 +489,16 @@ export const destinationTranslationsRelations = relations(
   }),
 );
 
-export const destinationWardsRelations = relations(
-  destinationWards,
+export const destinationProvincesRelations = relations(
+  destinationProvinces,
   ({ one }) => ({
     destination: one(destinations, {
-      fields: [destinationWards.destinationId],
+      fields: [destinationProvinces.destinationId],
       references: [destinations.id],
     }),
-    ward: one(wards, {
-      fields: [destinationWards.wardCode],
-      references: [wards.code],
+    province: one(provinces, {
+      fields: [destinationProvinces.provinceCode],
+      references: [provinces.code],
     }),
   }),
 );

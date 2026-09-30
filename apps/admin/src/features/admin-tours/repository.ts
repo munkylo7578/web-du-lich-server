@@ -1,11 +1,11 @@
 import "server-only";
-import { destinationWardCodes } from "@destination-country";
+import { destinationProvinceCodes } from "@destination-country";
 
 import {
   db,
   destinationImages,
   destinationTranslations,
-  destinationWards,
+  destinationProvinces,
   destinations,
   images,
   provinces,
@@ -16,7 +16,6 @@ import {
   tourServices,
   tours,
   tourTranslations,
-  wards,
 } from "@database";
 import { and, asc, countDistinct, desc, eq, ilike, inArray, or } from "drizzle-orm";
 
@@ -24,7 +23,7 @@ import type { TourRepository, TourSaveDestination, TourSaveImage } from "@/domai
 import type { TourImageMetadataUpdate } from "@/domains/tour/domain/tour-repository";
 import { Image } from "@/domains/image/domain";
 import { TourMapper } from "./tour-mapper";
-import type { AdminDestination, AdminTour, AdminTourPlan, AdminWard } from "./tour-types";
+import type { AdminDestination, AdminTour, AdminTourPlan, AdminProvince } from "./tour-types";
 import { hydrateServices } from "@/features/admin-services/repository";
 import { deleteUnreferencedImages, removeUnreferencedMediaFiles } from "@/features/shared/media-cleanup";
 import {
@@ -35,7 +34,7 @@ import {
   type AdminListResult,
 } from "@/features/shared/admin-list";
 
-const WARD_SEARCH_LIMIT = 20;
+const PROVINCE_SEARCH_LIMIT = 20;
 const DESTINATION_SEARCH_LIMIT = 20;
 
 export async function listAdminTours(input: AdminListQuery = {}): Promise<AdminListResult<AdminTour>> {
@@ -93,7 +92,7 @@ export async function listAdminDestinations(input: AdminListQuery = {}): Promise
   );
 }
 
-export async function searchWards(query: string): Promise<AdminWard[]> {
+export async function searchProvinces(query: string): Promise<AdminProvince[]> {
   const term = query.trim();
 
   if (!term) {
@@ -103,19 +102,16 @@ export async function searchWards(query: string): Promise<AdminWard[]> {
   const pattern = `%${term}%`;
   const rows = await db
     .select({
-      code: wards.code,
-      name: wards.name,
-      fullName: wards.fullName,
-      provinceCode: provinces.code,
-      provinceName: provinces.name,
+      code: provinces.code,
+      name: provinces.name,
+      fullName: provinces.fullName,
     })
-    .from(wards)
-    .leftJoin(provinces, eq(wards.provinceCode, provinces.code))
-    .where(or(ilike(wards.name, pattern), ilike(wards.fullName, pattern), ilike(provinces.name, pattern)))
-    .orderBy(asc(provinces.name), asc(wards.name))
-    .limit(WARD_SEARCH_LIMIT);
+    .from(provinces)
+    .where(or(ilike(provinces.name, pattern), ilike(provinces.fullName, pattern), ilike(provinces.code, pattern)))
+    .orderBy(asc(provinces.name), asc(provinces.code))
+    .limit(PROVINCE_SEARCH_LIMIT);
 
-  return rows.map(toAdminWard);
+  return rows.map(toAdminProvince);
 }
 
 export async function searchDestinations(query: string): Promise<AdminDestination[]> {
@@ -164,10 +160,17 @@ export async function persistDestinationRecord(
   media?: DestinationImageSave,
   requireExisting = false,
 ): Promise<void> {
-  const wardCodes = destinationWardCodes(destination.country, destination.wardCodes);
+  const provinceCodes = destinationProvinceCodes(destination.country, destination.provinceCodes);
   const now = new Date();
 
   const removedImages = await db.transaction(async (tx) => {
+    if (provinceCodes.length) {
+      const selectedProvinces = await tx.select({ code: provinces.code }).from(provinces)
+        .where(inArray(provinces.code, provinceCodes));
+      if (selectedProvinces.length !== provinceCodes.length) {
+        throw new Error("Tỉnh/thành đã chọn không tồn tại. Vui lòng chọn lại.");
+      }
+    }
     const existingDestination = await tx
       .select({ id: destinations.id })
       .from(destinations)
@@ -205,11 +208,11 @@ export async function persistDestinationRecord(
       updatedAt: now,
     })));
 
-    await tx.delete(destinationWards).where(eq(destinationWards.destinationId, destination.destinationId));
-    if (wardCodes.length) {
-      await tx.insert(destinationWards).values(wardCodes.map((wardCode) => ({
+    await tx.delete(destinationProvinces).where(eq(destinationProvinces.destinationId, destination.destinationId));
+    if (provinceCodes.length) {
+      await tx.insert(destinationProvinces).values(provinceCodes.map((provinceCode) => ({
         destinationId: destination.destinationId,
-        wardCode,
+        provinceCode,
       })));
     }
 
@@ -388,20 +391,17 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
     .select()
     .from(destinationTranslations)
     .where(inArray(destinationTranslations.destinationId, ids));
-  const wardRows = await db
+  const provinceRows = await db
     .select({
-      destinationId: destinationWards.destinationId,
-      code: wards.code,
-      name: wards.name,
-      fullName: wards.fullName,
-      provinceCode: provinces.code,
-      provinceName: provinces.name,
+      destinationId: destinationProvinces.destinationId,
+      code: provinces.code,
+      name: provinces.name,
+      fullName: provinces.fullName,
     })
-    .from(destinationWards)
-    .innerJoin(wards, eq(destinationWards.wardCode, wards.code))
-    .leftJoin(provinces, eq(wards.provinceCode, provinces.code))
-    .where(inArray(destinationWards.destinationId, ids))
-    .orderBy(asc(provinces.name), asc(wards.name));
+    .from(destinationProvinces)
+    .innerJoin(provinces, eq(destinationProvinces.provinceCode, provinces.code))
+    .where(inArray(destinationProvinces.destinationId, ids))
+    .orderBy(asc(provinces.name), asc(provinces.code));
   const tourLinkRows = await db
     .select({ destinationId: tourDestinations.destinationId })
     .from(tourDestinations)
@@ -431,9 +431,9 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
           name: translation.name,
           description: translation.description ?? undefined,
         })),
-      wards: wardRows
-        .filter((ward) => ward.destinationId === id)
-        .map(toAdminWard),
+      provinces: provinceRows
+        .filter((province) => province.destinationId === id)
+        .map(toAdminProvince),
       sortOrder: 0,
       tourCount: tourCountMap.get(id) ?? 0,
       createdAt: meta?.createdAt.toISOString(),
@@ -442,19 +442,15 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
   });
 }
 
-function toAdminWard(row: {
+function toAdminProvince(row: {
   code: string;
   name: string;
   fullName: string | null;
-  provinceCode: string | null;
-  provinceName: string | null;
-}): AdminWard {
+}): AdminProvince {
   return {
     code: row.code,
     name: row.name,
     fullName: row.fullName ?? undefined,
-    provinceCode: row.provinceCode ?? undefined,
-    provinceName: row.provinceName ?? undefined,
   };
 }
 

@@ -61,7 +61,7 @@ export const destinationEditorSchema = z.object({
     "Danh sách ảnh chứa mã ảnh trùng lặp.",
   ).optional(),
   country: z.enum(DESTINATION_COUNTRIES, { error: "Vui lòng chọn quốc gia hợp lệ." }),
-  wardCodes: z.array(z.string().trim().min(1)).default([]),
+  provinceCodes: z.array(z.string().trim().min(1, "Vui lòng chọn tỉnh/thành hợp lệ.").max(20, "Mã tỉnh/thành không hợp lệ.")).default([]),
   translations: z.object({
     vi: z.object({
       name: z.string().trim().min(2, "Tên điểm đến cần ít nhất 2 ký tự."),

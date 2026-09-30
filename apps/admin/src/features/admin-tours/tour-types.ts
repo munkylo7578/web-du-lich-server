@@ -2,12 +2,10 @@ import type { LocalizedText, TourTranslationSnapshot } from "@/domains/tour/doma
 import type { AdminService } from "@/features/admin-services/service-types";
 import type { DestinationCountry } from "@destination-country";
 
-export type AdminWard = {
+export type AdminProvince = {
   code: string;
   name: string;
   fullName?: string;
-  provinceCode?: string;
-  provinceName?: string;
 };
 
 export type AdminDestinationTranslation = {
@@ -20,7 +18,7 @@ export type AdminDestination = {
   destinationId: string;
   country: DestinationCountry;
   translations: AdminDestinationTranslation[];
-  wards: AdminWard[];
+  provinces: AdminProvince[];
   images: AdminTourImage[];
   sortOrder: number;
   tourCount?: number;

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { destinationWardCodes } from "@destination-country";
+import { destinationProvinceCodes } from "@destination-country";
 
 import { Image } from "@/domains/image/domain";
 import {
@@ -14,9 +14,9 @@ import {
   type TourTranslationSnapshot,
 } from "@/domains/tour/domain";
 import { requireSession } from "@/lib/auth/session";
-import { listAdminTours, saveDestinationRecord, searchDestinations, searchWards, tourRepository } from "@/features/admin-tours/repository";
+import { listAdminTours, saveDestinationRecord, searchDestinations, searchProvinces, tourRepository } from "@/features/admin-tours/repository";
 import { destinationEditorSchema, imageFieldErrors, pendingImagesSchema, pendingPlanImagesSchema, tourFormSchema } from "@/features/admin-tours/tour-form-schema";
-import type { AdminDestination, AdminTour, AdminWard } from "@/features/admin-tours/tour-types";
+import type { AdminDestination, AdminTour, AdminProvince } from "@/features/admin-tours/tour-types";
 import { removeUploadedFiles, saveTourImage } from "@/features/admin-tours/upload";
 import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
 
@@ -31,9 +31,9 @@ export async function listAdminToursAction(input: AdminListQuery): Promise<Admin
   return listAdminTours(input);
 }
 
-export async function searchWardsAction(query: string): Promise<AdminWard[]> {
+export async function searchProvincesAction(query: string): Promise<AdminProvince[]> {
   await requireSession();
-  return searchWards(query);
+  return searchProvinces(query);
 }
 
 export async function searchDestinationsAction(query: string): Promise<AdminDestination[]> {
@@ -58,7 +58,7 @@ export async function saveDestinationAction(payload: unknown): Promise<TourActio
   const destination = await saveDestinationRecord({
     destinationId,
     country: data.country,
-    wardCodes: destinationWardCodes(data.country, data.wardCodes),
+    provinceCodes: destinationProvinceCodes(data.country, data.provinceCodes),
     translations: [
       {
         locale: "vi",

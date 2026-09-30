@@ -59,7 +59,7 @@ export class ContentController {
     isArray: true,
     hasMeta: true,
     description:
-      'Paginated destinations. Wards include nullable latitude and longitude derived from GIS geometry.',
+      'Paginated destinations. Provinces include nullable latitude and longitude derived from GIS geometry.',
   })
   listDestinations(@Query() query: DestinationListQueryDto) {
     return this.content.destinations(query.locale, query.page, query.limit);
@@ -68,7 +68,7 @@ export class ContentController {
   @ApiSuccessEnvelope({
     dataType: DestinationContentDto,
     description:
-      'Destination detail. Wards include nullable latitude and longitude derived from GIS geometry.',
+      'Destination detail. Provinces include nullable latitude and longitude derived from GIS geometry.',
   })
   getDestination(
     @Param('id', new ParseUUIDPipe()) id: string,
