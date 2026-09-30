@@ -141,6 +141,13 @@
       "when": 1790776566163,
       "tag": "0019_destination_images",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790795026381,
+      "tag": "0020_destination_provinces",
+      "breakpoints": true
     }
   ]
 }
