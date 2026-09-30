@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { DESTINATION_COUNTRIES, DESTINATION_COUNTRY_LABELS, isDestinationCountry } from "@destination-country";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,8 +32,12 @@ import { AdminListTable } from "@/components/admin/shared/admin-list-table";
 import { ExpandableText } from "@/components/admin/shared/expandable-text";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RichTextEditor } from "@/components/admin/tours/rich-text-editor";
+import { CoverImageUploadField, type PendingImage } from "@/components/admin/shared/cover-image-upload-field";
+import { submitUpload } from "@/features/shared/upload-validation";
 import {
   destinationEditorSchema,
+  pendingImagesSchema,
+  imageFieldErrors,
   type DestinationEditorFormValues,
   type DestinationEditorValues,
 } from "@/features/admin-tours/tour-form-schema";
@@ -63,7 +67,10 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
       cell: ({ row, getValue }) => (
         <div className="flex min-w-0 items-start gap-3">
           <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-800">
-            <MapPin className="size-5" />
+            {row.original.images.find((image) => image.role === "cover") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={row.original.images.find((image) => image.role === "cover")!.url} alt="" className="size-12 rounded-xl object-cover" />
+            ) : <MapPin className="size-5" />}
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <ExpandableText text={getValue()} className="font-medium text-foreground" />
@@ -199,19 +206,19 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
         </Card>
       </section>
 
-      <DestinationFormDrawer
+      {drawerOpen && <DestinationFormDrawer
         key={editingDestination?.destinationId || "new"}
         open={drawerOpen}
         destination={editingDestination}
         initialWards={list.items.flatMap((destination) => destination.wards)}
         onSaved={() => { list.reload(); router.refresh(); }}
         onOpenChange={setDrawerOpen}
-      />
+      />}
       <AlertDialog open={Boolean(deletingDestination)} onOpenChange={(open) => !open && setDeletingDestination(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa điểm đến này?</AlertDialogTitle>
-            <AlertDialogDescription>Điểm đến, bản dịch và liên kết phường/xã sẽ bị xóa. Chỉ có thể xóa điểm đến chưa được gắn với tour.</AlertDialogDescription>
+            <AlertDialogDescription>Điểm đến, bản dịch, hình ảnh và liên kết phường/xã sẽ bị xóa. Chỉ có thể xóa điểm đến chưa được gắn với tour.</AlertDialogDescription>
           </AlertDialogHeader>
           {deleteMessage && <Alert><AlertDescription>{deleteMessage}</AlertDescription></Alert>}
           <AlertDialogFooter>
@@ -257,6 +264,13 @@ function DestinationFormDrawer({
   const values = useMemo(() => toEditorValues(destination), [destination]);
   const [locale, setLocale] = useState<Locale>("vi");
   const [message, setMessage] = useState<string>();
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
+  const pendingImagesRef = useRef(pendingImages);
+  useEffect(() => { pendingImagesRef.current = pendingImages; }, [pendingImages]);
+  useEffect(() => () => {
+    pendingImagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+  }, []);
   const [wardQuery, setWardQuery] = useState("");
   const [wardResults, setWardResults] = useState<AdminWard[]>([]);
   const [knownWards, setKnownWards] = useState<AdminWard[]>(initialWards);
@@ -314,9 +328,21 @@ function DestinationFormDrawer({
 
   const submit = form.handleSubmit((data) => {
     setMessage(undefined);
+    const parsedPending = pendingImagesSchema.safeParse(pendingImages);
+    if (!parsedPending.success) {
+      setImageErrors(imageFieldErrors(parsedPending.error.issues, "pendingImages"));
+      setMessage("Vui lòng kiểm tra lại tên ảnh.");
+      return;
+    }
+    setImageErrors({});
     startTransition(async () => {
-      const result = await saveAdminDestinationAction(data);
+      const body = new FormData();
+      body.set("payload", JSON.stringify({ ...data, existingImages: data.existingImages ?? [] }));
+      body.set("pendingImages", JSON.stringify(parsedPending.data));
+      pendingImages.forEach((image) => body.set(`file:${image.clientId}`, image.file));
+      const result = await submitUpload(body, saveAdminDestinationAction);
       setMessage(result.message);
+      if (result.fieldErrors) setImageErrors(result.fieldErrors);
       if (result.fieldErrors?.country?.[0]) {
         form.setError("country", { type: "server", message: result.fieldErrors.country[0] });
       }
@@ -340,12 +366,12 @@ function DestinationFormDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(nextOpen) => { if (!isPending) onOpenChange(nextOpen); }}>
       <SheetContent fullscreen className="tour-drawer-surface gap-0 text-slate-950" showCloseButton={!isPending}>
         <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
           <div className="mx-auto w-full max-w-[1180px] pr-12">
             <SheetTitle className="text-xl sm:text-2xl">{destination ? "Chỉnh sửa điểm đến" : "Tạo điểm đến"}</SheetTitle>
-            <SheetDescription className="mt-1">Nội dung tiếng Việt là bắt buộc. Điểm đến có thể liên kết nhiều phường/xã.</SheetDescription>
+            <SheetDescription className="mt-1">Nội dung tiếng Việt là bắt buộc. Ảnh mới chỉ được upload khi lưu điểm đến.</SheetDescription>
           </div>
         </SheetHeader>
 
@@ -402,6 +428,24 @@ function DestinationFormDrawer({
                 </Tabs>
               </section>
 
+              <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+                <SectionHeading title="Hình ảnh" description="Chọn, kéo thả hoặc paste ảnh. Tên ảnh không bắt buộc và dùng chung cho mọi ngôn ngữ. Chỉ một ảnh được đặt làm ảnh bìa." />
+                <fieldset disabled={isPending}>
+                  <legend className="sr-only">Hình ảnh điểm đến</legend>
+                  <Controller control={form.control} name="existingImages" render={({ field }) => (
+                    <CoverImageUploadField active={open} disabled={isPending} ensureCover
+                      existing={field.value ?? []} pending={pendingImages}
+                      helperText="JPEG, PNG, WebP, AVIF · tối đa 50MB · chỉ upload khi lưu điểm đến"
+                      errors={{ ...imageErrors, ...Object.fromEntries((field.value ?? []).flatMap((_, index) => {
+                        const error = form.formState.errors.existingImages?.[index]?.altText?.message;
+                        return error ? [[`existingImages.${index}.altText`, [error]]] : [];
+                      })) }}
+                      onExistingChange={(images) => { setImageErrors({}); field.onChange(images); }}
+                      onPendingChange={(images) => { setImageErrors({}); setPendingImages(images); }} />
+                  )} />
+                </fieldset>
+              </section>
+
               {country === "VN" && <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
                 <SectionHeading title="Phường/xã liên quan" description="Chọn các phường/xã để hỗ trợ tìm kiếm và phân loại điểm đến." />
                 <div className="space-y-2">
@@ -454,6 +498,7 @@ function DestinationFormDrawer({
 function createEmptyEditorValues(): DestinationEditorFormValues {
   return {
     country: "VN",
+    existingImages: [],
     wardCodes: [],
     translations: {
       vi: { name: "", description: "" },
@@ -469,6 +514,7 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
 
   return {
     destinationId: destination.destinationId,
+    existingImages: destination.images.map((image) => ({ ...image, altText: image.altText || "" })),
     country: destination.country,
     wardCodes: destination.country === "VN" ? destination.wards.map((ward) => ward.code) : [],
     translations: {

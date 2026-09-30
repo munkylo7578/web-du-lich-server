@@ -50,6 +50,7 @@ type DestinationTourLinkRow = {
 };
 type DestinationRow = {
   id: string;
+  imageLinks?: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   country: DestinationCountry;
   translations: TranslationRow[];
   wardLinks?: WardLinkRow[];
@@ -135,7 +136,9 @@ export class ContentService {
         },
         destinationLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
-          with: { destination: { with: { translations: true } } },
+          with: { destination: { with: { translations: true, imageLinks: {
+            orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true },
+          } } } },
         },
         serviceLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
@@ -177,7 +180,9 @@ export class ContentService {
         },
         destinationLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
-          with: { destination: { with: { translations: true } } },
+          with: { destination: { with: { translations: true, imageLinks: {
+            orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true },
+          } } } },
         },
         serviceLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder)],
@@ -217,6 +222,7 @@ export class ContentService {
       with: {
         translations: true,
         wardLinks: { with: { ward: { with: { province: true } } } },
+        imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
         tourLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
@@ -260,6 +266,7 @@ export class ContentService {
       with: {
         translations: true,
         wardLinks: { with: { ward: { with: { province: true } } } },
+        imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
         tourLinks: {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
@@ -484,6 +491,9 @@ export class ContentService {
     if (!translation) return null;
     return {
       country: row.country,
+      images: (row.imageLinks ?? []).map((link) => ({
+        ...this.mapImage(link.image), role: link.role, sortOrder: link.sortOrder,
+      })),
       id: row.id,
       name: translation.value.name,
       description: translation.value.description,

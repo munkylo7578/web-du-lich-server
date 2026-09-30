@@ -50,6 +50,16 @@ export function imageFieldErrors(issues: readonly z.core.$ZodIssue[], prefix = "
 
 export const destinationEditorSchema = z.object({
   destinationId: z.string().uuid().optional(),
+  existingImages: z.array(z.object({
+    imageId: z.string().uuid(),
+    url: z.string(),
+    altText: imageNameSchema,
+    role: z.enum(["cover", "gallery"]),
+    sortOrder: z.number().int().min(0),
+  })).refine(
+    (items) => new Set(items.map((item) => item.imageId)).size === items.length,
+    "Danh sách ảnh chứa mã ảnh trùng lặp.",
+  ).optional(),
   country: z.enum(DESTINATION_COUNTRIES, { error: "Vui lòng chọn quốc gia hợp lệ." }),
   wardCodes: z.array(z.string().trim().min(1)).default([]),
   translations: z.object({

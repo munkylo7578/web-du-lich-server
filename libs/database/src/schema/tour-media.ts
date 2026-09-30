@@ -32,6 +32,7 @@ export type TourPlanSnapshot = {
 };
 
 export const tourImageRole = pgEnum('tour_image_role', ['cover', 'gallery']);
+export const destinationImageRole = pgEnum('destination_image_role', ['cover', 'gallery']);
 
 export const tours = pgTable(
   'tours',
@@ -350,6 +351,28 @@ export const tourImages = pgTable(
   ],
 );
 
+export const destinationImages = pgTable(
+  'destination_images',
+  {
+    destinationId: uuid('destination_id').notNull().references(() => destinations.id, {
+      onDelete: 'cascade', onUpdate: 'cascade',
+    }),
+    imageId: uuid('image_id').notNull().references(() => images.id, {
+      onDelete: 'restrict', onUpdate: 'cascade',
+    }),
+    role: destinationImageRole('role').notNull(),
+    sortOrder: integer('sort_order').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.destinationId, table.imageId] }),
+    check('destination_images_sort_order_check', sql`${table.sortOrder} >= 0`),
+    uniqueIndex('destination_images_one_cover_idx').on(table.destinationId)
+      .where(sql`${table.role} = 'cover'`),
+    uniqueIndex('destination_images_destination_sort_order_idx').on(table.destinationId, table.sortOrder),
+    index('destination_images_image_id_idx').on(table.imageId),
+  ],
+);
+
 export const serviceImages = pgTable(
   'service_images',
   {
@@ -450,6 +473,7 @@ export const tourTranslationsRelations = relations(
 );
 
 export const destinationsRelations = relations(destinations, ({ many }) => ({
+  imageLinks: many(destinationImages),
   translations: many(destinationTranslations),
   wardLinks: many(destinationWards),
   tourLinks: many(tourDestinations),
@@ -510,6 +534,7 @@ export const serviceTranslationsRelations = relations(
 );
 
 export const imagesRelations = relations(images, ({ many }) => ({
+  destinationLinks: many(destinationImages),
   planLinks: many(tourPlanImages),
   tourLinks: many(tourImages),
   serviceLinks: many(serviceImages),
@@ -539,6 +564,15 @@ export const tourImagesRelations = relations(tourImages, ({ one }) => ({
   image: one(images, {
     fields: [tourImages.imageId],
     references: [images.id],
+  }),
+}));
+
+export const destinationImagesRelations = relations(destinationImages, ({ one }) => ({
+  destination: one(destinations, {
+    fields: [destinationImages.destinationId], references: [destinations.id],
+  }),
+  image: one(images, {
+    fields: [destinationImages.imageId], references: [images.id],
   }),
 }));
 

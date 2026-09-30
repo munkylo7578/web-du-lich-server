@@ -21,6 +21,7 @@ export type AdminDestination = {
   country: DestinationCountry;
   translations: AdminDestinationTranslation[];
   wards: AdminWard[];
+  images: AdminTourImage[];
   sortOrder: number;
   tourCount?: number;
   createdAt?: string;

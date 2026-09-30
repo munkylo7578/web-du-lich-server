@@ -8,12 +8,17 @@ import { requireSession } from "@/lib/auth/session";
 import {
   deleteDestinationRecord,
   listAdminDestinations,
-  saveDestinationRecord,
+  findAdminDestination,
+  persistDestinationRecord,
+  type DestinationImageSave,
   searchWards,
 } from "@/features/admin-tours/repository";
 import {
   destinationEditorSchema,
+  imageFieldErrors,
+  pendingImagesSchema,
 } from "@/features/admin-tours/tour-form-schema";
+import { saveImageFile, removeUploadedFiles } from "@/features/shared/image-upload";
 import type { AdminDestination, AdminWard } from "@/features/admin-tours/tour-types";
 import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-list";
 
@@ -36,22 +41,67 @@ export async function searchDestinationWardsAction(query: string): Promise<Admin
 }
 
 export async function saveAdminDestinationAction(
-  payload: unknown,
+  formData: FormData,
 ): Promise<DestinationActionState & { destination?: AdminDestination }> {
   await requireSession();
 
+  let payload: unknown;
+  let pendingPayload: unknown;
+  try {
+    payload = JSON.parse(String(formData.get("payload") || "{}"));
+    pendingPayload = JSON.parse(String(formData.get("pendingImages") || "[]"));
+  } catch {
+    return { success: false, message: "Dữ liệu biểu mẫu không hợp lệ." };
+  }
   const parsed = destinationEditorSchema.safeParse(payload);
   if (!parsed.success) {
     return {
       success: false,
       message: "Vui lòng kiểm tra lại thông tin điểm đến.",
-      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fieldErrors: imageFieldErrors(parsed.error.issues),
     };
   }
 
+  const pending = pendingImagesSchema.safeParse(pendingPayload);
+  if (!pending.success) return {
+    success: false, message: "Vui lòng kiểm tra thông tin ảnh mới.",
+    fieldErrors: imageFieldErrors(pending.error.issues, "pendingImages"),
+  };
   const data = parsed.data;
-  const destination = await saveDestinationRecord({
-    destinationId: data.destinationId ?? crypto.randomUUID(),
+  const existing = data.existingImages ?? [];
+  if ([...existing, ...pending.data].filter((image) => image.role === "cover").length > 1) {
+    return { success: false, message: "Chỉ được chọn một ảnh bìa." };
+  }
+  const paths: string[] = [];
+  let committed = false;
+  try {
+    const stored = data.destinationId ? await findAdminDestination(data.destinationId) : null;
+    if (data.destinationId && !stored) return { success: false, message: "Không tìm thấy điểm đến." };
+    const allowed = new Set(stored?.images.map((image) => image.imageId) ?? []);
+    if (existing.some((image) => !allowed.has(image.imageId))) {
+      return { success: false, message: "Ảnh không thuộc điểm đến đang chỉnh sửa." };
+    }
+    const maxBytes = Number(process.env.MAX_UPLOAD_IMAGE_MB || "50") * 1024 * 1024;
+    for (const meta of pending.data) {
+      const file = formData.get(`file:${meta.clientId}`);
+      if (!(file instanceof File) || !file.size || file.size > maxBytes
+        || !["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type)) {
+        return { success: false, message: "Tệp ảnh bị thiếu, không hợp lệ hoặc vượt quá dung lượng cho phép." };
+      }
+    }
+    const media: DestinationImageSave = { refs: [...existing], newImages: [] };
+    for (const meta of pending.data) {
+      const file = formData.get(`file:${meta.clientId}`) as File;
+      const uploaded = await saveImageFile(file, { subdirectory: "destinations", logScope: "DestinationUpload" });
+      paths.push(uploaded.physicalPath);
+      const imageId = crypto.randomUUID();
+      media.newImages.push({ id: imageId, url: uploaded.url, altText: meta.altText || null,
+        fileName: uploaded.fileName, mimeType: uploaded.mimeType, sizeInBytes: uploaded.sizeInBytes });
+      media.refs.push({ imageId, altText: meta.altText, role: meta.role, sortOrder: media.refs.length });
+    }
+    const destinationId = data.destinationId ?? crypto.randomUUID();
+    await persistDestinationRecord({
+    destinationId,
     country: data.country,
     wardCodes: destinationWardCodes(data.country, data.wardCodes),
     translations: [
@@ -68,12 +118,18 @@ export async function saveAdminDestinationAction(
           }]
         : []),
     ],
-  });
+    }, data.existingImages !== undefined || pending.data.length ? media : undefined, Boolean(data.destinationId));
+    committed = true;
 
-  revalidatePath("/admin/destinations");
-  revalidatePath("/admin/tours");
+    revalidatePath("/admin/destinations");
+    revalidatePath("/admin/tours");
 
-  return { success: true, message: "Đã lưu điểm đến.", destination };
+    return { success: true, message: "Đã lưu điểm đến." };
+  } catch (error) {
+    if (committed) return { success: true, message: "Đã lưu điểm đến. Vui lòng tải lại trang để xem thay đổi." };
+    await removeUploadedFiles(paths, "DestinationUpload");
+    return { success: false, message: error instanceof Error ? error.message : "Không thể lưu điểm đến." };
+  }
 }
 
 export async function deleteAdminDestinationAction(id: string): Promise<DestinationActionState> {

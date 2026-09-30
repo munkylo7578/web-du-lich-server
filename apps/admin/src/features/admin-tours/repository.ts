@@ -3,6 +3,7 @@ import { destinationWardCodes } from "@destination-country";
 
 import {
   db,
+  destinationImages,
   destinationTranslations,
   destinationWards,
   destinations,
@@ -141,16 +142,47 @@ export async function searchDestinations(query: string): Promise<AdminDestinatio
   return hydrateDestinations(ids);
 }
 
+export type DestinationImageSave = {
+  refs: { imageId: string; altText?: string; role: "cover" | "gallery"; sortOrder: number }[];
+  newImages: (typeof images.$inferInsert)[];
+};
+
 export async function saveDestinationRecord(destination: TourSaveDestination): Promise<AdminDestination> {
+  await persistDestinationRecord(destination);
+  const saved = await findAdminDestination(destination.destinationId);
+  if (!saved) throw new Error("Could not reload saved destination.");
+  return saved;
+}
+
+export async function findAdminDestination(id: string): Promise<AdminDestination | null> {
+  return (await hydrateDestinations([id]))[0] ?? null;
+}
+
+/** Returns after commit; callers must keep subsequent reloads outside upload rollback. */
+export async function persistDestinationRecord(
+  destination: TourSaveDestination,
+  media?: DestinationImageSave,
+  requireExisting = false,
+): Promise<void> {
   const wardCodes = destinationWardCodes(destination.country, destination.wardCodes);
   const now = new Date();
 
-  await db.transaction(async (tx) => {
+  const removedImages = await db.transaction(async (tx) => {
     const existingDestination = await tx
       .select({ id: destinations.id })
       .from(destinations)
       .where(eq(destinations.id, destination.destinationId))
-      .limit(1);
+      .limit(1).for("update");
+
+    if (requireExisting && !existingDestination.length) throw new Error("Không tìm thấy điểm đến.");
+    const oldLinks = media ? await tx.select().from(destinationImages)
+      .where(eq(destinationImages.destinationId, destination.destinationId)) : [];
+    if (media) {
+      const allowed = new Set([...oldLinks.map((link) => link.imageId), ...media.newImages.map((image) => image.id)]);
+      if (media.refs.some((ref) => !allowed.has(ref.imageId))) throw new Error("Ảnh không thuộc điểm đến đang chỉnh sửa.");
+      if (new Set(media.refs.map((ref) => ref.imageId)).size !== media.refs.length) throw new Error("Mã ảnh bị trùng lặp.");
+      if (media.refs.filter((ref) => ref.role === "cover").length > 1) throw new Error("Chỉ được chọn một ảnh bìa.");
+    }
 
     if (existingDestination.length) {
       await tx.update(destinations).set({ country: destination.country, updatedAt: now }).where(eq(destinations.id, destination.destinationId));
@@ -180,15 +212,22 @@ export async function saveDestinationRecord(destination: TourSaveDestination): P
         wardCode,
       })));
     }
+
+    if (!media) return [];
+    if (media.newImages.length) await tx.insert(images).values(media.newImages);
+    await tx.delete(destinationImages).where(eq(destinationImages.destinationId, destination.destinationId));
+    const hasCover = media.refs.some((ref) => ref.role === "cover");
+    for (const ref of media.refs) {
+      await tx.update(images).set({ altText: normalizeOptionalText(ref.altText), updatedAt: now })
+        .where(eq(images.id, ref.imageId));
+    }
+    if (media.refs.length) await tx.insert(destinationImages).values(media.refs.map((ref, index) => ({
+      destinationId: destination.destinationId, imageId: ref.imageId,
+      role: !hasCover && index === 0 ? "cover" as const : ref.role, sortOrder: index,
+    })));
+    return deleteUnreferencedImages(tx, oldLinks.map((link) => link.imageId));
   });
-
-  const [savedDestination] = await hydrateDestinations([destination.destinationId]);
-
-  if (!savedDestination) {
-    throw new Error("Could not reload saved destination.");
-  }
-
-  return savedDestination;
+  await removeUnreferencedMediaFiles(removedImages);
 }
 
 export async function deleteDestinationRecord(id: string): Promise<void> {
@@ -202,7 +241,14 @@ export async function deleteDestinationRecord(id: string): Promise<void> {
     throw new Error("Điểm đến đang được gắn với tour. Vui lòng gỡ khỏi tour trước khi xóa.");
   }
 
-  await db.delete(destinations).where(eq(destinations.id, id));
+  const removed = await db.transaction(async (tx) => {
+    await tx.select({ id: destinations.id }).from(destinations).where(eq(destinations.id, id)).for("update");
+    const oldLinks = await tx.select({ imageId: destinationImages.imageId }).from(destinationImages)
+      .where(eq(destinationImages.destinationId, id));
+    await tx.delete(destinations).where(eq(destinations.id, id));
+    return deleteUnreferencedImages(tx, oldLinks.map((link) => link.imageId));
+  });
+  await removeUnreferencedMediaFiles(removed);
 }
 
 export async function findAdminTour(id: string): Promise<AdminTour | null> {
@@ -323,6 +369,12 @@ async function hydrateAdminTours(rows: Array<Omit<typeof tours.$inferSelect, "pl
 async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
   if (!ids.length) return [];
 
+  const imageRows = await db.select({
+    destinationId: destinationImages.destinationId, imageId: destinationImages.imageId,
+    role: destinationImages.role, sortOrder: destinationImages.sortOrder,
+    url: images.url, altText: images.altText,
+  }).from(destinationImages).innerJoin(images, eq(destinationImages.imageId, images.id))
+    .where(inArray(destinationImages.destinationId, ids)).orderBy(asc(destinationImages.sortOrder));
   const destinationRows = await db
     .select({
       id: destinations.id,
@@ -368,6 +420,10 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
     return [{
       destinationId: id,
       country: meta.country,
+      images: imageRows.filter((image) => image.destinationId === id).map((image) => ({
+        imageId: image.imageId, url: image.url, altText: image.altText ?? undefined,
+        role: image.role, sortOrder: image.sortOrder,
+      })),
       translations: translationRows
         .filter((translation) => translation.destinationId === id)
         .map((translation) => ({
