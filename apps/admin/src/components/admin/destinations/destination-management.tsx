@@ -266,6 +266,7 @@ function DestinationFormDrawer({
   const [message, setMessage] = useState<string>();
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
+  const saveRequestId = useRef<string | undefined>(undefined);
   const pendingImagesRef = useRef(pendingImages);
   useEffect(() => { pendingImagesRef.current = pendingImages; }, [pendingImages]);
   useEffect(() => () => {
@@ -327,9 +328,18 @@ function DestinationFormDrawer({
   };
 
   const submit = form.handleSubmit((data) => {
+    const requestId = saveRequestId.current ?? crypto.randomUUID();
+    console.info("[DestinationSave] client:validation_passed", {
+      requestId, mode: data.destinationId ? "edit" : "create", country: data.country,
+      provinceCount: data.provinceCodes.length, existingImageCount: data.existingImages?.length ?? 0,
+      pendingImageCount: pendingImages.length,
+    });
     setMessage(undefined);
     const parsedPending = pendingImagesSchema.safeParse(pendingImages);
     if (!parsedPending.success) {
+      console.warn("[DestinationSave] client:pending_images_invalid", {
+        requestId, issues: parsedPending.error.issues.map(({ path, code, message }) => ({ path: path.join("."), code, message })),
+      });
       setImageErrors(imageFieldErrors(parsedPending.error.issues, "pendingImages"));
       setMessage("Vui lòng kiểm tra lại tên ảnh.");
       return;
@@ -337,10 +347,25 @@ function DestinationFormDrawer({
     setImageErrors({});
     startTransition(async () => {
       const body = new FormData();
+      body.set("saveRequestId", requestId);
       body.set("payload", JSON.stringify({ ...data, existingImages: data.existingImages ?? [] }));
       body.set("pendingImages", JSON.stringify(parsedPending.data));
       pendingImages.forEach((image) => body.set(`file:${image.clientId}`, image.file));
-      const result = await submitUpload(body, saveAdminDestinationAction);
+      console.info("[DestinationSave] client:upload_validation_start", { requestId });
+      const result = await submitUpload(body, async (payload) => {
+        console.info("[DestinationSave] client:action_dispatch", { requestId });
+        try {
+          return await saveAdminDestinationAction(payload);
+        } catch (error) {
+          console.error("[DestinationSave] client:action_rejected", {
+            requestId, errorName: error instanceof Error ? error.name : "UnknownError",
+          });
+          throw error;
+        }
+      });
+      console.info("[DestinationSave] client:result", {
+        requestId, success: result.success, fieldPaths: Object.keys(result.fieldErrors ?? {}),
+      });
       setMessage(result.message);
       if (result.fieldErrors) setImageErrors(result.fieldErrors);
       if (result.fieldErrors?.country?.[0]) {
@@ -349,9 +374,16 @@ function DestinationFormDrawer({
       const provinceError = Object.entries(result.fieldErrors ?? {}).find(([path]) => path === "provinceCodes" || path.startsWith("provinceCodes."))?.[1]?.[0];
       if (provinceError) form.setError("provinceCodes", { type: "server", message: provinceError });
       if (result.success) {
+        console.info("[DestinationSave] client:close_and_reload", { requestId });
         onOpenChange(false);
         onSaved();
       }
+    });
+  }, (errors) => {
+    const parsed = destinationEditorSchema.safeParse(form.getValues());
+    console.warn("[DestinationSave] client:validation_failed", {
+      requestId: saveRequestId.current, fields: Object.keys(errors),
+      issues: parsed.success ? [] : parsed.error.issues.map(({ path, code, message }) => ({ path: path.join("."), code, message })),
     });
   });
 
@@ -377,7 +409,13 @@ function DestinationFormDrawer({
           </div>
         </SheetHeader>
 
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={submit} onSubmitCapture={() => {
+          saveRequestId.current = crypto.randomUUID();
+          console.info("[DestinationSave] client:submit_event", { requestId: saveRequestId.current });
+        }} onInvalidCapture={(event) => {
+          const target = event.target as HTMLInputElement;
+          console.warn("[DestinationSave] client:native_validation_blocked", { field: target.name || target.id });
+        }} className="flex min-h-0 flex-1 flex-col">
           <div className="relative flex-1 overflow-y-auto px-5 py-6 sm:px-8">
             <div className="mx-auto w-full max-w-[1180px] space-y-7">
               {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
@@ -489,7 +527,7 @@ function DestinationFormDrawer({
           <SheetFooter className="tour-drawer-chrome sticky bottom-0 z-20 rounded-none border-x-0 border-b-0 px-5 py-4 sm:px-8">
             <div className="mx-auto flex w-full max-w-[1180px] flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending} onClick={() => onOpenChange(false)}>Hủy</Button>
-              <Button type="submit" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending}>{isPending ? "Đang lưu..." : destination ? "Lưu thay đổi" : "Tạo điểm đến"}</Button>
+              <Button type="submit" size="lg" className="h-12 rounded-2xl px-6 text-base" disabled={isPending} onClick={() => console.info("[DestinationSave] client:save_clicked", { isPending })}>{isPending ? "Đang lưu..." : destination ? "Lưu thay đổi" : "Tạo điểm đến"}</Button>
             </div>
           </SheetFooter>
         </form>

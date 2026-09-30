@@ -4,6 +4,7 @@ export function blockImageProcessingSubmit(form: HTMLFormElement | null, onBlock
   if (!form || !target) return () => undefined;
   const listener = (event: Event) => {
     if (event.target !== form) return;
+    console.warn("[ImageProcessing] submit_blocked", { reason: "Image optimization is still running" });
     event.preventDefault();
     // Window capture runs before React's delegated submit handlers, including
     // handlers on portal roots. Covers click, Enter and requestSubmit().

@@ -43,7 +43,17 @@ export async function searchDestinationProvincesAction(query: string): Promise<A
 export async function saveAdminDestinationAction(
   formData: FormData,
 ): Promise<DestinationActionState & { destination?: AdminDestination }> {
-  await requireSession();
+  const requestedId = z.string().uuid().safeParse(formData.get("saveRequestId"));
+  const requestId = requestedId.success ? requestedId.data : crypto.randomUUID();
+  const startedAt = Date.now();
+  console.info("[DestinationSave] server:received", { requestId });
+  try {
+    await requireSession();
+    console.info("[DestinationSave] server:authenticated", { requestId });
+  } catch (error) {
+    console.warn("[DestinationSave] server:authentication_interrupted", { requestId });
+    throw error;
+  }
 
   let payload: unknown;
   let pendingPayload: unknown;
@@ -51,10 +61,14 @@ export async function saveAdminDestinationAction(
     payload = JSON.parse(String(formData.get("payload") || "{}"));
     pendingPayload = JSON.parse(String(formData.get("pendingImages") || "[]"));
   } catch {
+    console.warn("[DestinationSave] server:json_invalid", { requestId });
     return { success: false, message: "Dữ liệu biểu mẫu không hợp lệ." };
   }
   const parsed = destinationEditorSchema.safeParse(payload);
   if (!parsed.success) {
+    console.warn("[DestinationSave] server:validation_failed", {
+      requestId, fieldErrors: imageFieldErrors(parsed.error.issues),
+    });
     return {
       success: false,
       message: "Vui lòng kiểm tra lại thông tin điểm đến.",
@@ -63,22 +77,38 @@ export async function saveAdminDestinationAction(
   }
 
   const pending = pendingImagesSchema.safeParse(pendingPayload);
-  if (!pending.success) return {
-    success: false, message: "Vui lòng kiểm tra thông tin ảnh mới.",
-    fieldErrors: imageFieldErrors(pending.error.issues, "pendingImages"),
-  };
+  if (!pending.success) {
+    console.warn("[DestinationSave] server:pending_images_invalid", {
+      requestId, fieldErrors: imageFieldErrors(pending.error.issues, "pendingImages"),
+    });
+    return {
+      success: false, message: "Vui lòng kiểm tra thông tin ảnh mới.",
+      fieldErrors: imageFieldErrors(pending.error.issues, "pendingImages"),
+    };
+  }
   const data = parsed.data;
   const existing = data.existingImages ?? [];
   if ([...existing, ...pending.data].filter((image) => image.role === "cover").length > 1) {
+    console.warn("[DestinationSave] server:multiple_covers", { requestId });
     return { success: false, message: "Chỉ được chọn một ảnh bìa." };
   }
   const paths: string[] = [];
   let committed = false;
+  let stage = "load_existing";
+  console.info("[DestinationSave] server:validated", {
+    requestId, mode: data.destinationId ? "edit" : "create", country: data.country,
+    provinceCount: data.provinceCodes.length, existingImageCount: existing.length,
+    pendingImageCount: pending.data.length,
+  });
   try {
     const stored = data.destinationId ? await findAdminDestination(data.destinationId) : null;
-    if (data.destinationId && !stored) return { success: false, message: "Không tìm thấy điểm đến." };
+    if (data.destinationId && !stored) {
+      console.warn("[DestinationSave] server:destination_not_found", { requestId });
+      return { success: false, message: "Không tìm thấy điểm đến." };
+    }
     const allowed = new Set(stored?.images.map((image) => image.imageId) ?? []);
     if (existing.some((image) => !allowed.has(image.imageId))) {
+      console.warn("[DestinationSave] server:image_ownership_failed", { requestId });
       return { success: false, message: "Ảnh không thuộc điểm đến đang chỉnh sửa." };
     }
     const maxBytes = Number(process.env.MAX_UPLOAD_IMAGE_MB || "50") * 1024 * 1024;
@@ -86,10 +116,16 @@ export async function saveAdminDestinationAction(
       const file = formData.get(`file:${meta.clientId}`);
       if (!(file instanceof File) || !file.size || file.size > maxBytes
         || !["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type)) {
+        console.warn("[DestinationSave] server:file_invalid", {
+          requestId, hasFile: file instanceof File,
+          size: file instanceof File ? file.size : null, type: file instanceof File ? file.type : null, maxBytes,
+        });
         return { success: false, message: "Tệp ảnh bị thiếu, không hợp lệ hoặc vượt quá dung lượng cho phép." };
       }
     }
     const media: DestinationImageSave = { refs: [...existing], newImages: [] };
+    stage = "upload_images";
+    console.info("[DestinationSave] server:upload_start", { requestId, count: pending.data.length });
     for (const meta of pending.data) {
       const file = formData.get(`file:${meta.clientId}`) as File;
       const uploaded = await saveImageFile(file, { subdirectory: "destinations", logScope: "DestinationUpload" });
@@ -100,6 +136,8 @@ export async function saveAdminDestinationAction(
       media.refs.push({ imageId, altText: meta.altText, role: meta.role, sortOrder: media.refs.length });
     }
     const destinationId = data.destinationId ?? crypto.randomUUID();
+    stage = "persist_destination";
+    console.info("[DestinationSave] server:persist_start", { requestId, destinationId });
     await persistDestinationRecord({
     destinationId,
     country: data.country,
@@ -120,12 +158,27 @@ export async function saveAdminDestinationAction(
     ],
     }, data.existingImages !== undefined || pending.data.length ? media : undefined, Boolean(data.destinationId));
     committed = true;
+    console.info("[DestinationSave] server:persist_complete", { requestId, destinationId });
 
+    stage = "revalidate";
     revalidatePath("/admin/destinations");
     revalidatePath("/admin/tours");
 
+    console.info("[DestinationSave] server:success", { requestId, elapsedMs: Date.now() - startedAt });
     return { success: true, message: "Đã lưu điểm đến." };
   } catch (error) {
+    const cause = error instanceof Error ? error.cause : undefined;
+    // Do not log the complete ORM error: it can include SQL parameters and form content.
+    const databaseError = cause && typeof cause === "object" ? cause : error;
+    const detail = databaseError && typeof databaseError === "object" ? databaseError as Record<string, unknown> : {};
+    console.error("[DestinationSave] server:failed", {
+      requestId, stage, committed, elapsedMs: Date.now() - startedAt,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      databaseCode: typeof detail.code === "string" ? detail.code : undefined,
+      table: typeof detail.table_name === "string" ? detail.table_name : undefined,
+      constraint: typeof detail.constraint_name === "string" ? detail.constraint_name : undefined,
+      missingProvinceRelation: databaseError instanceof Error && databaseError.message.includes("destination_provinces"),
+    });
     if (committed) return { success: true, message: "Đã lưu điểm đến. Vui lòng tải lại trang để xem thay đổi." };
     await removeUploadedFiles(paths, "DestinationUpload");
     return { success: false, message: error instanceof Error ? error.message : "Không thể lưu điểm đến." };
