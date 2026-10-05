@@ -90,6 +90,10 @@ export class DestinationContentDto {
   country!: DestinationCountry;
   @ApiProperty({ example: 'Thành phố Hồ Chí Minh' }) name!: string;
   @ApiPropertyOptional({ nullable: true }) description!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Localized visa information as rich-text HTML; null when empty.' })
+  visa!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Localized destination information as rich-text HTML; null when empty.' })
+  destination!: string | null;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
   @ApiProperty({ type: ProvinceContentDto, isArray: true })
   provinces!: ProvinceContentDto[];

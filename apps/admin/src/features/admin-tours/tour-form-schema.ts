@@ -2,6 +2,9 @@ import { z } from "zod";
 import { DESTINATION_COUNTRIES } from "@destination-country";
 
 const optionalHtml = z.string().trim().optional().default("");
+const hasRichTextContent = (value: string) => value.replace(/<[^>]*>/g, "")
+  .replace(/&nbsp;|&#160;|&#xA0;/gi, " ").replace(/[\s\u200B-\u200D\uFEFF]/g, "").length > 0;
+const optionalDestinationHtml = optionalHtml.transform((value) => hasRichTextContent(value) ? value : "");
 const optionalTourHtml = (message: string) => optionalHtml.refine(
   (value) => !value || value.replace(/<[^>]*>/g, "").trim().length >= 10,
   message,
@@ -66,12 +69,21 @@ export const destinationEditorSchema = z.object({
     en: z.object({
       name: z.string().trim().min(2, "Tên điểm đến cần ít nhất 2 ký tự."),
       description: optionalHtml,
+      visa: optionalDestinationHtml,
+      destination: optionalDestinationHtml,
     }),
     vi: z.object({
       name: z.string().trim().optional().default(""),
       description: optionalHtml,
+      visa: optionalDestinationHtml,
+      destination: optionalDestinationHtml,
     }),
   }),
+}).superRefine(({ translations }, ctx) => {
+  const vi = translations.vi;
+  if ((vi.name || [vi.description, vi.visa, vi.destination].some(hasRichTextContent)) && vi.name.length < 2) {
+    ctx.addIssue({ code: "custom", path: ["translations", "vi", "name"], message: "Vui lòng nhập tên điểm đến tiếng Việt (ít nhất 2 ký tự) để lưu nội dung tiếng Việt." });
+  }
 });
 
 export const localizedTextSchema = z.object({

@@ -179,6 +179,8 @@ export const destinationTranslations = pgTable(
     locale: tourLocale('locale').notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    visa: text('visa'),
+    destination: text('destination'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

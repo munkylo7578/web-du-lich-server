@@ -380,6 +380,8 @@ function DestinationFormDrawer({
       }
     });
   }, (errors) => {
+    if (errors.translations?.en) setLocale("en");
+    else if (errors.translations?.vi) setLocale("vi");
     const parsed = destinationEditorSchema.safeParse(form.getValues());
     console.warn("[DestinationSave] client:validation_failed", {
       requestId: saveRequestId.current, fields: Object.keys(errors),
@@ -463,6 +465,18 @@ function DestinationFormDrawer({
                       <FormField label={`Mô tả (${currentLocale.toUpperCase()})`} error={form.formState.errors.translations?.[currentLocale]?.description?.message}>
                         <Controller control={form.control} name={`translations.${currentLocale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của điểm đến..." invalid={Boolean(form.formState.errors.translations?.[currentLocale]?.description)} />} />
                       </FormField>
+                      {(["visa", "destination"] as const).map((fieldName) => {
+                        const label = `${fieldName === "visa" ? "Visa" : "Destination"} (${currentLocale.toUpperCase()})`;
+                        const fieldError = form.formState.errors.translations?.[currentLocale]?.[fieldName];
+                        return (
+                          <FormField key={fieldName} label={label} error={fieldError?.message}>
+                            <Controller control={form.control} name={`translations.${currentLocale}.${fieldName}`} render={({ field }) => (
+                              <RichTextEditor value={field.value || ""} onChange={field.onChange} onBlur={field.onBlur} label={label} disabled={isPending}
+                                placeholder={fieldName === "visa" ? "Thông tin visa (không bắt buộc)..." : "Thông tin destination (không bắt buộc)..."} invalid={Boolean(fieldError)} />
+                            )} />
+                          </FormField>
+                        );
+                      })}
                     </TabsContent>
                   ))}
                 </Tabs>
@@ -542,8 +556,8 @@ function createEmptyEditorValues(): DestinationEditorFormValues {
     existingImages: [],
     provinceCodes: [],
     translations: {
-      vi: { name: "", description: "" },
-      en: { name: "", description: "" },
+      vi: { name: "", description: "", visa: "", destination: "" },
+      en: { name: "", description: "", visa: "", destination: "" },
     },
   };
 }
@@ -559,8 +573,8 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
     country: destination.country,
     provinceCodes: destination.country === "VN" ? destination.provinces.map((province) => province.code) : [],
     translations: {
-      vi: { name: vi?.name || "", description: vi?.description || "" },
-      en: { name: en?.name || "", description: en?.description || "" },
+      vi: { name: vi?.name || "", description: vi?.description || "", visa: vi?.visa || "", destination: vi?.destination || "" },
+      en: { name: en?.name || "", description: en?.description || "", visa: en?.visa || "", destination: en?.destination || "" },
     },
   };
 }

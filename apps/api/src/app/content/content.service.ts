@@ -51,7 +51,7 @@ type DestinationRow = {
   id: string;
   imageLinks?: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   country: DestinationCountry;
-  translations: TranslationRow[];
+  translations: Array<TranslationRow & { visa?: string | null; destination?: string | null }>;
   provinceLinks?: ProvinceLinkRow[];
   tourLinks?: DestinationTourLinkRow[];
   createdAt: Date;
@@ -497,6 +497,8 @@ export class ContentService {
       name: translation.value.name,
       description: translation.value.description,
       locale: translation.locale,
+      visa: translation.value.visa ?? null,
+      destination: translation.value.destination ?? null,
       provinces: (row.provinceLinks ?? []).map(({ province }) => ({
         code: province.code,
         name: locale === 'en' ? (province.nameEn ?? province.name) : province.name,

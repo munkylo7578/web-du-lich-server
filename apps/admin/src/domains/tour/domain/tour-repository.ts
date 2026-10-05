@@ -17,6 +17,8 @@ export type TourSaveDestinationTranslation = {
   locale: TourLocale;
   name: string;
   description?: string;
+  visa?: string;
+  destination?: string;
 };
 
 export type TourSaveDestination = {

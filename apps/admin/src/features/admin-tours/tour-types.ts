@@ -12,6 +12,8 @@ export type AdminDestinationTranslation = {
   locale: "vi" | "en";
   name: string;
   description?: string;
+  visa?: string;
+  destination?: string;
 };
 
 export type AdminDestination = {

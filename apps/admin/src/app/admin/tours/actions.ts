@@ -64,12 +64,16 @@ export async function saveDestinationAction(payload: unknown): Promise<TourActio
         locale: "en",
         name: data.translations.en.name,
         description: data.translations.en.description,
+        visa: data.translations.en.visa,
+        destination: data.translations.en.destination,
       },
       ...(data.translations.vi.name
         ? [{
             locale: "vi" as const,
             name: data.translations.vi.name,
             description: data.translations.vi.description || undefined,
+            visa: data.translations.vi.visa,
+            destination: data.translations.vi.destination,
           }]
         : []),
     ],
