@@ -13,7 +13,7 @@ export type AdminDestinationTranslation = {
   name: string;
   description?: string;
   visa?: string;
-  destination?: string;
+  weather?: string;
 };
 
 export type AdminDestination = {

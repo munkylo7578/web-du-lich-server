@@ -180,7 +180,7 @@ export const destinationTranslations = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     visa: text('visa'),
-    destination: text('destination'),
+    weather: text('weather'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

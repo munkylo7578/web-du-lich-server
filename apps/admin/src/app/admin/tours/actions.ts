@@ -65,7 +65,7 @@ export async function saveDestinationAction(payload: unknown): Promise<TourActio
         name: data.translations.en.name,
         description: data.translations.en.description,
         visa: data.translations.en.visa,
-        destination: data.translations.en.destination,
+        weather: data.translations.en.weather,
       },
       ...(data.translations.vi.name
         ? [{
@@ -73,7 +73,7 @@ export async function saveDestinationAction(payload: unknown): Promise<TourActio
             name: data.translations.vi.name,
             description: data.translations.vi.description || undefined,
             visa: data.translations.vi.visa,
-            destination: data.translations.vi.destination,
+            weather: data.translations.vi.weather,
           }]
         : []),
     ],

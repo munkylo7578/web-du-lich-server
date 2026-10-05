@@ -465,14 +465,14 @@ function DestinationFormDrawer({
                       <FormField label={`Mô tả (${currentLocale.toUpperCase()})`} error={form.formState.errors.translations?.[currentLocale]?.description?.message}>
                         <Controller control={form.control} name={`translations.${currentLocale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của điểm đến..." invalid={Boolean(form.formState.errors.translations?.[currentLocale]?.description)} />} />
                       </FormField>
-                      {(["visa", "destination"] as const).map((fieldName) => {
-                        const label = `${fieldName === "visa" ? "Visa" : "Destination"} (${currentLocale.toUpperCase()})`;
+                      {(["visa", "weather"] as const).map((fieldName) => {
+                        const label = `${fieldName === "visa" ? "Visa" : "Weather"} (${currentLocale.toUpperCase()})`;
                         const fieldError = form.formState.errors.translations?.[currentLocale]?.[fieldName];
                         return (
                           <FormField key={fieldName} label={label} error={fieldError?.message}>
                             <Controller control={form.control} name={`translations.${currentLocale}.${fieldName}`} render={({ field }) => (
                               <RichTextEditor value={field.value || ""} onChange={field.onChange} onBlur={field.onBlur} label={label} disabled={isPending}
-                                placeholder={fieldName === "visa" ? "Thông tin visa (không bắt buộc)..." : "Thông tin destination (không bắt buộc)..."} invalid={Boolean(fieldError)} />
+                                placeholder={fieldName === "visa" ? "Thông tin visa (không bắt buộc)..." : "Thông tin thời tiết (không bắt buộc)..."} invalid={Boolean(fieldError)} />
                             )} />
                           </FormField>
                         );
@@ -556,8 +556,8 @@ function createEmptyEditorValues(): DestinationEditorFormValues {
     existingImages: [],
     provinceCodes: [],
     translations: {
-      vi: { name: "", description: "", visa: "", destination: "" },
-      en: { name: "", description: "", visa: "", destination: "" },
+      vi: { name: "", description: "", visa: "", weather: "" },
+      en: { name: "", description: "", visa: "", weather: "" },
     },
   };
 }
@@ -573,8 +573,8 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
     country: destination.country,
     provinceCodes: destination.country === "VN" ? destination.provinces.map((province) => province.code) : [],
     translations: {
-      vi: { name: vi?.name || "", description: vi?.description || "", visa: vi?.visa || "", destination: vi?.destination || "" },
-      en: { name: en?.name || "", description: en?.description || "", visa: en?.visa || "", destination: en?.destination || "" },
+      vi: { name: vi?.name || "", description: vi?.description || "", visa: vi?.visa || "", weather: vi?.weather || "" },
+      en: { name: en?.name || "", description: en?.description || "", visa: en?.visa || "", weather: en?.weather || "" },
     },
   };
 }

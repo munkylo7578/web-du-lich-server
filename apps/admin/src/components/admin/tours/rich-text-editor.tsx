@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Menu } from "@base-ui/react/menu";
 import Placeholder from "@tiptap/extension-placeholder";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
@@ -10,6 +11,7 @@ import StarterKit from "@tiptap/starter-kit";
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, LinkIcon,
   List, ListOrdered, Quote, Redo2, Strikethrough, UnderlineIcon, Undo2, Unlink, RemoveFormatting,
+  Check, ChevronDown, Highlighter, Paintbrush, Type,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -35,9 +37,13 @@ const HIGHLIGHTS = [
   { label: "Xanh dương", value: "#bfdbfe" }, { label: "Hồng", value: "#fbcfe8" },
 ];
 const BLOCKS = [
-  { label: "Đoạn văn", value: "paragraph" },
-  ...[1, 2, 3, 4, 5, 6].map((level) => ({ label: `Tiêu đề ${level}`, value: String(level) })),
+  { label: "Paragraph", value: "paragraph" },
+  ...[1, 2, 3, 4, 5, 6].map((level) => ({ label: `Heading ${level}`, value: String(level) })),
 ];
+const HEADING_PREVIEWS: Record<string, string> = {
+  "1": "text-2xl font-bold", "2": "text-xl font-bold", "3": "text-lg font-semibold",
+  "4": "text-base font-semibold", "5": "text-sm font-semibold", "6": "text-xs font-semibold",
+};
 const CONTENT_CLASS = "min-h-40 px-3 py-3 text-sm leading-relaxed outline-none [overflow-wrap:anywhere] [&_p]:my-2 [&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-muted-foreground [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl [&_h4]:text-lg [&_h5]:text-base [&_h6]:text-sm [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_h4]:font-semibold [&_h5]:font-semibold [&_h6]:font-semibold [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-blue-700 [&_a]:underline [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-100 [&_pre]:p-3 [&_hr]:my-4";
 
 export function RichTextEditor({
@@ -138,38 +144,44 @@ function EditorToolbar({ editor, disabled }: { editor: Editor; disabled: boolean
   ];
 
   return (
-    <fieldset disabled={disabled} className="min-w-0 space-y-2 border-b border-slate-200 bg-slate-50 p-2">
+    <fieldset disabled={disabled} className="min-w-0 border-b border-slate-200 bg-slate-50/80 p-1">
       <legend className="sr-only">Định dạng nội dung</legend>
-      <div className="flex flex-wrap items-end gap-2">
-        <ToolbarSelect label="Kiểu đoạn" value={heading ? String(heading) : "paragraph"} options={BLOCKS} onChange={(value) => {
+      <div role="group" aria-label="Công cụ định dạng" className="flex flex-wrap items-center gap-0.5">
+        <ToolbarMenu editor={editor} disabled={disabled} label="Kiểu đoạn" value={heading ? String(heading) : "paragraph"} options={BLOCKS}
+          triggerClassName="w-28 justify-between" renderOption={(option) => <span className={HEADING_PREVIEWS[option.value]}>{option.label}</span>} onChange={(value) => {
           const level = Number(value);
           if (level === 1 || level === 2 || level === 3 || level === 4 || level === 5 || level === 6) editor.chain().focus().setHeading({ level }).run();
           else editor.chain().focus().setParagraph().run();
         }} />
-        <ToolbarSelect label="Font chữ" value={textStyle.fontFamily || ""} options={FONTS} emptyLabel="Mặc định" onChange={(value) => {
+        <ToolbarMenu editor={editor} disabled={disabled} label="Font chữ" value={textStyle.fontFamily || ""} options={FONTS} emptyLabel="Font chữ"
+          triggerClassName="w-28 justify-between" renderOption={(option) => <span style={{ fontFamily: option.value || undefined }}>{option.label}</span>} onChange={(value) => {
           if (value) editor.chain().focus().setFontFamily(value).run();
           else editor.chain().focus().unsetFontFamily().run();
         }} />
-        <ToolbarSelect label="Cỡ chữ" value={textStyle.fontSize || ""} options={FONT_SIZES} emptyLabel="Mặc định" onChange={(value) => {
+        <ToolbarMenu editor={editor} disabled={disabled} label="Cỡ chữ" value={textStyle.fontSize || ""} options={FONT_SIZES} emptyLabel="Cỡ chữ" onChange={(value) => {
           if (value) editor.chain().focus().setFontSize(value).run();
           else editor.chain().focus().unsetFontSize().run();
         }} />
-        <ToolbarSelect label="Màu chữ" value={textStyle.color || ""} options={COLORS} emptyLabel="Mặc định" onChange={(value) => {
+        <ToolbarSeparator />
+        <ToolbarMenu editor={editor} disabled={disabled} label="Màu chữ" value={textStyle.color || ""} options={COLORS} emptyLabel="Mặc định" palette
+          trigger={<span className="flex flex-col items-center"><Type className="size-4" /><span className="h-0.5 w-4 rounded-full" style={{ backgroundColor: textStyle.color || "#0f172a" }} /></span>} onChange={(value) => {
           if (value) editor.chain().focus().setColor(value).run();
           else editor.chain().focus().unsetColor().run();
         }} />
-        <ToolbarSelect label="Tô sáng" value={editor.getAttributes("highlight").color || ""} options={HIGHLIGHTS} emptyLabel="Không" onChange={(value) => {
+        <ToolbarMenu editor={editor} disabled={disabled} label="Tô sáng" value={editor.getAttributes("highlight").color || ""} options={HIGHLIGHTS} emptyLabel="Không tô sáng" palette
+          trigger={<span className="flex flex-col items-center"><Highlighter className="size-4" /><span className="h-0.5 w-4 rounded-full" style={{ backgroundColor: editor.getAttributes("highlight").color || "#fef08a" }} /></span>} onChange={(value) => {
           if (value) editor.chain().focus().setHighlight({ color: value }).run();
           else editor.chain().focus().unsetHighlight().run();
         }} />
-      </div>
-      <div role="group" aria-label="Công cụ định dạng" className="flex flex-wrap gap-1">
-        {buttons.map((item) => (
-          <Button key={item.label} type="button" variant="ghost" size="icon-sm" title={item.label} aria-label={item.label}
-            aria-pressed={item.active} disabled={disabled || item.disabled} className={cn(item.active && "bg-cyan-100 text-cyan-900")}
-            onMouseDown={(event) => event.preventDefault()} onClick={item.action}>
-            <item.icon />
-          </Button>
+        {buttons.map((item, index) => (
+          <Fragment key={item.label}>
+            {[0, 2, 6, 10, 13].includes(index) && <ToolbarSeparator />}
+            <Button type="button" variant="ghost" size="icon-sm" title={item.label} aria-label={item.label}
+              aria-pressed={item.active} disabled={disabled || item.disabled} className={cn("rounded-sm", item.active && "bg-blue-100 text-blue-700")}
+              onMouseDown={(event) => event.preventDefault()} onClick={item.action}>
+              <item.icon />
+            </Button>
+          </Fragment>
         ))}
       </div>
       {linkError && <p role="alert" className="text-xs text-destructive">{linkError}</p>}
@@ -177,23 +189,79 @@ function EditorToolbar({ editor, disabled }: { editor: Editor; disabled: boolean
   );
 }
 
-function ToolbarSelect({ label, value, options, emptyLabel, onChange }: {
+function ToolbarSeparator() {
+  return <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-slate-300" />;
+}
+
+type ToolbarOption = { label: string; value: string };
+
+function ToolbarMenu({ editor, disabled, label, value, options, emptyLabel, onChange, trigger, triggerClassName, renderOption, palette = false }: {
+  editor: Editor;
+  disabled: boolean;
   label: string;
   value: string;
-  options: { label: string; value: string }[];
+  options: ToolbarOption[];
   emptyLabel?: string;
   onChange: (value: string) => void;
+  trigger?: ReactNode;
+  triggerClassName?: string;
+  renderOption?: (option: ToolbarOption) => ReactNode;
+  palette?: boolean;
 }) {
-  const id = useId();
+  const applied = useRef(false);
+  const selected = options.find((option) => option.value === value);
+  const items = [
+    ...(emptyLabel ? [{ label: palette ? emptyLabel : "Mặc định", value: "" }] : []),
+    ...(value && !selected ? [{ label: value, value }] : []),
+    ...options,
+  ];
+  const displayLabel = selected?.label || value || emptyLabel || label;
+
   return (
-    <div className="min-w-0 max-w-full space-y-1">
-      <label htmlFor={id} className="block text-xs font-medium text-slate-600">{label}</label>
-      <select id={id} value={value} onChange={(event) => onChange(event.target.value)}
-        className="h-9 max-w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:cursor-not-allowed">
-        {emptyLabel && <option value="">{emptyLabel}</option>}
-        {value && !options.some((option) => option.value === value) && <option value={value}>{value}</option>}
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-    </div>
+    <Menu.Root disabled={disabled} modal={false} orientation={palette ? "horizontal" : "vertical"}
+      onOpenChange={(open) => { if (open) applied.current = false; }}>
+      <Menu.Trigger type="button" disabled={disabled} title={`${label}: ${displayLabel}`} aria-label={`${label}: ${displayLabel}`}
+        className={cn("inline-flex h-8 shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-slate-700 outline-none hover:bg-slate-200/70 focus-visible:ring-2 focus-visible:ring-blue-500 data-popup-open:bg-blue-100 data-popup-open:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50", triggerClassName)}>
+        {trigger || <span className="truncate">{displayLabel}</span>}
+        <ChevronDown aria-hidden="true" className="size-3 shrink-0" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={4} className="z-[100] outline-none">
+          <Menu.Popup aria-label={label}
+            finalFocus={() => applied.current && !editor.isDestroyed ? editor.view.dom : true}
+            className="max-h-[min(20rem,var(--available-height))] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-md border border-slate-200 bg-white p-1 text-slate-950 shadow-lg outline-none">
+            {palette && <p className="px-2 pb-2 pt-1 text-xs font-medium text-slate-500">{label}</p>}
+            <Menu.RadioGroup value={value} className={palette ? "flex gap-1" : "min-w-48"}>
+              {items.map((option) => (
+                <Menu.RadioItem key={option.value} value={option.value} label={option.label} closeOnClick disabled={disabled}
+                  title={option.label} aria-label={option.label}
+                  onClick={() => {
+                    if (disabled || editor.isDestroyed) return;
+                    // Menu focus does not alter ProseMirror's selection; focus() restores it.
+                    applied.current = true;
+                    onChange(option.value);
+                  }}
+                  className={cn(
+                    "relative flex cursor-pointer select-none items-center rounded-sm outline-none data-highlighted:bg-blue-50 data-highlighted:ring-1 data-highlighted:ring-inset data-highlighted:ring-blue-500 data-checked:bg-blue-50",
+                    palette ? "size-8 justify-center" : "min-h-9 gap-2 py-1.5 pl-7 pr-5 text-sm",
+                  )}>
+                  {palette ? (
+                    <span className="grid size-6 place-items-center rounded-sm border border-black/15" style={{ backgroundColor: option.value || "transparent" }}>
+                      {!option.value && <Paintbrush className="size-3.5 text-slate-500" />}
+                      <Menu.RadioItemIndicator className="absolute -right-0.5 -top-0.5 rounded-full bg-blue-600 p-0.5 text-white"><Check className="size-2.5" /></Menu.RadioItemIndicator>
+                    </span>
+                  ) : (
+                    <>
+                      <Menu.RadioItemIndicator className="absolute left-1.5 text-blue-700"><Check className="size-3.5" /></Menu.RadioItemIndicator>
+                      {renderOption ? renderOption(option) : option.label}
+                    </>
+                  )}
+                </Menu.RadioItem>
+              ))}
+            </Menu.RadioGroup>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }

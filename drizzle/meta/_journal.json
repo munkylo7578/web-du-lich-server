@@ -162,6 +162,13 @@
       "when": 1791186230839,
       "tag": "0022_destination_rich_text_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791196101519,
+      "tag": "0023_destination_weather",
+      "breakpoints": true
     }
   ]
 }

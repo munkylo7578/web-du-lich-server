@@ -18,7 +18,7 @@ export type TourSaveDestinationTranslation = {
   name: string;
   description?: string;
   visa?: string;
-  destination?: string;
+  weather?: string;
 };
 
 export type TourSaveDestination = {

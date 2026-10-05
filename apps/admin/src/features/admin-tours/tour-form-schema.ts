@@ -70,18 +70,18 @@ export const destinationEditorSchema = z.object({
       name: z.string().trim().min(2, "Tên điểm đến cần ít nhất 2 ký tự."),
       description: optionalHtml,
       visa: optionalDestinationHtml,
-      destination: optionalDestinationHtml,
+      weather: optionalDestinationHtml,
     }),
     vi: z.object({
       name: z.string().trim().optional().default(""),
       description: optionalHtml,
       visa: optionalDestinationHtml,
-      destination: optionalDestinationHtml,
+      weather: optionalDestinationHtml,
     }),
   }),
 }).superRefine(({ translations }, ctx) => {
   const vi = translations.vi;
-  if ((vi.name || [vi.description, vi.visa, vi.destination].some(hasRichTextContent)) && vi.name.length < 2) {
+  if ((vi.name || [vi.description, vi.visa, vi.weather].some(hasRichTextContent)) && vi.name.length < 2) {
     ctx.addIssue({ code: "custom", path: ["translations", "vi", "name"], message: "Vui lòng nhập tên điểm đến tiếng Việt (ít nhất 2 ký tự) để lưu nội dung tiếng Việt." });
   }
 });

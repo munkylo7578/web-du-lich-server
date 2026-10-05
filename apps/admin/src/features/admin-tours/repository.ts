@@ -205,7 +205,7 @@ export async function persistDestinationRecord(
       name: translation.name,
       description: normalizeOptionalText(translation.description),
       visa: normalizeOptionalText(translation.visa),
-      destination: normalizeOptionalText(translation.destination),
+      weather: normalizeOptionalText(translation.weather),
       createdAt: now,
       updatedAt: now,
     })));
@@ -433,7 +433,7 @@ async function hydrateDestinations(ids: string[]): Promise<AdminDestination[]> {
           name: translation.name,
           description: translation.description ?? undefined,
           visa: translation.visa ?? undefined,
-          destination: translation.destination ?? undefined,
+          weather: translation.weather ?? undefined,
         })),
       provinces: provinceRows
         .filter((province) => province.destinationId === id)
