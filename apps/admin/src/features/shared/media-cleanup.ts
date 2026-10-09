@@ -2,13 +2,13 @@ import "server-only";
 
 import { realpath, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { db, destinationImages, images, serviceImages, siteSettings, tourImages, tourPlanImages } from "@database";
+import { db, countryImages, destinationImages, images, serviceImages, siteSettings, tourImages, tourPlanImages } from "@database";
 import { and, inArray, sql } from "drizzle-orm";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const UPLOAD_STEM = String.raw`\d+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`;
-const IMAGE_KEY = new RegExp(`^(?:tours|services|settings|destinations)/${UPLOAD_STEM}\\.(?:jpg|png|webp|avif)$`);
+const IMAGE_KEY = new RegExp(`^(?:tours|services|settings|destinations|countries)/${UPLOAD_STEM}\\.(?:jpg|png|webp|avif)$`);
 const VIDEO_KEY = new RegExp(`^settings/videos/${UPLOAD_STEM}\\.mp4$`);
 
 /** Return only rows actually removed; callers must wait for commit before deleting files. */
@@ -16,6 +16,7 @@ export async function deleteUnreferencedImages(tx: Transaction, ids: string[]) {
   if (!ids.length) return [];
   return tx.delete(images).where(and(
     inArray(images.id, [...new Set(ids)]),
+    sql`not exists (select 1 from ${countryImages} where ${countryImages.imageId} = ${images.id})`,
     sql`not exists (select 1 from ${destinationImages} where ${destinationImages.imageId} = ${images.id})`,
     sql`not exists (select 1 from ${tourImages} where ${tourImages.imageId} = ${images.id})`,
     sql`not exists (select 1 from ${tourPlanImages} where ${tourPlanImages.imageId} = ${images.id})`,

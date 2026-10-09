@@ -86,6 +86,7 @@ const adminNavItems: AdminNavItem[] = [
       { title: SETTING_CATEGORY_LABELS.home, href: "/admin/settings/home", icon: House },
       { title: SETTING_CATEGORY_LABELS["about-us"], href: "/admin/settings/about-us", icon: Building2 },
       { title: SETTING_CATEGORY_LABELS.general, href: "/admin/settings/general", icon: SlidersHorizontal },
+      { title: "Quốc gia", href: "/admin/settings/countries", icon: MapPin },
     ],
   },
 ] as const;

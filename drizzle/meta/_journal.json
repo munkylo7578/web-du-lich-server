@@ -169,6 +169,13 @@
       "when": 1791196101519,
       "tag": "0023_destination_weather",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791541071313,
+      "tag": "0024_country_settings",
+      "breakpoints": true
     }
   ]
 }
