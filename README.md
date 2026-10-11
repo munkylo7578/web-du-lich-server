@@ -159,14 +159,51 @@ Keep Drizzle table definitions and DB persistence-only snapshot types inside `li
 
 Copy [`.env.example`](.env.example), set `DATABASE_URL`, and set one or more comma-separated `API_KEYS` of at least 32 characters. During rotation, deploy both the old and new key, update callers, then remove the old key. Start locally with `npm run api:dev`; the default address is `http://localhost:3001/api/v1`.
 
-Content routes require both `x-api-key` and an explicit `locale=vi|en` query parameter:
+Content routes require `x-api-key`. The optional `locale=en|vi` query parameter defaults to English; missing requested translations fall back to English:
 
 - `GET /api/v1/tours?page=1&limit=20&locale=en`
 - `GET /api/v1/tours/:id?locale=vi`
 - `GET /api/v1/destinations` and `GET /api/v1/destinations/:id`
+- `GET /api/v1/countries` and `GET /api/v1/countries/:code`
 - `GET /api/v1/services` and `GET /api/v1/services/:id`
 - `GET /api/v1/settings` and `GET /api/v1/settings/:key`
 - Public checks: `GET /api/v1/health/live` and `GET /api/v1/health/ready`
+
+### Country content API
+
+Country endpoints are read-only and return localized content and cover/gallery images, without embedded destinations or tours. Country content is edited under **Settings → Quốc gia** in the admin.
+
+- List: `GET /api/v1/countries?locale=en`
+- Vietnamese detail: `GET /api/v1/countries/VN?locale=vi`
+- Optional pagination: `GET /api/v1/countries?locale=en&page=2&limit=1`
+- Supported codes are **LA**, **CB**, and **VN**. Cambodia intentionally uses **CB**, matching the existing database contract; **KH** is not accepted.
+- With no limit, all countries are returned in ascending code order and page is ignored. With a limit, page defaults to 1 and the configured maximum page size applies (query limit must be 1–100).
+- Responses use the standard success/data envelope; lists also include page, limit, total, and totalPages metadata. Empty unpaginated lists use page 1, limit 0, total 0, and totalPages 1, matching destinations.
+- Each country contains code, name, description, visa, weather, locale metadata, images, createdAt, and updatedAt. Description, visa, and weather preserve rich-text HTML and are null when empty.
+- Locale metadata identifies requested/effective language and whether fallback occurred. Fallback selects one entire translation, not individual fields. Records with neither the requested nor English translation are omitted from lists; their detail returns 404.
+- Images contain id, url, altText, role (cover/gallery), and sortOrder, ordered by sortOrder. Countries without images return an empty array. URLs follow the same rules as destination images.
+- Missing/invalid API keys return 401; unsupported codes or invalid query parameters return 400; missing countries or usable translations return 404.
+
+Example detail response (illustrative):
+
+```json
+{
+  "success": true,
+  "data": {
+    "code": "VN",
+    "name": "Vietnam",
+    "description": "<p>Discover Vietnam</p>",
+    "visa": null,
+    "weather": null,
+    "locale": { "requested": "en", "effective": "en", "fallback": false },
+    "images": [],
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  }
+}
+```
+
+Run `npm run db:migrate` from the repository root with the intended DATABASE_URL configured before using the country feature. Existing [migration 0024](drizzle/0024_country_settings.sql) creates the country tables and seeds all three countries with English/Vietnamese names; no separate seed command or new migration is required. The command applies all pending migrations, so back up production first. Schema generation or schema push alone does not execute the migration's seed statements. An already-applied migration does not rerun to restore deleted seed rows.
 
 ### Contact email API (Brevo)
 

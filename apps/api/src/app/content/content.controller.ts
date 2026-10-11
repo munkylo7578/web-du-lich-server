@@ -6,12 +6,15 @@ import {
   ApiSuccessEnvelope,
 } from '../common/api-response.swagger';
 import {
+  CountryCodeParamsDto,
+  CountryListQueryDto,
   DestinationListQueryDto,
   LocaleQueryDto,
   PageQueryDto,
   TourListQueryDto,
 } from '../common/query.dto';
 import {
+  CountryContentDto,
   DestinationContentDto,
   ServiceContentDto,
   SettingContentDto,
@@ -75,6 +78,26 @@ export class ContentController {
     @Query() query: LocaleQueryDto,
   ) {
     return this.content.destination(id, query.locale);
+  }
+
+  @Get('countries')
+  @ApiSuccessEnvelope({
+    dataType: CountryContentDto,
+    isArray: true,
+    hasMeta: true,
+    description: 'Countries ordered by code, with localized content and cover/gallery images. Returns all countries when limit is omitted.',
+  })
+  listCountries(@Query() query: CountryListQueryDto) {
+    return this.content.countries(query.locale, query.page, query.limit);
+  }
+
+  @Get('countries/:code')
+  @ApiSuccessEnvelope({
+    dataType: CountryContentDto,
+    description: 'Country detail by code (LA, CB, VN). Includes content and images, without embedded destinations or tours.',
+  })
+  getCountry(@Param() params: CountryCodeParamsDto, @Query() query: LocaleQueryDto) {
+    return this.content.country(params.code, query.locale);
   }
 
   @Get('services')

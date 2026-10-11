@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { DestinationCountry } from '@destination-country';
+import { DESTINATION_COUNTRIES, type DestinationCountry } from '@destination-country';
 import { SERVICE_CATEGORIES, type ServiceCategory } from '@service-category';
 import { SETTING_CATEGORIES, type SettingCategory } from '@setting-category';
 
@@ -80,6 +80,23 @@ export class ServiceContentDto {
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
   @ApiProperty({ type: ContentImageDto, isArray: true })
   images!: ContentImageDto[];
+  @ApiProperty({ format: 'date-time' }) createdAt!: Date;
+  @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
+}
+
+export class CountryContentDto {
+  @ApiProperty({ enum: DESTINATION_COUNTRIES, example: 'VN' })
+  code!: DestinationCountry;
+  @ApiProperty({ example: 'Vietnam' }) name!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Localized description as rich-text HTML; null when empty.' })
+  description!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Localized visa information as rich-text HTML; null when empty.' })
+  visa!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Localized weather information as rich-text HTML; null when empty.' })
+  weather!: string | null;
+  @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
+  @ApiProperty({ type: TourImageDto, isArray: true, description: 'Country cover and gallery images, ordered by sortOrder.' })
+  images!: TourImageDto[];
   @ApiProperty({ format: 'date-time' }) createdAt!: Date;
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
 }
