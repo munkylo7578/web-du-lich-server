@@ -171,7 +171,7 @@ Content routes require `x-api-key`. The optional `locale=en|vi` query parameter 
 
 ### Country content API
 
-Country endpoints are read-only and return localized content and cover/gallery images, without embedded destinations or tours. Country content is edited under **Settings → Quốc gia** in the admin.
+Country endpoints are read-only and return localized content and cover/gallery images, without embedded destinations or tours. Country content is edited through the top-level **Quốc gia** admin menu (the existing URL remains `/admin/settings/countries`).
 
 - List: `GET /api/v1/countries?locale=en`
 - Vietnamese detail: `GET /api/v1/countries/VN?locale=vi`

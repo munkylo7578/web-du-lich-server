@@ -184,14 +184,6 @@ function CountryFormDrawer({ country, onClose, onSaved }: { country: AdminCountr
           <div className="mx-auto w-full max-w-[1180px] space-y-7">
             {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
             <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-              <h3 className="font-heading text-base font-semibold">Quốc gia</h3>
-              <div className="space-y-2 sm:max-w-sm">
-                <Label htmlFor="country-code">Mã quốc gia</Label>
-                <Input id="country-code" value={country.code} readOnly />
-                <p className="text-sm text-muted-foreground">{DESTINATION_COUNTRY_LABELS[country.code]} · Mã quốc gia không thể thay đổi.</p>
-              </div>
-            </section>
-            <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
               <div><h3 className="font-heading text-base font-semibold">Nội dung đa ngôn ngữ</h3><p className="mt-1 text-sm text-muted-foreground">Tiếng Việt có thể bổ sung sau. Khi nhập nội dung tiếng Việt, cần nhập tên tiếng Việt.</p></div>
               <Tabs value={locale} onValueChange={(value) => { if (value === "en" || value === "vi") setLocale(value); }}>
                 <TabsList><TabsTrigger value="en">English *</TabsTrigger><TabsTrigger value="vi">Tiếng Việt</TabsTrigger></TabsList>
