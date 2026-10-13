@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsEmail,
   IsIn,
   IsInt,
@@ -55,6 +56,30 @@ export class ContactRequestDto {
   @IsEmail()
   @MaxLength(320)
   email?: string;
+
+  @ApiPropertyOptional({
+    description: 'Country of the visitor.',
+    example: 'Vietnam',
+    maxLength: 200,
+  })
+  @IsOptional()
+  @Transform(({ value }) => optionalTrimmedString(value))
+  @IsString()
+  @MaxLength(200)
+  country?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Children ages in years. The number of children is the array length. An empty array means no children; omitted or null means not provided.',
+    type: 'array',
+    items: { type: 'integer', minimum: 0 },
+    example: [3, 7],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  childrenAges?: number[];
 
   @ApiPropertyOptional({
     description: 'Expected number of tourists.',

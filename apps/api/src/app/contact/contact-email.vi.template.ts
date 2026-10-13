@@ -72,6 +72,21 @@ export function renderVietnameseContactEmail(
 }
 
 function contactFields(request: ContactRequestDto, variant: ContactEmailVariant): EmailField[] {
+  const additionalFields: EmailField[] = variant === 'contact'
+    ? [
+        ['Quốc gia', present(request.country)],
+        ['Số lượng trẻ em', present(request.childrenAges?.length.toString())],
+        [
+          'Độ tuổi trẻ em',
+          present(
+            request.childrenAges?.length === 0
+              ? 'Không có'
+              : request.childrenAges?.join(', '),
+          ),
+        ],
+      ]
+    : [];
+
   return [
     ['Họ và tên', present(request.name)],
     ['Số điện thoại', present(request.mobile)],
@@ -84,6 +99,7 @@ function contactFields(request: ContactRequestDto, variant: ContactEmailVariant)
           : String(request.touristArrivals),
       ),
     ],
+    ...additionalFields,
     ['Nội dung', present(request.message)],
   ];
 }
