@@ -1,4 +1,5 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { DESTINATION_COUNTRIES, type DestinationCountry } from '@destination-country';
 import { Transform } from 'class-transformer';
 import {
   IsIn,
@@ -82,6 +83,29 @@ export class DestinationListQueryDto extends LocaleQueryDto {
     maximum: 100,
     description: 'When omitted, all destinations are returned.',
   })
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}
+
+export class CountryCodeParamsDto {
+  @ApiProperty({ enum: DESTINATION_COUNTRIES, example: 'VN', description: 'Country code. Cambodia uses CB, matching the existing database contract.' })
+  @IsIn(DESTINATION_COUNTRIES)
+  code!: DestinationCountry;
+}
+
+export class CountryListQueryDto extends LocaleQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1, description: 'Ignored when limit is omitted.' })
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  page = 1;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, description: 'When omitted, all countries are returned.' })
   @IsOptional()
   @Transform(({ value }) => Number(value))
   @IsInt()

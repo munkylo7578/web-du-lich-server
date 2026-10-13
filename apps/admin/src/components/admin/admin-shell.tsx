@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Globe,
   House,
   Menu,
   MapPin,
@@ -56,6 +57,11 @@ const adminNavItems: AdminNavItem[] = [
     icon: MapPin,
   },
   {
+    title: "Quốc gia",
+    href: "/admin/settings/countries",
+    icon: Globe,
+  },
+  {
     title: "Dịch vụ",
     href: "/admin/services",
     icon: ConciergeBell,
@@ -86,7 +92,6 @@ const adminNavItems: AdminNavItem[] = [
       { title: SETTING_CATEGORY_LABELS.home, href: "/admin/settings/home", icon: House },
       { title: SETTING_CATEGORY_LABELS["about-us"], href: "/admin/settings/about-us", icon: Building2 },
       { title: SETTING_CATEGORY_LABELS.general, href: "/admin/settings/general", icon: SlidersHorizontal },
-      { title: "Quốc gia", href: "/admin/settings/countries", icon: MapPin },
     ],
   },
 ] as const;
@@ -97,6 +102,13 @@ function isNavItemActive(pathname: string, href: string) {
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function isNavGroupActive(pathname: string, item: AdminNavItem) {
+  // Countries remains at its existing URL, but is no longer a Settings child.
+  return item.children
+    ? pathname === item.href || item.children.some((child) => isNavItemActive(pathname, child.href))
+    : isNavItemActive(pathname, item.href);
 }
 
 function BrandMark({ collapsed = false }: { collapsed?: boolean }) {
@@ -125,7 +137,7 @@ function AdminNavigation({
   onExpand?: () => void;
 }) {
   const pathname = usePathname();
-  const settingsActive = isNavItemActive(pathname, "/admin/settings");
+  const settingsActive = adminNavItems.some((item) => item.href === "/admin/settings" && isNavGroupActive(pathname, item));
   const [settingsOpen, setSettingsOpen] = useState(settingsActive);
 
   useEffect(() => {
@@ -135,7 +147,7 @@ function AdminNavigation({
   return (
     <nav className="space-y-1.5" aria-label="Admin navigation">
       {adminNavItems.map((item) => {
-        const active = isNavItemActive(pathname, item.href);
+        const active = isNavGroupActive(pathname, item);
         const Icon = item.icon;
         const content = (
           <>

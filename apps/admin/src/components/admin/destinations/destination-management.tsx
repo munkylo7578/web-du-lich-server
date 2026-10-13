@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { DESTINATION_COUNTRIES, DESTINATION_COUNTRY_LABELS, isDestinationCountry } from "@destination-country";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,12 +32,9 @@ import { AdminListTable } from "@/components/admin/shared/admin-list-table";
 import { ExpandableText } from "@/components/admin/shared/expandable-text";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RichTextEditor } from "@/components/admin/tours/rich-text-editor";
-import { CoverImageUploadField, type PendingImage } from "@/components/admin/shared/cover-image-upload-field";
 import { submitUpload } from "@/features/shared/upload-validation";
 import {
   destinationEditorSchema,
-  pendingImagesSchema,
-  imageFieldErrors,
   type DestinationEditorFormValues,
   type DestinationEditorValues,
 } from "@/features/admin-tours/tour-form-schema";
@@ -67,10 +64,7 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
       cell: ({ row, getValue }) => (
         <div className="flex min-w-0 items-start gap-3">
           <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-800">
-            {row.original.images.find((image) => image.role === "cover") ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={row.original.images.find((image) => image.role === "cover")!.url} alt="" className="size-12 rounded-xl object-cover" />
-            ) : <MapPin className="size-5" />}
+            <MapPin className="size-5" />
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <ExpandableText text={getValue()} className="font-medium text-foreground" />
@@ -264,14 +258,7 @@ function DestinationFormDrawer({
   const values = useMemo(() => toEditorValues(destination), [destination]);
   const [locale, setLocale] = useState<Locale>("en");
   const [message, setMessage] = useState<string>();
-  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
-  const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
   const saveRequestId = useRef<string | undefined>(undefined);
-  const pendingImagesRef = useRef(pendingImages);
-  useEffect(() => { pendingImagesRef.current = pendingImages; }, [pendingImages]);
-  useEffect(() => () => {
-    pendingImagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-  }, []);
   const [provinceQuery, setProvinceQuery] = useState("");
   const [provinceResults, setProvinceResults] = useState<AdminProvince[]>([]);
   const [knownProvinces, setKnownProvinces] = useState<AdminProvince[]>(initialProvinces);
@@ -332,25 +319,14 @@ function DestinationFormDrawer({
     console.info("[DestinationSave] client:validation_passed", {
       requestId, mode: data.destinationId ? "edit" : "create", country: data.country,
       provinceCount: data.provinceCodes.length, existingImageCount: data.existingImages?.length ?? 0,
-      pendingImageCount: pendingImages.length,
     });
     setMessage(undefined);
-    const parsedPending = pendingImagesSchema.safeParse(pendingImages);
-    if (!parsedPending.success) {
-      console.warn("[DestinationSave] client:pending_images_invalid", {
-        requestId, issues: parsedPending.error.issues.map(({ path, code, message }) => ({ path: path.join("."), code, message })),
-      });
-      setImageErrors(imageFieldErrors(parsedPending.error.issues, "pendingImages"));
-      setMessage("Vui lòng kiểm tra lại tên ảnh.");
-      return;
-    }
-    setImageErrors({});
     startTransition(async () => {
       const body = new FormData();
       body.set("saveRequestId", requestId);
+      // Preserve legacy destination media and rich text; they are no longer editable here.
       body.set("payload", JSON.stringify({ ...data, existingImages: data.existingImages ?? [] }));
-      body.set("pendingImages", JSON.stringify(parsedPending.data));
-      pendingImages.forEach((image) => body.set(`file:${image.clientId}`, image.file));
+      body.set("pendingImages", "[]");
       console.info("[DestinationSave] client:upload_validation_start", { requestId });
       const result = await submitUpload(body, async (payload) => {
         console.info("[DestinationSave] client:action_dispatch", { requestId });
@@ -367,7 +343,6 @@ function DestinationFormDrawer({
         requestId, success: result.success, fieldPaths: Object.keys(result.fieldErrors ?? {}),
       });
       setMessage(result.message);
-      if (result.fieldErrors) setImageErrors(result.fieldErrors);
       if (result.fieldErrors?.country?.[0]) {
         form.setError("country", { type: "server", message: result.fieldErrors.country[0] });
       }
@@ -407,7 +382,7 @@ function DestinationFormDrawer({
         <SheetHeader className="tour-drawer-chrome sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-5 py-4 sm:px-8">
           <div className="mx-auto w-full max-w-[1180px] pr-12">
             <SheetTitle className="text-xl sm:text-2xl">{destination ? "Chỉnh sửa điểm đến" : "Tạo điểm đến"}</SheetTitle>
-            <SheetDescription className="mt-1">Nội dung tiếng Anh là bắt buộc. Ảnh mới chỉ được upload khi lưu điểm đến.</SheetDescription>
+            <SheetDescription className="mt-1">Nội dung tiếng Anh là bắt buộc. Quản lý tên, mô tả và tỉnh/thành liên quan của điểm đến.</SheetDescription>
           </div>
         </SheetHeader>
 
@@ -465,39 +440,9 @@ function DestinationFormDrawer({
                       <FormField label={`Mô tả (${currentLocale.toUpperCase()})`} error={form.formState.errors.translations?.[currentLocale]?.description?.message}>
                         <Controller control={form.control} name={`translations.${currentLocale}.description`} render={({ field }) => <RichTextEditor value={field.value || ""} onChange={field.onChange} placeholder="Mô tả điểm nổi bật của điểm đến..." invalid={Boolean(form.formState.errors.translations?.[currentLocale]?.description)} />} />
                       </FormField>
-                      {(["visa", "weather"] as const).map((fieldName) => {
-                        const label = `${fieldName === "visa" ? "Visa" : "Weather"} (${currentLocale.toUpperCase()})`;
-                        const fieldError = form.formState.errors.translations?.[currentLocale]?.[fieldName];
-                        return (
-                          <FormField key={fieldName} label={label} error={fieldError?.message}>
-                            <Controller control={form.control} name={`translations.${currentLocale}.${fieldName}`} render={({ field }) => (
-                              <RichTextEditor value={field.value || ""} onChange={field.onChange} onBlur={field.onBlur} label={label} disabled={isPending}
-                                placeholder={fieldName === "visa" ? "Thông tin visa (không bắt buộc)..." : "Thông tin thời tiết (không bắt buộc)..."} invalid={Boolean(fieldError)} />
-                            )} />
-                          </FormField>
-                        );
-                      })}
                     </TabsContent>
                   ))}
                 </Tabs>
-              </section>
-
-              <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
-                <SectionHeading title="Hình ảnh" description="Chọn, kéo thả hoặc paste ảnh. Tên ảnh không bắt buộc và dùng chung cho mọi ngôn ngữ. Chỉ một ảnh được đặt làm ảnh bìa." />
-                <fieldset disabled={isPending}>
-                  <legend className="sr-only">Hình ảnh điểm đến</legend>
-                  <Controller control={form.control} name="existingImages" render={({ field }) => (
-                    <CoverImageUploadField active={open} disabled={isPending} ensureCover
-                      existing={field.value ?? []} pending={pendingImages}
-                      helperText="JPEG, PNG, WebP, AVIF · tối đa 50MB · chỉ upload khi lưu điểm đến"
-                      errors={{ ...imageErrors, ...Object.fromEntries((field.value ?? []).flatMap((_, index) => {
-                        const error = form.formState.errors.existingImages?.[index]?.altText?.message;
-                        return error ? [[`existingImages.${index}.altText`, [error]]] : [];
-                      })) }}
-                      onExistingChange={(images) => { setImageErrors({}); field.onChange(images); }}
-                      onPendingChange={(images) => { setImageErrors({}); setPendingImages(images); }} />
-                  )} />
-                </fieldset>
               </section>
 
               {country === "VN" && <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
@@ -569,6 +514,7 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
 
   return {
     destinationId: destination.destinationId,
+    // Hidden fields must remain in the payload so editing a name does not remove stored data.
     existingImages: destination.images.map((image) => ({ ...image, altText: image.altText || "" })),
     country: destination.country,
     provinceCodes: destination.country === "VN" ? destination.provinces.map((province) => province.code) : [],

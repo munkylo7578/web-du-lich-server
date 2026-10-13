@@ -3,6 +3,7 @@ import { and, count, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import type { DestinationCountry } from '@destination-country';
 import type { ServiceCategory } from '@service-category';
 import {
+  countries,
   destinationTranslations,
   destinations,
   gisProvinces,
@@ -54,6 +55,13 @@ type DestinationRow = {
   translations: Array<TranslationRow & { visa?: string | null; weather?: string | null }>;
   provinceLinks?: ProvinceLinkRow[];
   tourLinks?: DestinationTourLinkRow[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+type CountryRow = {
+  code: DestinationCountry;
+  translations: Array<TranslationRow & { visa: string | null; weather: string | null }>;
+  imageLinks: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -301,6 +309,40 @@ export class ContentService {
     return { data: result };
   }
 
+  async countries(locale: Locale, page: number, requestedLimit?: number) {
+    const limit = requestedLimit === undefined
+      ? undefined
+      : Math.min(requestedLimit, this.env.maxPageSize);
+    const [{ value: total }] = await this.db.select({ value: count() }).from(countries);
+    const rows = await this.db.query.countries.findMany({
+      ...(limit === undefined ? {} : { limit, offset: (page - 1) * limit }),
+      orderBy: (table, { asc }) => [asc(table.code)],
+      with: {
+        translations: true,
+        imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
+      },
+    });
+    return {
+      data: rows.map((row) => this.mapCountry(row, locale)).filter((country) => country !== null),
+      meta: limit === undefined
+        ? { page: 1, limit: total, total, totalPages: 1 }
+        : pageMeta(page, limit, total),
+    };
+  }
+
+  async country(code: DestinationCountry, locale: Locale) {
+    const row = await this.db.query.countries.findFirst({
+      where: (table, { eq: equals }) => equals(table.code, code),
+      with: {
+        translations: true,
+        imageLinks: { orderBy: (link, { asc }) => [asc(link.sortOrder)], with: { image: true } },
+      },
+    });
+    const result = row && this.mapCountry(row, locale);
+    if (!result) throw new NotFoundException('Country or translation not found');
+    return { data: result };
+  }
+
   async services(locale: Locale, page: number, requestedLimit: number) {
     const limit = Math.min(requestedLimit, this.env.maxPageSize);
     const [{ value: total }] = await this.db
@@ -526,6 +568,24 @@ export class ContentService {
           };
         })
         .filter(Boolean),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  private mapCountry(row: CountryRow, locale: Locale) {
+    const translation = localized(row.translations, locale);
+    if (!translation) return null;
+    return {
+      code: row.code,
+      name: translation.value.name,
+      description: translation.value.description || null,
+      visa: translation.value.visa || null,
+      weather: translation.value.weather || null,
+      locale: translation.locale,
+      images: [...row.imageLinks].sort((a, b) => a.sortOrder - b.sortOrder).map((link) => ({
+        ...this.mapImage(link.image), role: link.role, sortOrder: link.sortOrder,
+      })),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
