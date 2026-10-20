@@ -38,6 +38,7 @@ const SETTING_CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
   general: "Quản lý các cấu hình dùng chung cho website.",
   home: "Quản lý nội dung và hình ảnh trên trang chủ.",
   "about-us": "Quản lý nội dung và hình ảnh trên trang About us.",
+  feedback: "Quản lý nội dung và hình ảnh trong mục Feedback.",
 };
 
 export function SettingsManagement({ initialResult, category }: { initialResult: AdminListResult<AdminSetting>; category: SettingCategory }) {
