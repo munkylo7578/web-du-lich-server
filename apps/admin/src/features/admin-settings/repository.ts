@@ -31,6 +31,7 @@ export async function listAdminSettings(
         ilike(siteSettings.key, pattern),
         ilike(siteSettings.description, pattern),
         ilike(siteSettings.value, pattern),
+        ilike(sql`${siteSettings.imageUrls}::text`, pattern),
         ilike(sql`${siteSettings.type}::text`, pattern),
         ilike(siteSettingTranslations.value, pattern),
       )
@@ -82,7 +83,7 @@ function toSnapshot(row: SettingRow): SettingSnapshot {
     key: row.key,
     category: row.category,
     description: row.description ?? undefined,
-    value: row.value ?? undefined,
+    value: row.type === "images" ? [...(row.imageUrls ?? [])] : row.value ?? undefined,
     translations: { en: translations.en ?? "", ...(translations.vi ? { vi: translations.vi } : {}) },
     type: row.type,
     canDelete: row.canDelete,
@@ -126,7 +127,8 @@ export class DrizzleSettingRepository implements SettingRepository {
           key: snapshot.key,
           category: snapshot.category,
           description: snapshot.description ?? null,
-          value: snapshot.value ?? null,
+          value: typeof snapshot.value === "string" ? snapshot.value : null,
+          imageUrls: snapshot.type === "images" && Array.isArray(snapshot.value) ? snapshot.value : null,
           type: snapshot.type,
           canDelete: snapshot.canDelete,
           createdAt: snapshot.createdAt,
@@ -136,7 +138,8 @@ export class DrizzleSettingRepository implements SettingRepository {
           target: siteSettings.key,
           set: {
             description: snapshot.description ?? null,
-            value: snapshot.value ?? null,
+            value: typeof snapshot.value === "string" ? snapshot.value : null,
+            imageUrls: snapshot.type === "images" && Array.isArray(snapshot.value) ? snapshot.value : null,
             type: snapshot.type,
             updatedAt: snapshot.updatedAt,
           },
@@ -155,8 +158,8 @@ export class DrizzleSettingRepository implements SettingRepository {
           }));
         await tx.insert(siteSettingTranslations).values(rows);
       }
-      return previous && (previous.type === "image" || previous.type === "video")
-        && previous.value && previous.value !== snapshot.value ? [{ url: previous.value }] : [];
+      const retained = new Set(Array.isArray(snapshot.value) ? snapshot.value : [snapshot.value]);
+      return previous ? settingMediaUrls(previous).filter((url) => !retained.has(url)).map((url) => ({ url })) : [];
     });
     await removeUnreferencedMediaFiles(removedMedia);
   }
@@ -169,10 +172,15 @@ export class DrizzleSettingRepository implements SettingRepository {
         .where(eq(siteSettingTranslations.settingKey, key));
       toDomain({ ...row, translations }).assertCanDelete();
       await tx.delete(siteSettings).where(eq(siteSettings.key, key));
-      return (row.type === "image" || row.type === "video") && row.value ? [{ url: row.value }] : [];
+      return settingMediaUrls(row).map((url) => ({ url }));
     });
     await removeUnreferencedMediaFiles(removedMedia);
   }
 }
 
 export const settingRepository: SettingRepository = new DrizzleSettingRepository();
+
+function settingMediaUrls(row: typeof siteSettings.$inferSelect): string[] {
+  if (row.type === "images") return row.imageUrls ?? [];
+  return (row.type === "image" || row.type === "video") && row.value ? [row.value] : [];
+}

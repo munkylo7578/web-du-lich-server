@@ -3,7 +3,7 @@ import "server-only";
 import { realpath, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { db, countryImages, destinationImages, images, serviceImages, siteSettings, tourImages, tourPlanImages } from "@database";
-import { and, inArray, sql } from "drizzle-orm";
+import { and, arrayOverlaps, eq, inArray, or, sql } from "drizzle-orm";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -51,7 +51,10 @@ export async function removeUnreferencedMediaFiles(candidates: Array<{ url: stri
         .where(inArray(images.url, upload.aliases)).limit(1);
       if (imageReferences.length) continue;
       const settingReferences = await db.select({ key: siteSettings.key }).from(siteSettings)
-        .where(and(inArray(siteSettings.type, ["image", "video"]), inArray(siteSettings.value, upload.aliases))).limit(1);
+        .where(or(
+          and(inArray(siteSettings.type, ["image", "video"]), inArray(siteSettings.value, upload.aliases)),
+          and(eq(siteSettings.type, "images"), arrayOverlaps(siteSettings.imageUrls, upload.aliases)),
+        )).limit(1);
       if (settingReferences.length) continue;
 
       // Resolve the parent as well as checking lexical containment to avoid following

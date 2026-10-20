@@ -1,6 +1,6 @@
 import { isSettingCategory, type SettingCategory } from "@setting-category";
 
-export const SETTING_TYPES = ["text", "image", "video", "plain_text"] as const;
+export const SETTING_TYPES = ["text", "image", "video", "plain_text", "images"] as const;
 export const SETTING_LOCALES = ["en", "vi"] as const;
 
 export type SettingType = (typeof SETTING_TYPES)[number];
@@ -11,7 +11,7 @@ export type SettingSnapshot = {
   key: string;
   category: SettingCategory;
   description?: string;
-  value?: string;
+  value?: string | string[];
   translations: SettingTranslations;
   type: SettingType;
   canDelete: boolean;
@@ -23,7 +23,7 @@ export type CreateSettingProps = {
   key: string;
   category: SettingCategory;
   description?: string;
-  value?: string;
+  value?: string | string[];
   translations?: SettingTranslations;
   type: SettingType;
   canDelete: boolean;
@@ -31,7 +31,7 @@ export type CreateSettingProps = {
 
 export type UpdateSettingProps = {
   description?: string;
-  value?: string;
+  value?: string | string[];
   translations?: SettingTranslations;
 };
 
@@ -40,7 +40,7 @@ export class Setting {
     private readonly key: string,
     private readonly category: SettingCategory,
     private description: string | undefined,
-    private value: string | undefined,
+    private value: string | string[] | undefined,
     private translations: SettingTranslations,
     private type: SettingType,
     private readonly canDelete: boolean,
@@ -106,7 +106,7 @@ export class Setting {
       key: this.key,
       category: this.category,
       description: this.description,
-      value: this.value,
+      value: Array.isArray(this.value) ? [...this.value] : this.value,
       translations: { ...this.translations },
       type: this.type,
       canDelete: this.canDelete,
@@ -140,7 +140,18 @@ export class Setting {
     return type;
   }
 
-  private static validateContent(type: SettingType, value?: string, translations?: SettingTranslations) {
+  private static validateContent(type: SettingType, value?: string | string[], translations?: SettingTranslations) {
+    if (type === "images") {
+      if (!Array.isArray(value) || !value.length) throw new Error("Vui lòng chọn ít nhất một ảnh.");
+      const normalized = value.map((url) => {
+        if (typeof url !== "string" || !isImageUrl(url.trim())) {
+          throw new Error("Mỗi ảnh phải là URL upload nội bộ hoặc URL tuyệt đối.");
+        }
+        return url.trim();
+      });
+      return { value: normalized, translations: { en: "" } as SettingTranslations };
+    }
+    if (Array.isArray(value)) throw new Error("Chỉ setting nhiều ảnh được sử dụng giá trị dạng mảng.");
     if (type === "image" || type === "video") {
       const normalized = value?.trim();
       if (!normalized) throw new Error("Setting value is required.");

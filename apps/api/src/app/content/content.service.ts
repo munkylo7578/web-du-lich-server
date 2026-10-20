@@ -410,11 +410,11 @@ export class ContentService {
     },
     locale: Locale,
   ) {
-    if (row.type === 'image' || row.type === 'video') {
+    if (row.type === 'image' || row.type === 'video' || row.type === 'images') {
       return {
         key: row.key,
         category: row.category,
-        value: row.value,
+        value: row.type === 'images' ? [...(row.imageUrls ?? [])] : row.value,
         type: row.type,
         updatedAt: row.updatedAt,
         locale: { requested: locale, effective: locale, fallback: false },

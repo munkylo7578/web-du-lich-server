@@ -176,6 +176,13 @@
       "when": 1791541071313,
       "tag": "0024_country_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792538581857,
+      "tag": "0025_setting_images",
+      "breakpoints": true
     }
   ]
 }
