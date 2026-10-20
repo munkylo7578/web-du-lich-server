@@ -79,6 +79,21 @@ export function renderContactEmail(
 }
 
 function contactFields(request: ContactRequestDto, variant: ContactEmailVariant): EmailField[] {
+  const additionalFields: EmailField[] = variant === 'contact'
+    ? [
+        ['Country', present(request.country)],
+        ['Number of children', present(request.childrenAges?.length.toString())],
+        [
+          'Children ages',
+          present(
+            request.childrenAges?.length === 0
+              ? 'None'
+              : request.childrenAges?.join(', '),
+          ),
+        ],
+      ]
+    : [];
+
   return [
     ['Name', present(request.name)],
     [variant === 'journey' ? 'Phone number' : 'Mobile', present(request.mobile)],
@@ -91,6 +106,7 @@ function contactFields(request: ContactRequestDto, variant: ContactEmailVariant)
           : String(request.touristArrivals),
       ),
     ],
+    ...additionalFields,
     ['Message', present(request.message)],
   ];
 }

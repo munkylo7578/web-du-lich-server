@@ -100,6 +100,8 @@ export class ContactService {
           request.name,
           request.mobile,
           request.message,
+          request.country,
+          ...(request.childrenAges?.map(String) ?? []),
           request.touristArrivals?.toString(),
         ].filter((item): item is string => Boolean(item));
         for (const sensitive of sensitiveValues.sort((a, b) => b.length - a.length)) {
