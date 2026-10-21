@@ -8,7 +8,8 @@ const translation = z.object({
   name: z.string().trim().max(255, "Tên không được vượt quá 255 ký tự."),
   description: html,
   visa: html,
-  weather: html,
+  travelRegions: html,
+  currencyMoneyExchange: html,
 });
 export const countryEditorSchema = z.object({
   code: z.enum(DESTINATION_COUNTRIES),
@@ -22,7 +23,7 @@ export const countryEditorSchema = z.object({
   })).refine((items) => new Set(items.map((image) => image.imageId)).size === items.length, "Mã ảnh bị trùng lặp."),
 }).superRefine(({ translations, existingImages }, ctx) => {
   const vi = translations.vi;
-  if ((vi.name || vi.description || vi.visa || vi.weather) && vi.name.length < 2) {
+  if ((vi.name || vi.description || vi.visa || vi.travelRegions || vi.currencyMoneyExchange) && vi.name.length < 2) {
     ctx.addIssue({ code: "custom", path: ["translations", "vi", "name"], message: "Nhập tên tiếng Việt (ít nhất 2 ký tự) để lưu bản dịch." });
   }
   if (existingImages.filter((image) => image.role === "cover").length > 1) {

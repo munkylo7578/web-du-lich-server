@@ -7,8 +7,10 @@ import { ContentService } from './content.service';
 const row = {
   code: 'VN' as const,
   translations: [
-    { locale: 'en' as const, name: 'Vietnam', description: '<p>Discover Vietnam</p>', visa: '<p>Visa EN</p>', weather: '<p>Weather EN</p>' },
-    { locale: 'vi' as const, name: 'Việt Nam', description: '<p>Khám phá Việt Nam</p>', visa: null, weather: null },
+    { locale: 'en' as const, name: 'Vietnam', description: '<p>Discover Vietnam</p>', visa: '<p>Passport and visa EN</p>',
+      travelRegions: '<p>Travel regions EN</p>', currencyMoneyExchange: '<p>Currency EN</p>' },
+    { locale: 'vi' as const, name: 'Việt Nam', description: '<p>Khám phá Việt Nam</p>', visa: null,
+      travelRegions: null, currencyMoneyExchange: null },
   ],
   imageLinks: [
     { role: 'gallery' as const, sortOrder: 1, image: { id: 'gallery-id', url: 'https://images.example.com/vn.webp', altText: null } },
@@ -35,8 +37,9 @@ describe('ContentService countries', () => {
     expect(detail.data).toEqual({
       code: 'VN', name: locale === 'en' ? 'Vietnam' : 'Việt Nam',
       description: locale === 'en' ? '<p>Discover Vietnam</p>' : '<p>Khám phá Việt Nam</p>',
-      visa: locale === 'en' ? '<p>Visa EN</p>' : null,
-      weather: locale === 'en' ? '<p>Weather EN</p>' : null,
+      visa: locale === 'en' ? '<p>Passport and visa EN</p>' : null,
+      travelRegions: locale === 'en' ? '<p>Travel regions EN</p>' : null,
+      currencyMoneyExchange: locale === 'en' ? '<p>Currency EN</p>' : null,
       locale: { requested: locale, effective: locale, fallback: false },
       images: [
         { id: 'cover-id', url: '/uploads/countries/vn.webp', altText: 'Vietnam cover', role: 'cover', sortOrder: 0 },
@@ -57,7 +60,8 @@ describe('ContentService countries', () => {
     const list = await service.countries('vi', 1);
     const detail = await service.country('VN', 'vi');
     expect(list.data[0]).toEqual(detail.data);
-    expect(detail.data).toMatchObject({ name: 'Vietnam', visa: '<p>Visa EN</p>', weather: '<p>Weather EN</p>',
+    expect(detail.data).toMatchObject({ name: 'Vietnam', visa: '<p>Passport and visa EN</p>',
+      travelRegions: '<p>Travel regions EN</p>', currencyMoneyExchange: '<p>Currency EN</p>',
       locale: { requested: 'vi', effective: 'en', fallback: true } });
   });
 
@@ -96,8 +100,10 @@ describe('ContentService countries', () => {
 
   it('returns null optional content and an empty images array', async () => {
     const { service, findFirst } = createService();
-    findFirst.mockResolvedValue({ ...row, imageLinks: [], translations: [{ ...row.translations[0], description: null, visa: '', weather: null }] });
-    expect((await service.country('VN', 'en')).data).toMatchObject({ description: null, visa: null, weather: null, images: [] });
+    findFirst.mockResolvedValue({ ...row, imageLinks: [], translations: [{ ...row.translations[0], description: null, visa: '',
+      travelRegions: null, currencyMoneyExchange: '' }] });
+    expect((await service.country('VN', 'en')).data).toMatchObject({ description: null, visa: null,
+      travelRegions: null, currencyMoneyExchange: null, images: [] });
   });
 
   it('omits untranslated records from lists and returns 404 for missing detail translations', async () => {

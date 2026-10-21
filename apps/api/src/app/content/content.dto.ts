@@ -90,10 +90,12 @@ export class CountryContentDto {
   @ApiProperty({ example: 'Vietnam' }) name!: string;
   @ApiProperty({ type: String, nullable: true, description: 'Localized description as rich-text HTML; null when empty.' })
   description!: string | null;
-  @ApiProperty({ type: String, nullable: true, description: 'Localized visa information as rich-text HTML; null when empty.' })
+  @ApiProperty({ type: String, nullable: true, description: 'Localized passport and visa information as rich-text HTML; null when empty.' })
   visa!: string | null;
-  @ApiProperty({ type: String, nullable: true, description: 'Localized weather information as rich-text HTML; null when empty.' })
-  weather!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Localized travel regions information as rich-text HTML; null when empty.' })
+  travelRegions!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Localized currency and money exchange information as rich-text HTML; null when empty.' })
+  currencyMoneyExchange!: string | null;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
   @ApiProperty({ type: TourImageDto, isArray: true, description: 'Country cover and gallery images, ordered by sortOrder.' })
   images!: TourImageDto[];

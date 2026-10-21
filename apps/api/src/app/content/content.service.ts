@@ -60,7 +60,11 @@ type DestinationRow = {
 };
 type CountryRow = {
   code: DestinationCountry;
-  translations: Array<TranslationRow & { visa: string | null; weather: string | null }>;
+  translations: Array<TranslationRow & {
+    visa: string | null;
+    travelRegions: string | null;
+    currencyMoneyExchange: string | null;
+  }>;
   imageLinks: Array<ImageLinkRow & { role: 'cover' | 'gallery' }>;
   createdAt: Date;
   updatedAt: Date;
@@ -581,7 +585,8 @@ export class ContentService {
       name: translation.value.name,
       description: translation.value.description || null,
       visa: translation.value.visa || null,
-      weather: translation.value.weather || null,
+      travelRegions: translation.value.travelRegions || null,
+      currencyMoneyExchange: translation.value.currencyMoneyExchange || null,
       locale: translation.locale,
       images: [...row.imageLinks].sort((a, b) => a.sortOrder - b.sortOrder).map((link) => ({
         ...this.mapImage(link.image), role: link.role, sortOrder: link.sortOrder,

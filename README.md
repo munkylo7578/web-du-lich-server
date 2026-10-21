@@ -179,7 +179,7 @@ Country endpoints are read-only and return localized content and cover/gallery i
 - Supported codes are **LA**, **CB**, and **VN**. Cambodia intentionally uses **CB**, matching the existing database contract; **KH** is not accepted.
 - With no limit, all countries are returned in ascending code order and page is ignored. With a limit, page defaults to 1 and the configured maximum page size applies (query limit must be 1–100).
 - Responses use the standard success/data envelope; lists also include page, limit, total, and totalPages metadata. Empty unpaginated lists use page 1, limit 0, total 0, and totalPages 1, matching destinations.
-- Each country contains code, name, description, visa, weather, locale metadata, images, createdAt, and updatedAt. Description, visa, and weather preserve rich-text HTML and are null when empty.
+- Each country contains code, name, description, visa, travelRegions, currencyMoneyExchange, locale metadata, images, createdAt, and updatedAt. Description, passport/visa, travel regions, and currency/money exchange content preserve rich-text HTML and are null when empty.
 - Locale metadata identifies requested/effective language and whether fallback occurred. Fallback selects one entire translation, not individual fields. Records with neither the requested nor English translation are omitted from lists; their detail returns 404.
 - Images contain id, url, altText, role (cover/gallery), and sortOrder, ordered by sortOrder. Countries without images return an empty array. URLs follow the same rules as destination images.
 - Missing/invalid API keys return 401; unsupported codes or invalid query parameters return 400; missing countries or usable translations return 404.
@@ -194,7 +194,8 @@ Example detail response (illustrative):
     "name": "Vietnam",
     "description": "<p>Discover Vietnam</p>",
     "visa": null,
-    "weather": null,
+    "travelRegions": null,
+    "currencyMoneyExchange": null,
     "locale": { "requested": "en", "effective": "en", "fallback": false },
     "images": [],
     "createdAt": "2026-01-01T00:00:00.000Z",
@@ -203,7 +204,7 @@ Example detail response (illustrative):
 }
 ```
 
-Run `npm run db:migrate` from the repository root with the intended DATABASE_URL configured before using the country feature. Existing [migration 0024](drizzle/0024_country_settings.sql) creates the country tables and seeds all three countries with English/Vietnamese names; no separate seed command or new migration is required. The command applies all pending migrations, so back up production first. Schema generation or schema push alone does not execute the migration's seed statements. An already-applied migration does not rerun to restore deleted seed rows.
+Run `npm run db:migrate` from the repository root with the intended DATABASE_URL configured before using the country feature. Existing [migration 0024](drizzle/0024_country_settings.sql) creates the country tables and seeds all three countries with English/Vietnamese names. [Migration 0027](drizzle/0027_country_travel_content.sql) preserves existing country weather content by renaming it to travel regions and adds currency/money exchange content. The command applies all pending migrations, so back up production first. Schema generation or schema push alone does not execute migration seed statements. An already-applied migration does not rerun to restore deleted seed rows.
 
 ### Contact email API (Brevo)
 

@@ -18,7 +18,8 @@ export const countryTranslations = pgTable('country_translations', {
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   visa: text('visa'),
-  weather: text('weather'),
+  travelRegions: text('travel_regions'),
+  currencyMoneyExchange: text('currency_money_exchange'),
 }, (table) => [
   primaryKey({ columns: [table.countryCode, table.locale] }),
   check('country_translations_name_check', sql`char_length(trim(${table.name})) >= 2`),

@@ -24,14 +24,20 @@ describe("countryEditorSchema", () => {
   it("trims names and normalizes visually empty optional rich text", () => {
     const input = values();
     input.translations.en.name = " Vietnam ";
-    input.translations.vi = { name: " ", description: "<p><br></p>", visa: "<p>&nbsp;</p>", weather: "<p>\u200B</p>" };
+    input.translations.vi = {
+      name: " ",
+      description: "<p><br></p>",
+      visa: "<p>&nbsp;</p>",
+      travelRegions: "<p>\u200B</p>",
+      currencyMoneyExchange: "<p><br></p>",
+    };
     expect(countryEditorSchema.parse(input).translations).toEqual({
-      en: { name: "Vietnam", description: "", visa: "", weather: "" },
-      vi: { name: "", description: "", visa: "", weather: "" },
+      en: { name: "Vietnam", description: "", visa: "", travelRegions: "", currencyMoneyExchange: "" },
+      vi: { name: "", description: "", visa: "", travelRegions: "", currencyMoneyExchange: "" },
     });
   });
 
-  it.each(["description", "visa", "weather"] as const)("requires a Vietnamese name when %s has content", (field) => {
+  it.each(["description", "visa", "travelRegions", "currencyMoneyExchange"] as const)("requires a Vietnamese name when %s has content", (field) => {
     const input = values();
     input.translations.vi[field] = "<p>Nội dung</p>";
     const result = countryEditorSchema.safeParse(input);

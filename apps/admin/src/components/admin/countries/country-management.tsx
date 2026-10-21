@@ -27,8 +27,13 @@ import { imageFieldErrors, pendingImagesSchema } from "@/features/admin-tours/to
 import { submitUpload } from "@/features/shared/upload-validation";
 
 const locales = ["en", "vi"] as const;
-const contentFields = ["description", "visa", "weather"] as const;
-const contentLabels = { description: "Mô tả", visa: "Visa", weather: "Thời tiết" };
+const contentFields = ["description", "visa", "travelRegions", "currencyMoneyExchange"] as const;
+const contentLabels = {
+  description: "Mô tả",
+  visa: "Passport & visa",
+  travelRegions: "Travel regions",
+  currencyMoneyExchange: "Currency & money exchange",
+};
 type Locale = typeof locales[number];
 
 export function CountryManagement({ countries }: { countries: AdminCountry[] }) {
@@ -241,7 +246,13 @@ function CountryFormDrawer({ country, onClose, onSaved }: { country: AdminCountr
 function toEditorValues(country: AdminCountry): CountryFormValues {
   const translation = (locale: Locale) => {
     const stored = country.translations.find((item) => item.locale === locale);
-    return { name: stored?.name || "", description: stored?.description || "", visa: stored?.visa || "", weather: stored?.weather || "" };
+    return {
+      name: stored?.name || "",
+      description: stored?.description || "",
+      visa: stored?.visa || "",
+      travelRegions: stored?.travelRegions || "",
+      currencyMoneyExchange: stored?.currencyMoneyExchange || "",
+    };
   };
   return {
     code: country.code,

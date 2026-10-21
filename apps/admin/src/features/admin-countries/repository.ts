@@ -14,7 +14,8 @@ export async function listAdminCountries(): Promise<AdminCountry[]> {
   return rows.map((row) => ({
     code: row.code, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
     translations: row.translations.map((item) => ({ locale: item.locale, name: item.name,
-      description: item.description ?? undefined, visa: item.visa ?? undefined, weather: item.weather ?? undefined })),
+      description: item.description ?? undefined, visa: item.visa ?? undefined,
+      travelRegions: item.travelRegions ?? undefined, currencyMoneyExchange: item.currencyMoneyExchange ?? undefined })),
     images: row.imageLinks.map((link) => ({ imageId: link.imageId, url: link.image.url,
       altText: link.image.altText ?? undefined, role: link.role, sortOrder: link.sortOrder })),
   }));
@@ -45,7 +46,9 @@ export async function updateCountryRecord(data: CountryEditorValues, media: Coun
     await tx.insert(countryTranslations).values((["en", "vi"] as const).filter((locale) => data.translations[locale].name).map((locale) => ({
       countryCode: data.code, locale, name: data.translations[locale].name,
       description: data.translations[locale].description || null,
-      visa: data.translations[locale].visa || null, weather: data.translations[locale].weather || null,
+      visa: data.translations[locale].visa || null,
+      travelRegions: data.translations[locale].travelRegions || null,
+      currencyMoneyExchange: data.translations[locale].currencyMoneyExchange || null,
     })));
     if (media.newImages.length) await tx.insert(images).values(media.newImages);
     await tx.delete(countryImages).where(eq(countryImages.countryCode, data.code));

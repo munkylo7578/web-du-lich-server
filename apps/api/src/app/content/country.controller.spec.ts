@@ -98,8 +98,12 @@ describe('Country content HTTP API', () => {
     expect(document.paths['/api/v1/countries'].post).toBeUndefined();
     const schema = document.components?.schemas?.CountryContentDto;
     if (!schema || !('properties' in schema)) throw new Error('Missing country schema');
-    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['code', 'createdAt', 'description', 'images', 'locale', 'name', 'updatedAt', 'visa', 'weather']);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual([
+      'code', 'createdAt', 'currencyMoneyExchange', 'description', 'images', 'locale', 'name', 'travelRegions', 'updatedAt', 'visa',
+    ]);
     expect(schema.properties?.visa).toMatchObject({ type: 'string', nullable: true });
+    expect(schema.properties?.travelRegions).toMatchObject({ type: 'string', nullable: true });
+    expect(schema.properties?.currencyMoneyExchange).toMatchObject({ type: 'string', nullable: true });
     expect(schema.properties?.images).toMatchObject({ type: 'array' });
   });
 });
