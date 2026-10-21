@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { access, mkdir, writeFile } from "node:fs/promises";
 
+import { getMaxUploadVideoMb } from "@/features/admin-settings/upload-config";
 import { removeUploadedFiles as removeFiles, saveImageFile } from "@/features/shared/image-upload";
 
 export async function saveSettingImage(file: File) {
@@ -11,7 +12,7 @@ export async function saveSettingImage(file: File) {
 
 export async function saveSettingVideo(file: File) {
   const uploadDir = (process.env.UPLOAD_DIR || "public/uploads").replace(/[\\/]+$/, "");
-  const maxMb = Number(process.env.MAX_UPLOAD_VIDEO_MB || "50");
+  const maxMb = getMaxUploadVideoMb();
   const maxBytes = maxMb * 1024 * 1024;
 
   if (file.type !== "video/mp4") {
