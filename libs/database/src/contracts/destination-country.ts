@@ -18,5 +18,5 @@ export function destinationProvinceCodes(country: DestinationCountry, provinceCo
     throw new Error("Quốc gia điểm đến phải là Lào, Cambodia hoặc Việt Nam.");
   }
 
-  return country === "VN" ? [...new Set(provinceCodes)] : [];
+  return [...new Set(provinceCodes)];
 }

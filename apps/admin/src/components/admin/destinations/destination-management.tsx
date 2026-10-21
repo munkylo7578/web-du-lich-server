@@ -90,7 +90,7 @@ export function DestinationManagement({ initialResult }: { initialResult: AdminL
           ))}
           {row.original.provinces.length > 3 && <Badge variant="outline">+{row.original.provinces.length - 3}</Badge>}
         </div>
-      ) : <span className="text-muted-foreground">{row.original.country === "VN" ? "Chưa liên kết" : "Không áp dụng"}</span>,
+      ) : <span className="text-muted-foreground">Chưa liên kết</span>,
     }),
     helper.display({
       id: "languages",
@@ -264,7 +264,6 @@ function DestinationFormDrawer({
   const [knownProvinces, setKnownProvinces] = useState<AdminProvince[]>(initialProvinces);
   const [isPending, startTransition] = useTransition();
   const form = useForm<DestinationEditorFormValues, unknown, DestinationEditorValues>({ resolver: zodResolver(destinationEditorSchema), values });
-  const country = form.watch("country");
   const provinceSearchVersion = useRef(0);
   const watchedProvinceCodes = form.watch("provinceCodes") ?? [];
   const provinceMap = useMemo(() => {
@@ -281,21 +280,20 @@ function DestinationFormDrawer({
     const version = ++provinceSearchVersion.current;
     setProvinceQuery(query);
 
-    if (form.getValues("country") !== "VN" || query.trim().length < 2) {
+    if (query.trim().length < 2) {
       setProvinceResults([]);
       return;
     }
 
     startTransition(async () => {
       const results = await searchDestinationProvincesAction(query);
-      if (version !== provinceSearchVersion.current || form.getValues("country") !== "VN") return;
+      if (version !== provinceSearchVersion.current) return;
       setProvinceResults(results);
       mergeKnownProvinces(results);
     });
   };
 
   const addProvince = (province: AdminProvince) => {
-    if (form.getValues("country") !== "VN") return;
     const currentCodes = form.getValues("provinceCodes") ?? [];
     if (currentCodes.includes(province.code)) return;
 
@@ -415,9 +413,6 @@ function DestinationFormDrawer({
                         provinceSearchVersion.current += 1;
                         setProvinceQuery("");
                         setProvinceResults([]);
-                        if (nextCountry !== "VN") {
-                          form.setValue("provinceCodes", [], { shouldDirty: true, shouldValidate: true });
-                        }
                       },
                     })}
                   >
@@ -425,7 +420,6 @@ function DestinationFormDrawer({
                   </select>
                   {form.formState.errors.country && <p id="destination-country-error" role="alert" className="text-xs text-destructive">{form.formState.errors.country.message}</p>}
                 </div>
-                {country !== "VN" && <p className="text-sm text-muted-foreground">Liên kết tỉnh/thành chỉ áp dụng cho Việt Nam. Khi lưu quốc gia Lào hoặc Cambodia, các liên kết tỉnh/thành trước đó sẽ được xóa.</p>}
               </section>
 
               <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
@@ -445,7 +439,7 @@ function DestinationFormDrawer({
                 </Tabs>
               </section>
 
-              {country === "VN" && <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
+              <section className="tour-drawer-panel relative z-30 space-y-4 overflow-visible rounded-[28px] p-5 sm:p-7">
                 <SectionHeading title="Tỉnh/thành liên quan" description="Chọn các tỉnh/thành để hỗ trợ tìm kiếm và phân loại điểm đến." />
                 <div className="space-y-2">
                   <Label htmlFor="destination-province-search">Tìm tỉnh/thành</Label>
@@ -479,7 +473,7 @@ function DestinationFormDrawer({
                   }) : <p className="text-xs text-muted-foreground">Chưa chọn tỉnh/thành. Có thể bổ sung sau.</p>}
                 </div>
                 {form.formState.errors.provinceCodes && <p id="destination-provinces-error" role="alert" className="text-xs text-destructive">{form.formState.errors.provinceCodes.message}</p>}
-              </section>}
+              </section>
             </div>
           </div>
 
@@ -517,7 +511,7 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
     // Hidden fields must remain in the payload so editing a name does not remove stored data.
     existingImages: destination.images.map((image) => ({ ...image, altText: image.altText || "" })),
     country: destination.country,
-    provinceCodes: destination.country === "VN" ? destination.provinces.map((province) => province.code) : [],
+    provinceCodes: destination.provinces.map((province) => province.code),
     translations: {
       vi: { name: vi?.name || "", description: vi?.description || "", visa: vi?.visa || "", weather: vi?.weather || "" },
       en: { name: en?.name || "", description: en?.description || "", visa: en?.visa || "", weather: en?.weather || "" },
@@ -526,7 +520,7 @@ function toEditorValues(destination: AdminDestination | null): DestinationEditor
 }
 
 function SectionHeading({ title, description }: { title: string; description: string }) {
-  return <div><h3 className="font-heading text-base font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{description}</p></div>;
+  return <div></div>;
 }
 
 function FormField({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
