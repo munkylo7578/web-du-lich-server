@@ -491,7 +491,7 @@ Các nút có thể chỉ hiển thị biểu tượng. Tên in đậm trong hư
 
 **Giới hạn theo phiên bản mã nguồn đã kiểm tra:** ảnh JPEG, PNG, WebP, AVIF tối đa 50 MB mỗi tệp ở trình duyệt; ảnh vượt 100 triệu điểm ảnh bị từ chối. Ảnh được tối ưu trước khi gửi; vì vậy tệp sau xử lý có thể khác dung lượng và định dạng ban đầu. Hệ thống có kiểm tra tổng yêu cầu tải khoảng 500 MB, tính cả phần thông tin kèm theo, không phải 500 MB tệp thuần.
 
-**Video:** phần Settings nhận MP4; giao diện ghi tối đa 50 MB. Giới hạn máy chủ cho ảnh/video có thể được cấu hình khác và chưa được xác minh trên website đang chạy. Nếu tệp nhỏ hơn mức trên vẫn bị từ chối, liên hệ người phụ trách; không coi các con số này là cam kết của môi trường production.
+**Video:** phần Settings nhận MP4; mặc định tối đa 200 MB mỗi tệp. Giao diện hiển thị và kiểm tra cùng giới hạn video được cấu hình trên máy chủ. Giới hạn máy chủ có thể được cấu hình khác và chưa được xác minh trên website đang chạy. Nếu tệp nhỏ hơn mức hiển thị vẫn bị từ chối, liên hệ người phụ trách; không coi các con số này là cam kết của môi trường production.
 
 Ảnh tour, ảnh dịch vụ và ảnh setting hỗ trợ chọn, kéo thả hoặc paste tại khu vực phù hợp. Ảnh chặng chỉ hỗ trợ chọn hoặc kéo thả. Không có ảnh minh họa trạng thái xử lý vì đợt chụp chỉ đọc không chọn hay tải tệp.
 

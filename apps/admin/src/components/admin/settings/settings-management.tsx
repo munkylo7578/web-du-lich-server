@@ -41,7 +41,7 @@ const SETTING_CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
   feedback: "Quản lý nội dung và hình ảnh trong mục Feedback.",
 };
 
-export function SettingsManagement({ initialResult, category }: { initialResult: AdminListResult<AdminSetting>; category: SettingCategory }) {
+export function SettingsManagement({ initialResult, category, maxVideoMb }: { initialResult: AdminListResult<AdminSetting>; category: SettingCategory; maxVideoMb: number }) {
   const categoryLabel = SETTING_CATEGORY_LABELS[category];
   const router = useRouter();
   const loadPage = useCallback((input: AdminListQuery) => listAdminSettingsAction(category, input), [category]);
@@ -153,6 +153,7 @@ export function SettingsManagement({ initialResult, category }: { initialResult:
       <SettingFormDrawer
         key={`${category}:${editingSetting?.key || "new"}`}
         category={category}
+        maxVideoMb={maxVideoMb}
         open={drawerOpen}
         setting={editingSetting}
         onSaved={() => { list.reload(); router.refresh(); }}
@@ -197,12 +198,14 @@ function SettingFormDrawer({
   open,
   setting,
   category,
+  maxVideoMb,
   onSaved,
   onOpenChange,
 }: {
   open: boolean;
   setting: AdminSetting | null;
   category: SettingCategory;
+  maxVideoMb: number;
   onSaved: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -458,6 +461,7 @@ function SettingFormDrawer({
                       existingUrl={typeof watchedValue === "string" ? watchedValue : ""}
                       pending={pendingVideo}
                       disabled={isPending}
+                      maxVideoMb={maxVideoMb}
                       onChange={(nextVideo) => {
                         if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
                         setPendingVideo(nextVideo);
@@ -525,12 +529,14 @@ function VideoPickerField({
   existingUrl,
   pending,
   disabled,
+  maxVideoMb,
   onChange,
   onError,
 }: {
   existingUrl: string;
   pending?: PendingSettingVideo;
   disabled: boolean;
+  maxVideoMb: number;
   onChange: (video?: PendingSettingVideo) => void;
   onError: (message?: string) => void;
 }) {
@@ -553,8 +559,8 @@ function VideoPickerField({
             onError("Chỉ hỗ trợ video MP4.");
             return;
           }
-          if (file.size <= 0 || file.size > 50 * 1024 * 1024) {
-            onError("Dung lượng video phải lớn hơn 0 và không vượt quá 50 MB.");
+          if (file.size <= 0 || file.size > maxVideoMb * 1024 * 1024) {
+            onError(`Dung lượng video phải lớn hơn 0 và không vượt quá ${maxVideoMb} MB.`);
             return;
           }
           onChange({ file, previewUrl: URL.createObjectURL(file) });
@@ -566,7 +572,7 @@ function VideoPickerField({
           <div>
             <p className="font-medium">{pending ? pending.file.name : existingUrl ? "Video hiện tại" : "Chưa chọn video"}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {pending ? `${formatFileSize(pending.file.size)} · chỉ upload khi lưu setting` : "MP4 · tối đa 50 MB · chỉ upload khi lưu setting"}
+              {pending ? `${formatFileSize(pending.file.size)} · chỉ upload khi lưu setting` : `MP4 · tối đa ${maxVideoMb} MB · chỉ upload khi lưu setting`}
             </p>
           </div>
           <div className="flex gap-2">
