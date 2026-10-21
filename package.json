@@ -14,7 +14,10 @@
     "db:generate": "nx db:generate database",
     "db:migrate": "nx db:migrate database",
     "db:push": "nx db:push database",
-    "db:studio": "nx db:studio database"
+    "db:studio": "nx db:studio database",
+    "geo:fetch:adm1": "node scripts/fetch-geoboundaries-adm1.cjs",
+    "geo:import:adm1": "node scripts/import-geoboundaries-adm1.cjs",
+    "geo:rollback:adm1": "node scripts/rollback-geoboundaries-adm1.cjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
