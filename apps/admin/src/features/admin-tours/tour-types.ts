@@ -41,6 +41,7 @@ export type AdminTour = {
   departureStartMonth?: number;
   serviceDescription?: string;
   accommodationDescription?: string;
+  stopoverDescription?: string;
   transportationDescription?: string;
   tourguideDescription?: string;
   translations: TourTranslationSnapshot[];

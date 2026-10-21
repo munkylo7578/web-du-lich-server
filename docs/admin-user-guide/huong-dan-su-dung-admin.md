@@ -177,7 +177,7 @@ Các nút có thể chỉ hiển thị biểu tượng. Tên in đậm trong hư
 
 | Tên trường | Ý nghĩa | Bắt buộc? | Ví dụ | Lưu ý |
 | --- | --- | --- | --- | --- |
-| Phân loại dịch vụ | Nhóm dịch vụ | Có | Nơi lưu trú và điểm dừng chân | Hai nhóm còn lại: Phương tiện di chuyển; Hướng dẫn viên |
+| Phân loại dịch vụ | Nhóm dịch vụ | Có | Nơi lưu trú | Ba nhóm còn lại: Điểm dừng chân; Phương tiện di chuyển; Hướng dẫn viên |
 | Tên dịch vụ (VI) | Tên tiếng Việt | Có | Nhà nghỉ mẫu Bình Minh | Ít nhất 2 ký tự |
 | Mô tả (VI) | Nội dung giới thiệu | Không | Chỗ nghỉ mẫu dành cho đoàn tham quan | Nếu điền, ít nhất 10 ký tự nội dung |
 | Tên dịch vụ (EN) | Tên tiếng Anh | Không | Demo Binh Minh guesthouse | Bổ sung theo nhu cầu |
@@ -311,7 +311,7 @@ Các nút có thể chỉ hiển thị biểu tượng. Tên in đậm trong hư
 
 1. Mở thẻ **Dịch vụ** trong biểu mẫu tour.
 2. Nhập **Mô tả dịch vụ chung** nếu cần.
-3. Tại từng nhóm **Nơi lưu trú và điểm dừng chân**, **Phương tiện di chuyển**, **Hướng dẫn viên**, điền mô tả riêng của nhóm nếu có.
+3. Tại từng nhóm **Nơi lưu trú**, **Điểm dừng chân**, **Phương tiện di chuyển**, **Hướng dẫn viên**, điền mô tả riêng của nhóm nếu có.
 4. Nhập ít nhất hai ký tự vào **Tìm dịch vụ...** của nhóm tương ứng.
 5. Chọn dịch vụ đúng từ kết quả; chỉ những dịch vụ thuộc nhóm đó được hiển thị.
 6. Dùng **Gỡ dịch vụ** nếu đã chọn nhầm.

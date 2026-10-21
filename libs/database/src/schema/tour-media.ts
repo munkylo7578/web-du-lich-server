@@ -41,6 +41,7 @@ export const tours = pgTable(
     departureStartMonth: integer('departure_start_month'),
     serviceDescription: text('service_description'),
     accommodationDescription: text('accommodation_description'),
+    stopoverDescription: text('stopover_description'),
     transportationDescription: text('transportation_description'),
     tourguideDescription: text('tourguide_description'),
     plans: jsonb('plans')

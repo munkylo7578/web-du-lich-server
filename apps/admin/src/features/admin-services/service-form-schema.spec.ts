@@ -4,14 +4,14 @@ const validPayload = {
   category: 'tourguide',
   translations: {
     vi: { name: 'Hướng dẫn viên', description: '' },
-    en: { name: '', description: '' },
+    en: { name: 'Tour guide', description: '' },
   },
   existingImages: [],
 };
 
 describe('serviceFormSchema category', () => {
-  it('accepts a supported category', () => {
-    expect(serviceFormSchema.safeParse(validPayload).success).toBe(true);
+  it.each(['accommodation', 'stopover', 'transportation', 'tourguide'])('accepts supported category %s', (category) => {
+    expect(serviceFormSchema.safeParse({ ...validPayload, category }).success).toBe(true);
   });
 
   it('requires one of the supported category keys', () => {

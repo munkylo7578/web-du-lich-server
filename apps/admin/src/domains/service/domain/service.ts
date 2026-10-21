@@ -101,7 +101,7 @@ export class Service {
   private static validateCategory(category: ServiceCategory): ServiceCategory {
     if (!isServiceCategory(category)) {
       throw new Error(
-        'Service category must be accommodation, transportation, or tourguide.',
+        'Service category must be accommodation, stopover, transportation, or tourguide.',
       );
     }
     return category;

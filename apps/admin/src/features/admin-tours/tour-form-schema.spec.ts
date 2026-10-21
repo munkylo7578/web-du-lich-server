@@ -2,7 +2,14 @@ import { describe, expect, it } from '@jest/globals';
 import { tourFormSchema } from './tour-form-schema';
 
 const payload = {
-  translations: { vi: { name: 'Tour thử nghiệm' }, en: {} },
+  serviceDescription: '',
+  serviceDescriptions: {
+    accommodation: '',
+    stopover: '',
+    transportation: '',
+    tourguide: '',
+  },
+  translations: { vi: { name: '' }, en: { name: 'Test tour' } },
   destinations: [],
   services: [],
   plans: [],
@@ -28,5 +35,21 @@ describe('Tour form departure start month', () => {
     const result = tourFormSchema.safeParse({ ...payload, departureStartMonth });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.issues[0].path).toEqual(['departureStartMonth']);
+  });
+});
+
+describe('Tour form service descriptions', () => {
+  it('accepts independent accommodation and stopover descriptions', () => {
+    const result = tourFormSchema.parse({
+      ...payload,
+      serviceDescriptions: {
+        ...payload.serviceDescriptions,
+        accommodation: '<p>Comfortable accommodation</p>',
+        stopover: '<p>Convenient stopover location</p>',
+      },
+    });
+
+    expect(result.serviceDescriptions.accommodation).toBe('<p>Comfortable accommodation</p>');
+    expect(result.serviceDescriptions.stopover).toBe('<p>Convenient stopover location</p>');
   });
 });

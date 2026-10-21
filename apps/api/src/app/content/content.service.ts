@@ -89,6 +89,7 @@ type TourRow = {
   departureStartMonth: number | null;
   serviceDescription: string | null;
   accommodationDescription: string | null;
+  stopoverDescription: string | null;
   transportationDescription: string | null;
   tourguideDescription: string | null;
   translations: TranslationRow[];
@@ -522,6 +523,7 @@ export class ContentService {
       ...tour,
       serviceDescription: row.serviceDescription ?? null,
       accommodationDescription: row.accommodationDescription ?? null,
+      stopoverDescription: row.stopoverDescription ?? null,
       transportationDescription: row.transportationDescription ?? null,
       tourguideDescription: row.tourguideDescription ?? null,
     };

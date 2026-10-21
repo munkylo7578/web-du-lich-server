@@ -8,6 +8,7 @@ describe('ContentService tour departure start month', () => {
       departureStartMonth,
       serviceDescription: '<p>Dịch vụ chung</p>',
       accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+      stopoverDescription: '<p>Điểm dừng thuận tiện</p>',
       transportationDescription: '<p>Di chuyển an toàn</p>',
       tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
       translations: [
@@ -50,6 +51,7 @@ describe('ContentService tour departure start month', () => {
         expect(detail.data).toMatchObject({
           serviceDescription: '<p>Dịch vụ chung</p>',
           accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+          stopoverDescription: '<p>Điểm dừng thuận tiện</p>',
           transportationDescription: '<p>Di chuyển an toàn</p>',
           tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
         });

@@ -148,6 +148,8 @@ export class TourDetailContentDto extends TourContentDto {
   @ApiPropertyOptional({ nullable: true })
   accommodationDescription!: string | null;
   @ApiPropertyOptional({ nullable: true })
+  stopoverDescription!: string | null;
+  @ApiPropertyOptional({ nullable: true })
   transportationDescription!: string | null;
   @ApiPropertyOptional({ nullable: true })
   tourguideDescription!: string | null;

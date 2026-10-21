@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import { Tour } from './tour';
 
-const translations = [{ locale: 'vi' as const, name: 'Tour thử nghiệm' }];
+const translations = [{ locale: 'en' as const, name: 'Test tour' }];
 
 describe('Tour departure start month', () => {
   const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
@@ -60,6 +60,7 @@ describe('Tour departure start month', () => {
       translations,
       serviceDescription: '<p>Dịch vụ chất lượng cao</p>',
       accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+      stopoverDescription: '<p>Điểm dừng thuận tiện</p>',
       transportationDescription: '<p>Di chuyển an toàn</p>',
       tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
     });
@@ -67,6 +68,7 @@ describe('Tour departure start month', () => {
     expect(Tour.rehydrate(tour.toSnapshot()).toSnapshot()).toMatchObject({
       serviceDescription: '<p>Dịch vụ chất lượng cao</p>',
       accommodationDescription: '<p>Lưu trú tiện nghi</p>',
+      stopoverDescription: '<p>Điểm dừng thuận tiện</p>',
       transportationDescription: '<p>Di chuyển an toàn</p>',
       tourguideDescription: '<p>Hướng dẫn tận tâm</p>',
     });
@@ -75,6 +77,7 @@ describe('Tour departure start month', () => {
     expect(tour.toSnapshot()).toMatchObject({
       serviceDescription: undefined,
       accommodationDescription: undefined,
+      stopoverDescription: undefined,
       transportationDescription: undefined,
       tourguideDescription: undefined,
     });

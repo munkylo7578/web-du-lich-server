@@ -101,6 +101,7 @@ export const tourFormSchema = z.object({
   serviceDescription: optionalTourHtml("Mô tả dịch vụ chung cần ít nhất 10 ký tự."),
   serviceDescriptions: z.object({
     accommodation: optionalTourHtml("Mô tả nơi lưu trú cần ít nhất 10 ký tự."),
+    stopover: optionalTourHtml("Mô tả điểm dừng chân cần ít nhất 10 ký tự."),
     transportation: optionalTourHtml("Mô tả phương tiện di chuyển cần ít nhất 10 ký tự."),
     tourguide: optionalTourHtml("Mô tả hướng dẫn viên cần ít nhất 10 ký tự."),
   }),

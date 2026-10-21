@@ -22,6 +22,7 @@ export type TourSnapshot = {
   departureStartMonth?: number;
   serviceDescription?: string;
   accommodationDescription?: string;
+  stopoverDescription?: string;
   transportationDescription?: string;
   tourguideDescription?: string;
   translations: TourTranslationSnapshot[];
@@ -37,6 +38,7 @@ export type CreateTourProps = {
   departureStartMonth?: number;
   serviceDescription?: string;
   accommodationDescription?: string;
+  stopoverDescription?: string;
   transportationDescription?: string;
   tourguideDescription?: string;
   translations: TourTranslationSnapshot[];
@@ -59,6 +61,7 @@ export class Tour {
     private departureStartMonth: number | undefined,
     private serviceDescription: string | undefined,
     private accommodationDescription: string | undefined,
+    private stopoverDescription: string | undefined,
     private transportationDescription: string | undefined,
     private tourguideDescription: string | undefined,
   ) {}
@@ -78,6 +81,7 @@ export class Tour {
       Tour.validateDepartureStartMonth(props.departureStartMonth),
       Tour.validateOptionalContent(props.serviceDescription, "service description"),
       Tour.validateOptionalContent(props.accommodationDescription, "accommodation description"),
+      Tour.validateOptionalContent(props.stopoverDescription, "stopover description"),
       Tour.validateOptionalContent(props.transportationDescription, "transportation description"),
       Tour.validateOptionalContent(props.tourguideDescription, "tourguide description"),
     );
@@ -96,6 +100,7 @@ export class Tour {
       Tour.validateDepartureStartMonth(snapshot.departureStartMonth),
       Tour.validateOptionalContent(snapshot.serviceDescription, "service description"),
       Tour.validateOptionalContent(snapshot.accommodationDescription, "accommodation description"),
+      Tour.validateOptionalContent(snapshot.stopoverDescription, "stopover description"),
       Tour.validateOptionalContent(snapshot.transportationDescription, "transportation description"),
       Tour.validateOptionalContent(snapshot.tourguideDescription, "tourguide description"),
     );
@@ -113,11 +118,13 @@ export class Tour {
   updateServiceDescriptions(descriptions: {
     serviceDescription?: string;
     accommodationDescription?: string;
+    stopoverDescription?: string;
     transportationDescription?: string;
     tourguideDescription?: string;
   }): void {
     this.serviceDescription = Tour.validateOptionalContent(descriptions.serviceDescription, "service description");
     this.accommodationDescription = Tour.validateOptionalContent(descriptions.accommodationDescription, "accommodation description");
+    this.stopoverDescription = Tour.validateOptionalContent(descriptions.stopoverDescription, "stopover description");
     this.transportationDescription = Tour.validateOptionalContent(descriptions.transportationDescription, "transportation description");
     this.tourguideDescription = Tour.validateOptionalContent(descriptions.tourguideDescription, "tourguide description");
     this.touch();
@@ -176,6 +183,7 @@ export class Tour {
       departureStartMonth: this.departureStartMonth,
       serviceDescription: this.serviceDescription,
       accommodationDescription: this.accommodationDescription,
+      stopoverDescription: this.stopoverDescription,
       transportationDescription: this.transportationDescription,
       tourguideDescription: this.tourguideDescription,
       translations: this.translations.map((translation) => ({ ...translation })),

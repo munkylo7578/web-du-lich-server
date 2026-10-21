@@ -36,7 +36,7 @@ function createEmptyValues(): TourFormValues {
   return {
     departureStartMonth: null,
     serviceDescription: "",
-    serviceDescriptions: { accommodation: "", transportation: "", tourguide: "" },
+    serviceDescriptions: { accommodation: "", stopover: "", transportation: "", tourguide: "" },
     translations: {
       vi: { name: "", description: "", inclusions: "", exclusions: "" },
       en: { name: "", description: "", inclusions: "", exclusions: "" },
@@ -58,6 +58,7 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
     serviceDescription: tour.serviceDescription || "",
     serviceDescriptions: {
       accommodation: tour.accommodationDescription || "",
+      stopover: tour.stopoverDescription || "",
       transportation: tour.transportationDescription || "",
       tourguide: tour.tourguideDescription || "",
     },

@@ -205,6 +205,7 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     const serviceDescriptions = {
       serviceDescription: data.serviceDescription || undefined,
       accommodationDescription: data.serviceDescriptions.accommodation || undefined,
+      stopoverDescription: data.serviceDescriptions.stopover || undefined,
       transportationDescription: data.serviceDescriptions.transportation || undefined,
       tourguideDescription: data.serviceDescriptions.tourguide || undefined,
     };
