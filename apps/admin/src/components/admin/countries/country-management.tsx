@@ -31,8 +31,8 @@ const contentFields = ["description", "visa", "travelRegions", "currencyMoneyExc
 const contentLabels = {
   description: "Mô tả",
   visa: "Passport & visa",
-  travelRegions: "Travel regions",
   currencyMoneyExchange: "Currency & money exchange",
+  travelRegions: "Travel regions",
 };
 type Locale = typeof locales[number];
 
