@@ -14,6 +14,7 @@ import {
   House,
   Menu,
   MapPin,
+  MessageSquare,
   PlaneTakeoff,
   ConciergeBell,
   Settings,
@@ -91,6 +92,7 @@ const adminNavItems: AdminNavItem[] = [
     children: [
       { title: SETTING_CATEGORY_LABELS.home, href: "/admin/settings/home", icon: House },
       { title: SETTING_CATEGORY_LABELS["about-us"], href: "/admin/settings/about-us", icon: Building2 },
+      { title: SETTING_CATEGORY_LABELS.feedback, href: "/admin/settings/feedback", icon: MessageSquare },
       { title: SETTING_CATEGORY_LABELS.general, href: "/admin/settings/general", icon: SlidersHorizontal },
     ],
   },

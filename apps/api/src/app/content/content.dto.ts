@@ -159,9 +159,13 @@ export class SettingContentDto {
     example: 'general',
   })
   category!: SettingCategory;
-  @ApiProperty() value!: string;
-  @ApiProperty({ enum: ['text', 'image', 'video', 'plain_text'] })
-  type!: 'text' | 'image' | 'video' | 'plain_text';
+  @ApiProperty({
+    description: 'An ordered array of image URLs for images settings; a string for all other types.',
+    oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' }, minItems: 1 }],
+  })
+  value!: string | string[];
+  @ApiProperty({ enum: ['text', 'image', 'video', 'plain_text', 'images'] })
+  type!: 'text' | 'image' | 'video' | 'plain_text' | 'images';
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
   @ApiProperty({ type: ContentLocaleMetaDto }) locale!: ContentLocaleMetaDto;
 }

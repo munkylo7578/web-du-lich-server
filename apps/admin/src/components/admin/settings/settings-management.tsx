@@ -38,6 +38,7 @@ const SETTING_CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
   general: "Quản lý các cấu hình dùng chung cho website.",
   home: "Quản lý nội dung và hình ảnh trên trang chủ.",
   "about-us": "Quản lý nội dung và hình ảnh trên trang About us.",
+  feedback: "Quản lý nội dung và hình ảnh trong mục Feedback.",
 };
 
 export function SettingsManagement({ initialResult, category, maxVideoMb }: { initialResult: AdminListResult<AdminSetting>; category: SettingCategory; maxVideoMb: number }) {
@@ -223,9 +224,19 @@ function SettingFormDrawer({
   });
   const watchedType = form.watch("type");
   const watchedValue = form.watch("value") || "";
-  const imageExisting = watchedType === "image" && watchedValue
+  const imageExisting = watchedType === "images" && Array.isArray(watchedValue)
+    ? watchedValue.map((url, index) => ({ id: `setting-image-${index}`, url }))
+    : watchedType === "image" && typeof watchedValue === "string" && watchedValue
     ? [{ id: form.getValues("key") || "setting-image", url: watchedValue }]
     : [];
+  const draftMediaRef = useRef({ images: pendingImages, video: pendingVideo });
+  useEffect(() => {
+    draftMediaRef.current = { images: pendingImages, video: pendingVideo };
+  }, [pendingImages, pendingVideo]);
+  useEffect(() => () => {
+    draftMediaRef.current.images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    if (draftMediaRef.current.video) URL.revokeObjectURL(draftMediaRef.current.video.previewUrl);
+  }, []);
 
   useEffect(() => {
     previousTypeRef.current = values.type;
@@ -240,7 +251,8 @@ function SettingFormDrawer({
     if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
     setPendingVideo(undefined);
     // Changing the type starts fresh content; validate it when the user saves.
-    form.setValue("value", "", { shouldDirty: true, shouldValidate: false });
+    form.setValue("value", watchedType === "images" ? [] : "", { shouldDirty: true, shouldValidate: false });
+    form.setValue("pendingImageClientIds", []);
     form.setValue("translations", { vi: "", en: "" }, { shouldDirty: true, shouldValidate: false });
     form.clearErrors(["value", "translations"]);
   }, [form, pendingImages, pendingVideo, watchedType]);
@@ -251,6 +263,7 @@ function SettingFormDrawer({
     if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
     setPendingVideo(undefined);
     setMessage(undefined);
+    previousTypeRef.current = values.type;
     form.reset(values);
     setLocale("en");
   };
@@ -277,7 +290,9 @@ function SettingFormDrawer({
     startTransition(async () => {
       const body = new FormData();
       body.set("payload", JSON.stringify(data));
-      if (pendingImages[0]) {
+      if (data.type === "images") {
+        pendingImages.forEach((image) => body.set(`file:${image.clientId}`, image.file));
+      } else if (pendingImages[0]) {
         body.set("pendingImageClientId", pendingImages[0].clientId);
         body.set(`file:${pendingImages[0].clientId}`, pendingImages[0].file);
       }
@@ -286,11 +301,7 @@ function SettingFormDrawer({
       const result = await submitUpload(body, saveSettingAction);
       setMessage(result.message);
       if (result.success) {
-        setLocale("en");
-        pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-        setPendingImages([]);
-        if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
-        setPendingVideo(undefined);
+        resetDraft();
         onOpenChange(false);
         onSaved();
       }
@@ -348,6 +359,7 @@ function SettingFormDrawer({
                         <option value="text">Text (trình soạn thảo)</option>
                         <option value="plain_text">Văn bản thuần (input)</option>
                         <option value="image">Ảnh</option>
+                        <option value="images">Nhiều ảnh</option>
                         <option value="video">Video</option>
                       </select>
                       <input type="hidden" {...form.register("type")} />
@@ -362,6 +374,7 @@ function SettingFormDrawer({
                       <option value="text">Text (trình soạn thảo)</option>
                       <option value="plain_text">Văn bản thuần (input)</option>
                       <option value="image">Ảnh</option>
+                      <option value="images">Nhiều ảnh</option>
                       <option value="video">Video</option>
                     </select>
                   )}
@@ -416,24 +429,27 @@ function SettingFormDrawer({
                       </FormField>
                     </TabsContent>
                   </Tabs>
-                ) : watchedType === "image" ? (
-                  <FormField label="Ảnh" required error={form.formState.errors.value?.message}>
+                ) : watchedType === "image" || watchedType === "images" ? (
+                  <FormField label={watchedType === "images" ? "Nhiều ảnh" : "Ảnh"} required error={form.formState.errors.value?.message}>
                     <Controller
                       control={form.control}
                       name="value"
                       render={({ field }) => (
                         <ImagePickerField
                           active={open} disabled={isPending}
-                          mode="single"
+                          mode={watchedType === "images" ? "multiple" : "single"}
                           existing={imageExisting}
                           pending={pendingImages}
                           allowAltText={false}
-                          helperText="JPEG, PNG, WebP, AVIF · tối đa 50MB · chỉ upload khi lưu setting"
+                          helperText={watchedType === "images" ? "JPEG, PNG, WebP, AVIF · tối đa 50MB mỗi ảnh · chọn ít nhất một ảnh · chỉ upload khi lưu setting" : "JPEG, PNG, WebP, AVIF · tối đa 50MB · chỉ upload khi lưu setting"}
                           emptyText="Chưa chọn ảnh setting."
-                          onExistingChange={(images) => field.onChange(images[0]?.url ?? "")}
+                          onExistingChange={(images) => field.onChange(watchedType === "images" ? images.map((image) => image.url) : images[0]?.url ?? "")}
                           onPendingChange={(images) => {
                             setPendingImages(images);
-                            if (images.length) field.onChange("");
+                            if (watchedType === "images") {
+                              form.setValue("pendingImageClientIds", images.map((image) => image.clientId), { shouldDirty: true });
+                              if (form.formState.isSubmitted) void form.trigger("value");
+                            } else if (images.length) field.onChange("");
                           }}
                         />
                       )}
@@ -442,7 +458,7 @@ function SettingFormDrawer({
                 ) : (
                   <FormField label="Video" required error={form.formState.errors.value?.message}>
                     <VideoPickerField
-                      existingUrl={watchedValue}
+                      existingUrl={typeof watchedValue === "string" ? watchedValue : ""}
                       pending={pendingVideo}
                       disabled={isPending}
                       maxVideoMb={maxVideoMb}
@@ -472,6 +488,7 @@ function SettingFormDrawer({
 }
 
 function SettingTypeBadge({ type }: { type: AdminSetting["type"] }) {
+  if (type === "images") return <Badge variant="secondary"><ImageIcon data-icon="inline-start" />Nhiều ảnh</Badge>;
   if (type === "image") return <Badge variant="secondary"><ImageIcon data-icon="inline-start" />Ảnh</Badge>;
   if (type === "video") return <Badge variant="secondary"><Video data-icon="inline-start" />Video</Badge>;
   if (type === "plain_text") return <Badge variant="outline"><Type data-icon="inline-start" />Văn bản thuần</Badge>;
@@ -479,15 +496,29 @@ function SettingTypeBadge({ type }: { type: AdminSetting["type"] }) {
 }
 
 function SettingValuePreview({ setting }: { setting: AdminSetting }) {
+  if (setting.type === "images") {
+    const urls = Array.isArray(setting.value) ? setting.value : [];
+    return (
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap gap-1.5">
+          {urls.slice(0, 3).map((url, index) => (
+            <img key={`${index}:${url}`} src={url} alt={`${setting.description || setting.key} · ${index + 1}`} className="size-12 rounded-xl border object-cover" />
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">{urls.length} ảnh</p>
+      </div>
+    );
+  }
+  const value = typeof setting.value === "string" ? setting.value : "";
   if (setting.type === "image") {
     return (
-      <img src={setting.value} alt={setting.description || setting.key} className="size-14 rounded-xl border object-cover" />
+      <img src={value} alt={setting.description || setting.key} className="size-14 rounded-xl border object-cover" />
     );
   }
 
   if (setting.type === "video") {
     return (
-      <SettingVideoPreview key={setting.value} src={setting.value || ""} label={setting.description || setting.key} />
+      <SettingVideoPreview key={value} src={value} label={setting.description || setting.key} />
     );
   }
 
@@ -584,6 +615,7 @@ function toFormValues(setting: AdminSetting | null, category: SettingCategory): 
       type: "text",
       canDelete: false,
       value: "",
+      pendingImageClientIds: [],
       translations: { vi: "", en: "" },
     };
   }
@@ -595,7 +627,8 @@ function toFormValues(setting: AdminSetting | null, category: SettingCategory): 
     description: setting.description ?? "",
     type: setting.type,
     canDelete: setting.canDelete,
-    value: setting.value ?? "",
+    value: setting.value ?? (setting.type === "images" ? [] : ""),
+    pendingImageClientIds: [],
     translations: { en: setting.translations.en, vi: setting.translations.vi ?? "" },
   };
 }

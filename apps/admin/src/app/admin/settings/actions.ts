@@ -11,6 +11,7 @@ import type { AdminListQuery, AdminListResult } from "@/features/shared/admin-li
 import type { SettingCategory } from "@setting-category";
 import { removeUploadedSettingFiles, saveSettingImage, saveSettingVideo } from "@/features/admin-settings/upload";
 import { requireSession } from "@/lib/auth/session";
+import { getUploadFormError } from "@/features/shared/upload-validation";
 
 export type SettingActionState = {
   success: boolean;
@@ -29,6 +30,9 @@ export async function listAdminSettingsAction(
 
 export async function saveSettingAction(formData: FormData): Promise<SettingActionState> {
   await requireSession();
+
+  const uploadError = getUploadFormError(formData);
+  if (uploadError) return { success: false, message: uploadError };
 
   let payload: unknown;
   try {
@@ -75,6 +79,26 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
   try {
     let value = data.value;
 
+    if (data.type === "images") {
+      // Validate the complete manifest before writing any file. Missing files
+      // must not silently produce a partially saved gallery.
+      const files = data.pendingImageClientIds.map((clientId) => {
+        const entries = formData.getAll(`file:${clientId}`);
+        const file = entries[0];
+        if (entries.length !== 1 || !(file instanceof File) || file.size <= 0) {
+          throw new Error("Không tìm thấy ảnh đã chọn. Vui lòng chọn lại ảnh.");
+        }
+        return file;
+      });
+      const urls = Array.isArray(data.value) ? [...data.value] : [];
+      for (const file of files) {
+        const stored = await saveSettingImage(file);
+        uploadedPaths.push(stored.physicalPath);
+        urls.push(stored.url);
+      }
+      value = urls;
+    }
+
     if (data.type === "image") {
       const pendingClientId = String(formData.get("pendingImageClientId") || "");
       const file = pendingClientId ? formData.get(`file:${pendingClientId}`) : null;
@@ -104,7 +128,7 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
       category: data.category,
       description: data.description,
       type: data.type,
-      value: data.type === "image" || data.type === "video" ? value : undefined,
+      value: data.type === "image" || data.type === "video" || data.type === "images" ? value : undefined,
       translations: data.type === "text" || data.type === "plain_text" ? data.translations : undefined,
       canDelete: data.canDelete,
     });
@@ -112,7 +136,7 @@ export async function saveSettingAction(formData: FormData): Promise<SettingActi
     if (existing) {
       setting.update({
         description: data.description,
-        value: data.type === "image" || data.type === "video" ? value : undefined,
+        value: data.type === "image" || data.type === "video" || data.type === "images" ? value : undefined,
         translations: data.type === "text" || data.type === "plain_text" ? data.translations : undefined,
       });
     }
