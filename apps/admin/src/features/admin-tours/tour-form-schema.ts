@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { DESTINATION_COUNTRIES } from "@destination-country";
+import { isValidTourPrice, type TourCurrency } from "@/domains/tour/domain/tour-prices";
+
+const optionalPrice = (currency: TourCurrency) => z.number({ error: "Vui lòng nhập giá hợp lệ." }).nullish().refine(
+  (value) => value == null || isValidTourPrice(value, currency),
+  currency === "USD"
+    ? "Giá USD phải từ 0 đến 999.999.999.999,99 và có tối đa 2 chữ số thập phân."
+    : "Giá VND phải là số nguyên từ 0 đến 99.999.999.999.999.",
+);
 
 const optionalHtml = z.string().trim().optional().default("");
 const hasRichTextContent = (value: string) => value.replace(/<[^>]*>/g, "")
@@ -93,6 +101,10 @@ export const localizedTextSchema = z.object({
 
 export const tourFormSchema = z.object({
   id: z.string().uuid().optional(),
+  beforeDiscountPriceUsd: optionalPrice("USD"),
+  beforeDiscountPriceVnd: optionalPrice("VND"),
+  listedPriceUsd: optionalPrice("USD"),
+  listedPriceVnd: optionalPrice("VND"),
   departureStartMonth: z.number({ error: "Vui lòng chọn tháng từ 1 đến 12." })
     .int("Tháng khởi hành phải là số nguyên.")
     .min(1, "Tháng khởi hành phải từ 1 đến 12.")

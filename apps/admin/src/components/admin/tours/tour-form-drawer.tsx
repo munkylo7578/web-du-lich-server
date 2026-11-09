@@ -22,9 +22,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { imageFieldErrors, pendingImagesSchema, pendingPlanImagesSchema, tourFormSchema, type TourFormValues } from "@/features/admin-tours/tour-form-schema";
 import type { AdminTour } from "@/features/admin-tours/tour-types";
 import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@service-category";
+import { TOUR_PRICE_LIMITS, type TourCurrency } from "@/domains/tour/domain/tour-prices";
 
 type Locale = "vi" | "en";
 type FormTab = "information" | "plan" | "services";
+type PriceKind = "beforeDiscountPrice" | "listedPrice";
+
+const PRICE_FIELDS: { key: PriceKind; label: string }[] = [
+  { key: "beforeDiscountPrice", label: "Giá trước giảm" },
+  { key: "listedPrice", label: "Giá niêm yết" },
+];
+const INITIAL_PRICE_CURRENCIES: Record<PriceKind, TourCurrency> = { beforeDiscountPrice: "USD", listedPrice: "USD" };
 
 const FORM_TABS: { value: FormTab; label: string }[] = [
   { value: "information", label: "Thông tin" },
@@ -35,6 +43,10 @@ const FORM_TABS: { value: FormTab; label: string }[] = [
 function createEmptyValues(): TourFormValues {
   return {
     departureStartMonth: null,
+    beforeDiscountPriceUsd: null,
+    beforeDiscountPriceVnd: null,
+    listedPriceUsd: null,
+    listedPriceVnd: null,
     serviceDescription: "",
     serviceDescriptions: { accommodation: "", stopover: "", transportation: "", tourguide: "" },
     translations: {
@@ -55,6 +67,10 @@ function toFormValues(tour: AdminTour | null): TourFormValues {
   return {
     id: tour.id,
     departureStartMonth: tour.departureStartMonth ?? null,
+    beforeDiscountPriceUsd: tour.beforeDiscountPriceUsd ?? null,
+    beforeDiscountPriceVnd: tour.beforeDiscountPriceVnd ?? null,
+    listedPriceUsd: tour.listedPriceUsd ?? null,
+    listedPriceVnd: tour.listedPriceVnd ?? null,
     serviceDescription: tour.serviceDescription || "",
     serviceDescriptions: {
       accommodation: tour.accommodationDescription || "",
@@ -103,6 +119,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
   const [imageErrors, setImageErrors] = useState<Record<string, string[]>>({});
   const [activeTab, setActiveTab] = useState<FormTab>("information");
   const [translationLocale, setTranslationLocale] = useState<Locale>("en");
+  const [priceCurrencies, setPriceCurrencies] = useState(INITIAL_PRICE_CURRENCIES);
   const [planLocales, setPlanLocales] = useState<Record<string, Locale>>({});
   const [isPending, startTransition] = useTransition();
   const form = useForm<TourFormValues>({ resolver: zodResolver(tourFormSchema), values });
@@ -149,6 +166,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
     setImageErrors({});
     setActiveTab("information");
     setTranslationLocale("en");
+    setPriceCurrencies(INITIAL_PRICE_CURRENCIES);
     setPlanLocales({});
     form.reset(values);
   };
@@ -186,6 +204,11 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
 
     if (parts[0] === "translations" && isLocale(parts[1])) {
       setTranslationLocale(parts[1]);
+    }
+
+    const priceField = PRICE_FIELDS.find(({ key }) => parts[0] === `${key}Usd` || parts[0] === `${key}Vnd`);
+    if (priceField) {
+      setPriceCurrencies((current) => ({ ...current, [priceField.key]: parts[0].endsWith("Usd") ? "USD" : "VND" }));
     }
 
     if (parts[0] === "plans" && parts[1] && isLocale(parts[3])) {
@@ -282,7 +305,7 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
           </div>
         </SheetHeader>
 
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
           <div ref={scrollAreaRef} className="relative flex-1 overflow-y-auto">
             <div className="min-h-full w-full min-w-0">
               <div ref={tabBarRef} className="tour-drawer-chrome sticky top-0 z-40 rounded-none border-0 shadow-none">
@@ -345,6 +368,48 @@ export function TourFormDrawer({ open, tour, onSaved, onOpenChange }: { open: bo
                       {form.formState.errors.departureStartMonth && (
                         <p id="departure-start-month-error" role="alert" className="text-xs text-destructive">{form.formState.errors.departureStartMonth.message}</p>
                       )}
+                    </div>
+                  </section>
+
+                  <section className="tour-drawer-panel space-y-4 rounded-[28px] p-5 sm:p-7">
+                    <SectionHeading title="Giá tour" description="Không bắt buộc. Nhập giá USD và VND độc lập, không tự động quy đổi. Để trống để xóa giá đã lưu." />
+                    <div className="grid gap-6 md:grid-cols-2">
+                      {PRICE_FIELDS.map(({ key, label }) => (
+                        <div key={key} className="min-w-0 space-y-3">
+                          <h3 id={`${key}-heading`} className="text-sm font-semibold">{label}</h3>
+                          <Tabs value={priceCurrencies[key]} onValueChange={(value) => {
+                            if (value === "USD" || value === "VND") setPriceCurrencies((current) => ({ ...current, [key]: value }));
+                          }}>
+                            <TabsList aria-labelledby={`${key}-heading`}>
+                              <TabsTrigger value="USD" disabled={isPending}>USD</TabsTrigger>
+                              <TabsTrigger value="VND" disabled={isPending}>VND</TabsTrigger>
+                            </TabsList>
+                            {(["USD", "VND"] as const).map((currency) => {
+                              const name = `${key}${currency === "USD" ? "Usd" : "Vnd"}` as const;
+                              return (
+                                <TabsContent key={currency} value={currency} className="pt-3">
+                                  <Controller control={form.control} name={name} render={({ field, fieldState }) => {
+                                    const error = fieldState.error?.message || imageErrors[name]?.[0];
+                                    return (
+                                      <div data-field-path={name} className="space-y-2">
+                                        <Label htmlFor={name}>{label} ({currency})</Label>
+                                        <Input {...field} id={name} type="number" inputMode={currency === "USD" ? "decimal" : "numeric"}
+                                          min={0} max={TOUR_PRICE_LIMITS[currency].max} step={TOUR_PRICE_LIMITS[currency].step}
+                                          value={field.value == null || Number.isNaN(field.value) ? "" : field.value}
+                                          onChange={(event) => field.onChange(event.target.validity.badInput ? Number.NaN : event.target.value === "" ? null : event.target.valueAsNumber)}
+                                          disabled={isPending} placeholder="Chưa cập nhật" aria-invalid={Boolean(error)}
+                                          aria-describedby={`${name}-help${error ? ` ${name}-error` : ""}`} />
+                                        <p id={`${name}-help`} className="text-xs text-muted-foreground">{currency === "USD" ? "Tối đa 2 chữ số thập phân." : "Nhập số tiền nguyên, không có phần thập phân."}</p>
+                                        {error && <p id={`${name}-error`} role="alert" className="text-xs text-destructive">{error}</p>}
+                                      </div>
+                                    );
+                                  }} />
+                                </TabsContent>
+                              );
+                            })}
+                          </Tabs>
+                        </div>
+                      ))}
                     </div>
                   </section>
 

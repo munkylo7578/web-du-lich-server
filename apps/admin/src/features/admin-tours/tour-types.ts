@@ -36,7 +36,7 @@ export type AdminTourImage = {
   sortOrder: number;
 };
 
-export type AdminTour = {
+export type AdminTour = import("@/domains/tour/domain/tour-prices").TourPrices & {
   id: string;
   departureStartMonth?: number;
   serviceDescription?: string;

@@ -211,6 +211,13 @@
       "when": 1792601807380,
       "tag": "0029_geo_import_batches",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794234479078,
+      "tag": "0030_tour_prices",
+      "breakpoints": true
     }
   ]
 }

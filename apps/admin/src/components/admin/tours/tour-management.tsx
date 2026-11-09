@@ -26,6 +26,20 @@ import { useServerPagination } from "@/hooks/use-server-pagination";
 
 const helper = createColumnHelper<AdminTour>();
 
+const priceFormatters = {
+  USD: new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  VND: new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }),
+};
+
+function TourPriceCell({ usd, vnd }: { usd?: number; vnd?: number }) {
+  return (
+    <div className="space-y-1 text-sm tabular-nums">
+      <p><span className="text-xs text-muted-foreground">USD</span> {usd == null ? "—" : priceFormatters.USD.format(usd)}</p>
+      <p><span className="text-xs text-muted-foreground">VND</span> {vnd == null ? "—" : priceFormatters.VND.format(vnd)}</p>
+    </div>
+  );
+}
+
 export function TourManagement({ initialResult }: { initialResult: AdminListResult<AdminTour> }) {
   const loadPage = useCallback((input: AdminListQuery) => listAdminToursAction(input), []);
   const list = useServerPagination({ initialResult, loadPage });
@@ -45,6 +59,8 @@ export function TourManagement({ initialResult }: { initialResult: AdminListResu
     }),
     helper.display({ id: "destinations", header: "Điểm đến", cell: ({ row }) => row.original.destinations.length ? <div className="flex min-w-0 flex-wrap gap-1.5">{row.original.destinations.slice(0, 3).map((destination) => <Badge key={destination.destinationId} variant="secondary" className="h-auto max-w-full items-start whitespace-normal py-1"><MapPin data-icon="inline-start" className="mt-0.5 shrink-0" /><span className="min-w-0 [overflow-wrap:anywhere]">{destination.translations.find((item) => item.locale === "en")?.name || "Chưa đặt tên"}</span></Badge>)}{row.original.destinations.length > 3 && <Badge variant="outline">+{row.original.destinations.length - 3}</Badge>}</div> : <span className="text-muted-foreground">Chưa cập nhật</span> }),
     helper.display({ id: "languages", header: "Ngôn ngữ", cell: ({ row }) => <div className="flex flex-wrap gap-1.5">{row.original.translations.map((item) => <Badge key={item.locale} variant="secondary"><Languages data-icon="inline-start" />{item.locale.toUpperCase()}</Badge>)}</div> }),
+    helper.display({ id: "beforeDiscountPrice", header: "Giá trước giảm", cell: ({ row }) => <TourPriceCell usd={row.original.beforeDiscountPriceUsd} vnd={row.original.beforeDiscountPriceVnd} /> }),
+    helper.display({ id: "listedPrice", header: "Giá niêm yết", cell: ({ row }) => <TourPriceCell usd={row.original.listedPriceUsd} vnd={row.original.listedPriceVnd} /> }),
     helper.accessor("updatedAt", { header: "Cập nhật", cell: ({ getValue }) => <span className="text-muted-foreground">{new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(getValue()))}</span> }),
     helper.display({ id: "actions", header: "", cell: ({ row }) => <div className="flex justify-end gap-1"><Button variant="ghost" size="icon" aria-label="Chỉnh sửa tour" onClick={() => { setEditingTour(row.original); setDrawerOpen(true); }}><Edit3 /></Button><Button variant="ghost" size="icon" aria-label="Xóa tour" onClick={() => setDeletingTour(row.original)}><Trash2 className="text-destructive" /></Button></div> }),
   ], []);
@@ -70,8 +86,8 @@ export function TourManagement({ initialResult }: { initialResult: AdminListResu
           </div>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <AdminListTable className="min-w-[900px]">
-                <colgroup><col /><col className="w-60" /><col className="w-28" /><col className="w-36" /><col className="w-28" /></colgroup>
+              <AdminListTable className="min-w-[1300px]">
+                <colgroup><col /><col className="w-60" /><col className="w-28" /><col className="w-52" /><col className="w-52" /><col className="w-36" /><col className="w-28" /></colgroup>
                 <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-cyan-900/15 hover:bg-transparent">{group.headers.map((header) => <TableHead key={header.id} className="font-semibold text-slate-700">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
                 <TableBody>{table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => <TableRow key={row.id}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={columns.length} className="h-52 text-center"><div className="mx-auto flex max-w-sm flex-col items-center"><div className="mb-3 grid size-12 place-items-center rounded-2xl bg-muted"><MoreHorizontal className="size-5" /></div><p className="font-medium">Chưa tìm thấy tour</p><p className="mt-1 text-sm text-muted-foreground">Tạo tour mới hoặc thử từ khóa khác.</p></div></TableCell></TableRow>}</TableBody>
               </AdminListTable>

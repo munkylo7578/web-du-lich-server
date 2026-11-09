@@ -202,6 +202,12 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
     }
 
     const departureStartMonth = data.departureStartMonth ?? undefined;
+    const prices = {
+      beforeDiscountPriceUsd: data.beforeDiscountPriceUsd === undefined ? storedSnapshot?.beforeDiscountPriceUsd : data.beforeDiscountPriceUsd ?? undefined,
+      beforeDiscountPriceVnd: data.beforeDiscountPriceVnd === undefined ? storedSnapshot?.beforeDiscountPriceVnd : data.beforeDiscountPriceVnd ?? undefined,
+      listedPriceUsd: data.listedPriceUsd === undefined ? storedSnapshot?.listedPriceUsd : data.listedPriceUsd ?? undefined,
+      listedPriceVnd: data.listedPriceVnd === undefined ? storedSnapshot?.listedPriceVnd : data.listedPriceVnd ?? undefined,
+    };
     const serviceDescriptions = {
       serviceDescription: data.serviceDescription || undefined,
       accommodationDescription: data.serviceDescriptions.accommodation || undefined,
@@ -291,8 +297,9 @@ export async function saveTourAction(formData: FormData): Promise<TourActionStat
       ],
     }));
 
-    const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth, ...serviceDescriptions });
+    const aggregate = tour || Tour.create({ translations, destinations, services, plans, departureStartMonth, ...serviceDescriptions, ...prices });
     if (tour) {
+      aggregate.updatePrices(prices);
       aggregate.updateDepartureStartMonth(departureStartMonth);
       aggregate.updateServiceDescriptions(serviceDescriptions);
       aggregate.replaceTranslations(translations);

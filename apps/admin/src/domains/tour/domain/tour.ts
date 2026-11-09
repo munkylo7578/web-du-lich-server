@@ -8,6 +8,7 @@ import {
 } from "./tour-locale";
 import { TourPlan, type TourPlanSnapshot } from "./tour-plan";
 import { TourService, type TourServiceSnapshot } from "./tour-service";
+import { validateTourPrices, type TourPrices } from "./tour-prices";
 
 export type TourTranslationSnapshot = {
   locale: TourLocale;
@@ -17,7 +18,7 @@ export type TourTranslationSnapshot = {
   exclusions?: string;
 };
 
-export type TourSnapshot = {
+export type TourSnapshot = TourPrices & {
   id: string;
   departureStartMonth?: number;
   serviceDescription?: string;
@@ -34,7 +35,7 @@ export type TourSnapshot = {
   updatedAt: Date;
 };
 
-export type CreateTourProps = {
+export type CreateTourProps = TourPrices & {
   departureStartMonth?: number;
   serviceDescription?: string;
   accommodationDescription?: string;
@@ -64,6 +65,7 @@ export class Tour {
     private stopoverDescription: string | undefined,
     private transportationDescription: string | undefined,
     private tourguideDescription: string | undefined,
+    private prices: TourPrices,
   ) {}
 
   static create(props: CreateTourProps): Tour {
@@ -84,6 +86,7 @@ export class Tour {
       Tour.validateOptionalContent(props.stopoverDescription, "stopover description"),
       Tour.validateOptionalContent(props.transportationDescription, "transportation description"),
       Tour.validateOptionalContent(props.tourguideDescription, "tourguide description"),
+      validateTourPrices(props),
     );
   }
 
@@ -103,6 +106,7 @@ export class Tour {
       Tour.validateOptionalContent(snapshot.stopoverDescription, "stopover description"),
       Tour.validateOptionalContent(snapshot.transportationDescription, "transportation description"),
       Tour.validateOptionalContent(snapshot.tourguideDescription, "tourguide description"),
+      validateTourPrices(snapshot),
     );
   }
 
@@ -112,6 +116,11 @@ export class Tour {
 
   updateDepartureStartMonth(month?: number): void {
     this.departureStartMonth = Tour.validateDepartureStartMonth(month);
+    this.touch();
+  }
+
+  updatePrices(prices: TourPrices): void {
+    this.prices = validateTourPrices(prices);
     this.touch();
   }
 
@@ -179,6 +188,7 @@ export class Tour {
 
   toSnapshot(): TourSnapshot {
     return {
+      ...this.prices,
       id: this.id.value,
       departureStartMonth: this.departureStartMonth,
       serviceDescription: this.serviceDescription,

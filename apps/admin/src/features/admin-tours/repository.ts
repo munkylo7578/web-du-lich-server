@@ -269,6 +269,10 @@ const tourColumns = {
   stopoverDescription: tours.stopoverDescription,
   transportationDescription: tours.transportationDescription,
   tourguideDescription: tours.tourguideDescription,
+  beforeDiscountPriceUsd: tours.beforeDiscountPriceUsd,
+  beforeDiscountPriceVnd: tours.beforeDiscountPriceVnd,
+  listedPriceUsd: tours.listedPriceUsd,
+  listedPriceVnd: tours.listedPriceVnd,
   createdAt: tours.createdAt, updatedAt: tours.updatedAt,
 };
 
@@ -327,6 +331,10 @@ async function hydrateAdminTours(rows: Array<Omit<typeof tours.$inferSelect, "pl
   return rows.map((row) => ({
     id: row.id,
     departureStartMonth: row.departureStartMonth ?? undefined,
+    beforeDiscountPriceUsd: row.beforeDiscountPriceUsd == null ? undefined : Number(row.beforeDiscountPriceUsd),
+    beforeDiscountPriceVnd: row.beforeDiscountPriceVnd == null ? undefined : Number(row.beforeDiscountPriceVnd),
+    listedPriceUsd: row.listedPriceUsd == null ? undefined : Number(row.listedPriceUsd),
+    listedPriceVnd: row.listedPriceVnd == null ? undefined : Number(row.listedPriceVnd),
     serviceDescription: row.serviceDescription ?? undefined,
     accommodationDescription: row.accommodationDescription ?? undefined,
     stopoverDescription: row.stopoverDescription ?? undefined,
@@ -504,6 +512,10 @@ export class DrizzleTourRepository implements TourRepository {
     return TourMapper.toDomain({
       id: row[0].id,
       departureStartMonth: row[0].departureStartMonth ?? undefined,
+      beforeDiscountPriceUsd: row[0].beforeDiscountPriceUsd == null ? undefined : Number(row[0].beforeDiscountPriceUsd),
+      beforeDiscountPriceVnd: row[0].beforeDiscountPriceVnd == null ? undefined : Number(row[0].beforeDiscountPriceVnd),
+      listedPriceUsd: row[0].listedPriceUsd == null ? undefined : Number(row[0].listedPriceUsd),
+      listedPriceVnd: row[0].listedPriceVnd == null ? undefined : Number(row[0].listedPriceVnd),
       serviceDescription: row[0].serviceDescription ?? undefined,
       accommodationDescription: row[0].accommodationDescription ?? undefined,
       stopoverDescription: row[0].stopoverDescription ?? undefined,
@@ -544,6 +556,12 @@ export class DrizzleTourRepository implements TourRepository {
     // Reserved by the existing repository contract; destinations are saved separately.
     void _saveDestinations;
     const snapshot = TourMapper.toPersistence(tour);
+    const prices = {
+      beforeDiscountPriceUsd: snapshot.beforeDiscountPriceUsd?.toString() ?? null,
+      beforeDiscountPriceVnd: snapshot.beforeDiscountPriceVnd?.toString() ?? null,
+      listedPriceUsd: snapshot.listedPriceUsd?.toString() ?? null,
+      listedPriceVnd: snapshot.listedPriceVnd?.toString() ?? null,
+    };
 
     const removedImages = await db.transaction(async (tx) => {
       const existing = await tx.select({ id: tours.id }).from(tours).where(eq(tours.id, snapshot.id)).for("update");
@@ -590,6 +608,7 @@ export class DrizzleTourRepository implements TourRepository {
 
       if (existing.length) {
         await tx.update(tours).set({
+          ...prices,
           departureStartMonth: snapshot.departureStartMonth ?? null,
           serviceDescription: snapshot.serviceDescription ?? null,
           accommodationDescription: snapshot.accommodationDescription ?? null,
@@ -600,6 +619,7 @@ export class DrizzleTourRepository implements TourRepository {
         }).where(eq(tours.id, snapshot.id));
       } else {
         await tx.insert(tours).values({
+          ...prices,
           id: snapshot.id,
           departureStartMonth: snapshot.departureStartMonth ?? null,
           serviceDescription: snapshot.serviceDescription ?? null,

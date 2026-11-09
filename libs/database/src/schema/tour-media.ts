@@ -5,6 +5,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -39,6 +40,10 @@ export const tours = pgTable(
   {
     id: uuid('id').primaryKey(),
     departureStartMonth: integer('departure_start_month'),
+    beforeDiscountPriceUsd: numeric('before_discount_price_usd', { precision: 14, scale: 2 }),
+    beforeDiscountPriceVnd: numeric('before_discount_price_vnd', { precision: 14, scale: 0 }),
+    listedPriceUsd: numeric('listed_price_usd', { precision: 14, scale: 2 }),
+    listedPriceVnd: numeric('listed_price_vnd', { precision: 14, scale: 0 }),
     serviceDescription: text('service_description'),
     accommodationDescription: text('accommodation_description'),
     stopoverDescription: text('stopover_description'),
@@ -56,6 +61,10 @@ export const tours = pgTable(
       .notNull(),
   },
   (table) => [
+    check('tours_before_discount_price_usd_check', sql`${table.beforeDiscountPriceUsd} between 0 and 999999999999.99`),
+    check('tours_before_discount_price_vnd_check', sql`${table.beforeDiscountPriceVnd} between 0 and 99999999999999`),
+    check('tours_listed_price_usd_check', sql`${table.listedPriceUsd} between 0 and 999999999999.99`),
+    check('tours_listed_price_vnd_check', sql`${table.listedPriceVnd} between 0 and 99999999999999`),
     check(
       'tours_plans_array_check',
       sql`jsonb_typeof(${table.plans}) = 'array'`,
