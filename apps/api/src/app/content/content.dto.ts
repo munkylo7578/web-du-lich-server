@@ -56,7 +56,37 @@ class TourPlanContentDto {
   images!: ContentImageDto[];
 }
 
-class LinkedTourContentDto {
+class TourPricesContentDto {
+  @ApiProperty({
+    type: Number, nullable: true, minimum: 0, maximum: 999999999999.99, multipleOf: 0.01,
+    example: 150.5,
+    description: 'Before-discount price in USD, up to two decimal places. Entered independently of VND and locale; null when unset.',
+  })
+  beforeDiscountPriceUsd!: number | null;
+
+  @ApiProperty({
+    type: 'integer', nullable: true, minimum: 0, maximum: 99999999999999,
+    example: 3800000,
+    description: 'Before-discount price in VND, whole amounts only. Entered independently of USD and locale; null when unset.',
+  })
+  beforeDiscountPriceVnd!: number | null;
+
+  @ApiProperty({
+    type: Number, nullable: true, minimum: 0, maximum: 999999999999.99, multipleOf: 0.01,
+    example: 120.5,
+    description: 'Listed price in USD, up to two decimal places. Entered independently of VND and locale; null when unset.',
+  })
+  listedPriceUsd!: number | null;
+
+  @ApiProperty({
+    type: 'integer', nullable: true, minimum: 0, maximum: 99999999999999,
+    example: 3000000,
+    description: 'Listed price in VND, whole amounts only. Entered independently of USD and locale; null when unset.',
+  })
+  listedPriceVnd!: number | null;
+}
+
+class LinkedTourContentDto extends TourPricesContentDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiPropertyOptional({ nullable: true, minimum: 1, maximum: 12 })
   departureStartMonth!: number | null;
@@ -122,7 +152,7 @@ export class DestinationContentDto {
   @ApiProperty({ format: 'date-time' }) updatedAt!: Date;
 }
 
-export class TourContentDto {
+export class TourContentDto extends TourPricesContentDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiPropertyOptional({ nullable: true, minimum: 1, maximum: 12 })
   departureStartMonth!: number | null;

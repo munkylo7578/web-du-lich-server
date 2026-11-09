@@ -39,8 +39,11 @@ type ProvinceLinkRow = {
   };
 };
 type ProvinceCoordinate = { latitude: number | null; longitude: number | null };
+type TourPriceRow = Pick<typeof tours.$inferSelect,
+  'beforeDiscountPriceUsd' | 'beforeDiscountPriceVnd' | 'listedPriceUsd' | 'listedPriceVnd'
+>;
 type DestinationTourLinkRow = {
-  tour: {
+  tour: TourPriceRow & {
     id: string;
     departureStartMonth: number | null;
     translations: TranslationRow[];
@@ -84,7 +87,7 @@ type PlanRow = {
   sortOrder: number;
   imageLinks: ImageLinkRow[];
 };
-type TourRow = {
+type TourRow = TourPriceRow & {
   id: string;
   departureStartMonth: number | null;
   serviceDescription: string | null;
@@ -239,7 +242,14 @@ export class ContentService {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
             tour: {
-              columns: { id: true, departureStartMonth: true },
+              columns: {
+                id: true,
+                departureStartMonth: true,
+                beforeDiscountPriceUsd: true,
+                beforeDiscountPriceVnd: true,
+                listedPriceUsd: true,
+                listedPriceVnd: true,
+              },
               with: {
                 translations: true,
                 planRows: {
@@ -283,7 +293,14 @@ export class ContentService {
           orderBy: (link, { asc }) => [asc(link.sortOrder), asc(link.tourId)],
           with: {
             tour: {
-              columns: { id: true, departureStartMonth: true },
+              columns: {
+                id: true,
+                departureStartMonth: true,
+                beforeDiscountPriceUsd: true,
+                beforeDiscountPriceVnd: true,
+                listedPriceUsd: true,
+                listedPriceVnd: true,
+              },
               with: {
                 translations: true,
                 planRows: {
@@ -487,12 +504,24 @@ export class ContentService {
     return conditions.length ? and(...conditions) : undefined;
   }
 
+  private mapTourPrices(row: TourPriceRow) {
+    // PostgreSQL numeric values arrive as strings. The schema bounds these
+    // amounts to safe numeric ranges; preserve zero and expose missing prices as null.
+    return {
+      beforeDiscountPriceUsd: row.beforeDiscountPriceUsd == null ? null : Number(row.beforeDiscountPriceUsd),
+      beforeDiscountPriceVnd: row.beforeDiscountPriceVnd == null ? null : Number(row.beforeDiscountPriceVnd),
+      listedPriceUsd: row.listedPriceUsd == null ? null : Number(row.listedPriceUsd),
+      listedPriceVnd: row.listedPriceVnd == null ? null : Number(row.listedPriceVnd),
+    };
+  }
+
   private mapTour(row: TourRow, locale: Locale) {
     const translation = localized(row.translations, locale);
     if (!translation) return null;
     return {
       id: row.id,
       departureStartMonth: row.departureStartMonth ?? null,
+      ...this.mapTourPrices(row),
       name: translation.value.name,
       description: translation.value.description,
       inclusions: translation.value.inclusions ?? null,
@@ -563,6 +592,7 @@ export class ContentService {
           return {
             id: tour.id,
             departureStartMonth: tour.departureStartMonth ?? null,
+            ...this.mapTourPrices(tour),
             name: tourTranslation.value.name,
             locale: tourTranslation.locale,
             plans: this.localizePlans(tour.planRows, locale),
